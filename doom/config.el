@@ -87,20 +87,30 @@
   (setq dap-php-debug-program '("/nix/store/07vcszwmkfxhdjnsi5psxzr47zg9xkjj-php-with-extensions-8.2.13/bin/php" "-dxdebug.remote_enable=1" "-dxdebug.remote_mode=req" "-dxdebug.remote_port=9000" "-dxdebug.remote_host=127.0.0.1" "-dxdebug.remote_connect_back=0")
   )
 
+
+
+
 ;; Configuración de la fuente y ligaduras
-(setq doom-font (font-spec :family "Hack Nerd Font Mono FC Ligatured" :size 16)
-      doom-variable-pitch-font (font-spec :family "Hack Nerd Font Mono FC Ligatured")
-      doom-unicode-font (font-spec :family "Hack Nerd Font Mono FC Ligatured"))
+(setq doom-font (font-spec :family "Hasklug Nerd Font Propo"
+                           :weight 'regular
+                           :slant 'normal
+                           :size 16)
+      doom-variable-pitch-font (font-spec :family "Hasklug Nerd Font Propo"
+                                           :weight 'regular
+                                           :slant 'normal)
+      doom-unicode-font (font-spec :family "Hasklug Nerd Font Propo"
+                                    :weight 'regular
+                                    :slant 'normal))
 
-;; Ligaduras adicionales
-(setq +ligatures-extra-symbols
-      '(:name "»" :src ">>" :unicode #X21D2)  ; Cambiado unicode para =>
-      doom-unicode-extra-ligatures '(("->" #X2192) ("=>" #X21D2)))
+;; Fuentes específicas para glifos
+(setq doom-unicode-extra-fonts
+      '((:fallback "Symbols Nerd Font Mono Normal" :size 12)  ; Fallback para glifos Unicode
+        (:fallback "DejaVu Sans" :size 12)))  ; Fallback adicional si es necesario
 
-;; Recargar la configuración de la fuente
+;;; Recargar la configuración de la fuente
 (doom/reload-font)
 
 (message "Valor actual de doom-font: %s" doom-font)
 
-;; Cargar la configuración de las fuentes
-(doom/reload-font)
+
+(setq telega-server-libs-prefix "/usr/local/lib/tdlib")

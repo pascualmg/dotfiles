@@ -49,7 +49,9 @@
 ;; ...Or *all* packages (NOT RECOMMENDED; will likely break things)
 ;; (unpin! t)
 
-(package! dap-mode)
-;; Agregar xdebug a la lista de paquetes
 (package! spacemacs-theme)
 (load-theme 'spacemacs-dark t)
+
+
+;; En tu archivo packages.el
+(package! telega)
