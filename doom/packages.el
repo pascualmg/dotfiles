@@ -50,7 +50,7 @@
 ;; (unpin! t)
 
 (package! spacemacs-theme)
-(load-theme 'spacemacs-dark t)
+;;(load-theme 'spacemacs-dark t)
 
 
 ;; En tu archivo packages.el
