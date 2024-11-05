@@ -1,30 +1,3 @@
-2024/10/30-08:48:21.639 8d76 Reusing MANIFEST /home/passh/.config/Postman/Partitions/e086444a-82ef-4729-be0e-97c771c068ea/Local Storage/leveldb/MANIFEST-000001
-2024/10/30-08:48:21.658 8d76 Recovering log #37
-2024/10/30-08:48:21.661 8d76 Reusing old log /home/passh/.config/Postman/Partitions/e086444a-82ef-4729-be0e-97c771c068ea/Local Storage/leveldb/000037.log 
-2024/10/30-11:45:05.286 8d77 Level-0 table #42: started
-2024/10/30-11:45:05.303 8d77 Level-0 table #42: 38078 bytes OK
-2024/10/30-11:45:05.305 8d77 Delete type=0 #37
-2024/10/30-19:23:43.153 8d77 Level-0 table #44: started
-2024/10/30-19:23:43.163 8d77 Level-0 table #44: 28095 bytes OK
-2024/10/30-19:23:43.165 8d77 Delete type=0 #41
-2024/10/30-21:49:56.127 8d77 Level-0 table #46: started
-2024/10/30-21:49:56.132 8d77 Level-0 table #46: 22925 bytes OK
-2024/10/30-21:49:56.137 8d77 Delete type=0 #43
-2024/10/30-21:56:43.776 8d77 Level-0 table #48: started
-2024/10/30-21:56:43.785 8d77 Level-0 table #48: 29096 bytes OK
-2024/10/30-21:56:43.787 8d77 Delete type=0 #45
-2024/10/30-21:56:43.788 8d77 Compacting 4@0 + 1@1 files
-2024/10/30-21:56:43.792 8d77 Generated table #49@0: 10 keys, 5079 bytes
-2024/10/30-21:56:43.792 8d77 Compacted 4@0 + 1@1 files => 5079 bytes
-2024/10/30-21:56:43.794 8d77 compacted to: files[ 0 1 1 0 0 0 0 ]
-2024/10/30-21:56:43.794 8d77 Delete type=2 #46
-2024/10/30-21:56:43.794 8d77 Delete type=2 #44
-2024/10/30-21:56:43.794 8d77 Delete type=2 #42
-2024/10/30-21:56:43.794 8d77 Delete type=2 #48
-2024/10/30-21:56:43.794 8d77 Delete type=2 #39
-2024/10/31-01:32:38.565 8d77 Level-0 table #51: started
-2024/10/31-01:32:38.568 8d77 Level-0 table #51: 24376 bytes OK
-2024/10/31-01:32:38.570 8d77 Delete type=0 #47
-2024/10/31-10:35:12.691 8d77 Level-0 table #53: started
-2024/10/31-10:35:12.700 8d77 Level-0 table #53: 29552 bytes OK
-2024/10/31-10:35:12.706 8d77 Delete type=0 #50
+2024/11/05-12:13:30.035 7f1b5 Reusing MANIFEST /home/passh/.config/Postman/Partitions/e086444a-82ef-4729-be0e-97c771c068ea/Local Storage/leveldb/MANIFEST-000001
+2024/11/05-12:13:30.055 7f1b5 Recovering log #52
+2024/11/05-12:13:30.059 7f1b5 Reusing old log /home/passh/.config/Postman/Partitions/e086444a-82ef-4729-be0e-97c771c068ea/Local Storage/leveldb/000052.log 

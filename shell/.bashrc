@@ -123,3 +123,6 @@ export PATH=$PATH:/home/passh/.config/emacs/bin
 
 # Agregar Postman al PATH
 export PATH="$PATH:/opt/Postman"
+export PATH="$HOME/go/bin:$PATH"
+export PATH="$HOME/go/bin:$PATH"
+export PATH="$HOME/go/bin:$PATH"

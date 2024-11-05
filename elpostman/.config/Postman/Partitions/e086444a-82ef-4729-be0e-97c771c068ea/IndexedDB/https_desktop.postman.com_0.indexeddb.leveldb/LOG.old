@@ -1,3 +1,7 @@
-2024/10/29-14:03:37.273 b0f9e Reusing MANIFEST /home/passh/.config/Postman/Partitions/e086444a-82ef-4729-be0e-97c771c068ea/IndexedDB/https_desktop.postman.com_0.indexeddb.leveldb/MANIFEST-000001
-2024/10/29-14:03:37.273 b0f9e Recovering log #9
-2024/10/29-14:03:37.275 b0f9e Reusing old log /home/passh/.config/Postman/Partitions/e086444a-82ef-4729-be0e-97c771c068ea/IndexedDB/https_desktop.postman.com_0.indexeddb.leveldb/000009.log 
+2024/10/30-08:48:23.617 8d76 Reusing MANIFEST /home/passh/.config/Postman/Partitions/e086444a-82ef-4729-be0e-97c771c068ea/IndexedDB/https_desktop.postman.com_0.indexeddb.leveldb/MANIFEST-000001
+2024/10/30-08:48:23.617 8d76 Recovering log #9
+2024/10/30-08:48:23.620 8d76 Reusing old log /home/passh/.config/Postman/Partitions/e086444a-82ef-4729-be0e-97c771c068ea/IndexedDB/https_desktop.postman.com_0.indexeddb.leveldb/000009.log 
+2024/10/31-01:19:13.691 8d76 Compacting 1@0 + 1@1 files
+2024/10/31-01:19:13.713 8d76 Generated table #12@0: 4823 keys, 143142 bytes
+2024/10/31-01:19:13.713 8d76 Compacted 1@0 + 1@1 files => 143142 bytes
+2024/10/31-01:19:13.716 8d76 compacted to: files[ 0 1 1 0 0 0 0 ]
