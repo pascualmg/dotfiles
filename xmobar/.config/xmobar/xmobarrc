@@ -1,0 +1,99 @@
+Config {
+    -- Apariencia básica
+    font = "xft:Monoid Nerd Font:size=16:bold"
+    , additionalFonts = [ "xft:Monoid Nerd Font:pixelsize=28:bold" ]
+    , borderColor = "#282c34"
+    , border = TopB
+    , bgColor = "#282c34"
+    , fgColor = "#abb2bf"
+    , alpha = 255
+
+    -- Posicionamiento
+    , position = Top
+    , textOffset = -1
+    , iconOffset = -1
+
+    -- Comportamiento
+    , lowerOnStart = True
+    , allDesktops = True
+    , overrideRedirect = True
+    , persistent = True
+    , hideOnStart = False
+
+    -- Comandos y monitores
+    , commands = [
+        -- GPU NVIDIA mejorado con más métricas
+        Run Com "bash"
+            ["-c", "nvidia-smi --query-gpu=temperature.gpu,utilization.gpu,memory.used,memory.total,power.draw --format=csv,noheader,nounits | awk -F',' '{printf \"RTX2060 a %.1f°C usando el %.1f%% de GPU %.1f/%.1fGB de RAM chupando %.1fW 8==D~\", $1, $2, $3/1024, $4/1024, $5}'"]
+            "gpu"
+            10
+
+        -- CPU con btop
+        , Run Cpu [ "-t", "<action=`alacritty --class=btop-monitor --option=font.size=12 --option=window.startup_mode=Maximized -e btop`><fn=1>\xf2db</fn> CPU: <total>%</action>"
+                , "-L", "3"
+                , "-H", "50"
+                , "-l", "#98c379"
+                , "-n", "#e5c07b"
+                , "-h", "#e06c75"
+                ] 10
+
+        -- Memoria RAM mejorada
+        , Run Memory [ "-t", "<action=`alacritty --class=btop-monitor --option=font.size=12 --option=window.startup_mode=Maximized -e btop`><fn=1>\xf233</fn> Mem: <usedratio>% (<used>/<total>)</action>"
+                    , "-L", "50"
+                    , "-H", "80"
+                    , "-l", "#98c379"
+                    , "-n", "#e5c07b"
+                    , "-h", "#e06c75"
+                    ] 10
+
+        -- Red Ethernet
+        , Run Network "enp10s0"
+            [ "-t", "<action=`alacritty -e nmtui`><fn=1>\xf0ac</fn> <rx>KB/<tx>KB</action>"
+            , "-L", "1000"
+            , "-H", "5000"
+            , "-l", "#98c379"
+            , "-n", "#e5c07b"
+            , "-h", "#e06c75"
+            ] 10
+
+        -- WiFi
+        , Run Wireless "wlp8s5"
+            [ "-t", "<action=`alacritty -e nmtui`><fn=1>\xf1eb</fn> <quality>%</action>"
+            , "-L", "50"
+            , "-H", "75"
+            , "-l", "#e06c75"
+            , "-n", "#e5c07b"
+            , "-h", "#98c379"
+            ] 10
+
+        -- Docker containers
+        , Run Com "bash"
+            ["-c", "docker ps -q | wc -l | xargs -I{} echo '<fn=1>\xf308</fn> {}'"
+            ] "docker" 50
+
+        -- Fecha y hora con calendario
+        , Run Date "<action=`gsimplecal`><fn=1>\xf017</fn> %a %d %b %H:%M</action>" "date" 10
+
+        -- Volumen
+        , Run Alsa "default" "Master"
+            [ "-t", "<action=`pavucontrol`><fn=1>\xf028</fn> <volume>% <status></action>"
+            , "--"
+            , "--on", ""
+            , "--off", "<fn=1>\xf026</fn>"
+            , "--onc", "#98c379"
+            , "--offc", "#e06c75"
+            ]
+
+        -- XMonad Workspaces y Layout
+        , Run StdinReader
+
+        -- Bandeja del sistema
+        , Run Com "trayer-padding-icon" [] "trayerpad" 10
+    ]
+
+    -- Template mejorado
+    , sepChar = "%"
+    , alignSep = "}{"
+    , template = " <action=`nvidia-settings`><fc=#98c379><fn=1></fn> %gpu%</fc></action> (cable %enp10s0%) (wifi %wlp8s5%) } %StdinReader% { %cpu% %memory% <fc=#56b6c2>%docker%</fc>  %alsa:default:Master% %date% | %trayerpad%"
+
+}
