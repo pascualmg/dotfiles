@@ -1,1 +1,74 @@
-/nix/store/ywp3mq0zysrpf8kbp9ccvprs5y7yy3nf-home-manager-files/.config/alacritty/alacritty.toml
+[window]
+opacity = 0.72
+#todo hacer el pr con los temas , faltan las fotos y el readme.
+padding = { x = 2, y = 2 }
+dynamic_padding = true
+decorations = "full"
+startup_mode = "Windowed"
+title = "Alacritty"
+dynamic_title = true
+
+[scrolling]
+history = 10000
+multiplier = 3
+
+[font]
+size = 16.0
+
+[font.normal]
+family = "Monoid Nerd Font Mono"
+style = "Retina"
+
+[font.bold]
+family = "Hack Nerd Font"
+style = "Bold"
+
+[font.italic]
+family = "Hack Nerd Font"
+style = "Italic"
+
+[font.bold_italic]
+family = "Hack Nerd Font"
+style = "Bold Italic"
+
+[cursor]
+style = "Block"
+unfocused_hollow = false
+
+[keyboard]
+# Tus atajos de teclado actuales
+[[keyboard.bindings]]
+action = "Copy"
+key = "Copy"
+mods = "Control"
+
+[[keyboard.bindings]]
+action = "Paste"
+key = "Paste"
+mods = "Control"
+
+# Atajos de teclado adicionales (comentados)
+# [[keyboard.bindings]]
+# key = "V"
+# mods = "Control|Shift"
+# action = "Paste"
+
+# [[keyboard.bindings]]
+# key = "C"
+# mods = "Control|Shift"
+# action = "Copy"
+
+[mouse]
+hide_when_typing = true
+
+[selection]
+save_to_clipboard = true
+
+[general]
+live_config_reload = true
+# Configuración de Alacritty con temas Spacemacs (Dark y Light)
+
+# Importar configuraciones adicionales
+import = [
+ "~/.config/alacritty/themes/themes/spacemacs-dark.toml"
+]
