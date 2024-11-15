@@ -23,21 +23,24 @@ import XMonad.Layout.NoBorders
 
 myStartupHook :: X ()
 myStartupHook = do
-    spawnOnce "xrandr --output DP-0 --mode 5120x1440" -- Ajusta según tu configuración
+    spawnOnce "xrandr --output --output DP-0 --mode 5120x1440 --rate 120 --primary --dpi 96"
     spawnOnce "nitrogen --random --set-zoom-fill ~/.config/xmonad/wallpapers"
-    spawnOnce "picom -b"
-    spawnOnce "~/.local/share/JetBrains/Toolbox/bin/jetbrains-toolbox"
+    spawnOnce "/home/passh/.nix-profile/bin/picom -b"
+    -- spawnOnce "~/.local/share/JetBrains/Toolbox/bin/jetbrains-toolbox"
+    spawnOnce "/home/passh/.nix-profile/bin/jetbrains-toolbox"
     spawnOnce "emacs --daemon || emacsclient -e '(kill-emacs)' && emacs --daemon"
     spawnOnce "xfce4-clipman"  -- Iniciar Clipman
     spawnOnce "xscreensaver -no-splash"  -- Iniciar xscreensaver
     spawnOnce "xfce4-clipman"  -- Iniciar Clipman
     spawnOnce "trayer --edge top --align right --widthtype request --padding 6 --SetDockType true --SetPartialStrut true --expand true --monitor 0 --transparent true --alpha 0 --tint 0x282c34 --height 28"
     spawnOnce "eval $(ssh-agent) && ssh-add ~/.ssh/id_rsa"
+    
+    spawnOnce "notify-send 'configuacion de Xmonad recargada 8==D~mente'"
 
 
 -- Para añadir las aplicaciones de flatpak a dmenu
 myDmenuCommand :: String
-myDmenuCommand = "(flatpak list --app --columns=application | sed 's/^/flatpak run /' && dmenu_path) | sort -u | dmenu -i | ${SHELL:-\"/bin/sh\"} &"
+myDmenuCommand = "(flatpak list --app --columns=application | sed 's/^/flatpak run /' && find ~/.nix-profile/bin -type f -executable -printf \"%f\\n\" && dmenu_path) | sort -u | grep -v '^$' | dmenu -i | ${SHELL:-\"/bin/sh\"} &"
 
 myScratchPads = [
     NS "terminal" "alacritty --class=scratchpad" (className =? "scratchpad")
