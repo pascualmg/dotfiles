@@ -100,12 +100,7 @@ source $HOME/dotfiles/zsh/aliases.sh
 # alias zshconfig="mate ~/.zshrc"
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 
-PATH="/home/passh/perl5/bin${PATH:+:${PATH}}";export PATH;
 export PATH=$PATH:/home/passh/.config/emacs/bin:/home/passh/.local/bin
-PERL5LIB="/home/passh/perl5/lib/perl5${PERL5LIB:+:${PERL5LIB}}"; export PERL5LIB;
-PERL_LOCAL_LIB_ROOT="/home/passh/perl5${PERL_LOCAL_LIB_ROOT:+:${PERL_LOCAL_LIB_ROOT}}"; export PERL_LOCAL_LIB_ROOT;
-PERL_MB_OPT="--install_base \"/home/passh/perl5\""; export PERL_MB_OPT;
-PERL_MM_OPT="INSTALL_BASE=/home/passh/perl5"; export PERL_MM_OPT;
 eval "$(direnv hook zsh)"
 
 function c() { cd "$1" && tree -L 1; }
