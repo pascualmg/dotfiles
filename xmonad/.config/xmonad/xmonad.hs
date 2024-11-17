@@ -20,6 +20,9 @@ import XMonad.Operations
 import XMonad.Core
 import XMonad.Layout.Spacing
 import XMonad.Layout.NoBorders
+import XMonad.Layout.Grid            -- Necesario para Grid
+import XMonad.Layout.Column
+import XMonad.Actions.CopyWindow (copyToAll, killAllOtherCopies)
 
 myStartupHook :: X ()
 myStartupHook = do
@@ -62,6 +65,8 @@ myManageHook = composeAll
 
 myLayoutHook = spacingWithEdge 5 $ avoidStruts $ smartBorders $
     ThreeColMid 1 (3/100) (1/3)
+    ||| Column 1.0  -- Divide el espacio equitativamente en vertical
+    ||| Grid        -- Alternativa: división en cuadrícula
     ||| tiled
     ||| Mirror tiled
     ||| noBorders Full
@@ -70,6 +75,7 @@ myLayoutHook = spacingWithEdge 5 $ avoidStruts $ smartBorders $
     nmaster = 1      -- Número predeterminado de ventanas en el área maestra
     ratio = 1/2      -- Proporción predeterminada del área ocupada por el área maestra
     delta = 3/100    -- Porcentaje del área de la pantalla para incrementar/reducir
+
 
 main :: IO ()
 main = do
