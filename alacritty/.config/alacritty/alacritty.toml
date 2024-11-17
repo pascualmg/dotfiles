@@ -1,5 +1,10 @@
+# Configuración de Alacritty con temas Spacemacs (Dark y Light)
+import = [
+ "~/.config/alacritty/themes/themes/spacemacs-light.toml"
+]
+
 [window]
-opacity = 0.72
+opacity = 0.95
 #todo hacer el pr con los temas , faltan las fotos y el readme.
 padding = { x = 2, y = 2 }
 dynamic_padding = true
@@ -20,7 +25,7 @@ family = "Monoid Nerd Font Mono"
 style = "Retina"
 
 [font.bold]
-family = "Hack Nerd Font"
+family = "Monoid Nerd Font Mono"
 style = "Bold"
 
 [font.italic]
@@ -47,27 +52,9 @@ action = "Paste"
 key = "Paste"
 mods = "Control"
 
-# Atajos de teclado adicionales (comentados)
-# [[keyboard.bindings]]
-# key = "V"
-# mods = "Control|Shift"
-# action = "Paste"
-
-# [[keyboard.bindings]]
-# key = "C"
-# mods = "Control|Shift"
-# action = "Copy"
-
 [mouse]
 hide_when_typing = true
 
 [selection]
 save_to_clipboard = true
 
-live_config_reload = true
-# Configuración de Alacritty con temas Spacemacs (Dark y Light)
-
-# Importar configuraciones adicionales
-import = [
- "~/.config/alacritty/themes/themes/spacemacs-dark.toml"
-]
