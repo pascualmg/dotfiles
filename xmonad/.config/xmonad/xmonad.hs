@@ -27,7 +27,7 @@ import XMonad.Actions.CopyWindow (copyToAll, killAllOtherCopies)
 myStartupHook :: X ()
 myStartupHook = do
     spawnOnce "xrandr --output --output DP-0 --mode 5120x1440 --rate 120 --primary --dpi 96"
-    spawnOnce "nitrogen --random --set-zoom-fill ~/.config/xmonad/wallpapers"
+    spawnOnce "nitrogen --random --set-zoom-fill ~/wallpapers"
     spawnOnce "/home/passh/.nix-profile/bin/picom -b"
     -- spawnOnce "~/.local/share/JetBrains/Toolbox/bin/jetbrains-toolbox"
     spawnOnce "/home/passh/.nix-profile/bin/jetbrains-toolbox"
@@ -130,7 +130,7 @@ main = do
         -- Alt-Tab
         , ("M1-<Tab>", spawn "alttab -w 1 -d 0")
         -- Cambiar wallpaper
-        , ("M-S-w", spawn "nitrogen --random --set-zoom-fill ~/.config/xmonad/wallpapers")
+        , ("M-S-w", spawn "nitrogen --random --set-zoom-fill ~/wallpapers")
         -- Controles de espaciado
         , ("M-S-plus", incScreenWindowSpacing 2)   -- Incrementa el espacio
         , ("M-S-minus", decScreenWindowSpacing 2)  -- Reduce el espacio
