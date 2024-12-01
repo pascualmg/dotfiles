@@ -12,6 +12,8 @@ import System.IO (hPutStrLn)
 import XMonad.Hooks.EwmhDesktops (ewmh, ewmhFullscreen)
 import XMonad.Actions.GridSelect
 import XMonad.Layout.ThreeColumns
+import XMonad.Layout.ResizableTile
+import XMonad.Layout.MultiColumns
 import XMonad.Hooks.ManageHelpers
 import Data.Monoid
 import qualified Data.Map as M
@@ -52,7 +54,9 @@ myManageHook = composeAll
 
 -- Configuración del layout
 myLayoutHook = spacingWithEdge 5 $ avoidStruts $ smartBorders $
-    ThreeColMid 1 (3/100) (1/3)
+    ThreeColMid 1 (3/100) (2/3)
+    ||| ResizableTall 1 (3/100) (1/2) []  -- Para divisiones flexibles
+    ||| multiCol [1] 1 0.01 (-0.5)  -- Ajusta el último número para el ancho relativo
     ||| Column 1.0
     ||| Grid
     ||| tiled
