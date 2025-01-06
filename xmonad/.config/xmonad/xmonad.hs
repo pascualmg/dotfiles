@@ -77,7 +77,7 @@ myStartupHook = do
     spawnOnce "/home/passh/.nix-profile/bin/jetbrains-toolbox"
     spawnOnce "emacs --daemon || emacsclient -e '(kill-emacs)' && emacs --daemon"
     spawnOnce "xfce4-clipman"
-    spawnOnce "xscreensaver -no-splash"
+    --spawnOnce "xscreensaver -no-splash"
     spawnOnce "trayer --edge top --align right --widthtype request --padding 6 --SetDockType true --SetPartialStrut true --expand true --monitor 0 --transparent true --alpha 0 --tint 0x282c34 --height 28"
     spawnOnce "eval $(ssh-agent) && ssh-add ~/.ssh/id_rsa"
     spawnOnce "systemctl --user restart pipewire pipewire-pulse"

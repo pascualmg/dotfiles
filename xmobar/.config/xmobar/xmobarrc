@@ -83,6 +83,8 @@ Config {
             , "--onc", "#98c379"
             , "--offc", "#e06c75"
             ]
+        , Run Com "/home/passh/dotfiles/scripts/hdmon.sh" [] "nvme" 60
+
 
         -- XMonad Workspaces y Layout
         , Run StdinReader
@@ -94,6 +96,6 @@ Config {
     -- Template mejorado
     , sepChar = "%"
     , alignSep = "}{"
-    , template = " <action=`nvidia-settings`><fc=#98c379><fn=1></fn> %gpu%</fc></action> (cable %enp10s0%) (wifi %wlp8s5%) } %StdinReader% { %cpu% %memory% <fc=#56b6c2>%docker%</fc>  %alsa:default:Master% %date% | %trayerpad%"
+    , template = " <action=`nvidia-settings`><fc=#98c379><fn=1></fn> %gpu%</fc></action> (cable %enp10s0%) %nvme%  (wifi %wlp8s5%) } %StdinReader% { %cpu% %memory% <fc=#56b6c2>%docker%</fc>  %alsa:default:Master% %date% | %trayerpad%"
 
 }
