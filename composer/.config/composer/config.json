@@ -1,0 +1,18 @@
+{
+  "repositories": [
+    {
+      "type": "composer",
+      "url": "https://toran.srv.vocento.in/repo/private/",
+      "options": {
+        "ssl": {
+          "verify_peer": false,
+          "verify_peer_name": false
+        }
+      }
+    }
+  ],
+  "config": {
+    "secure-http": false,
+    "sort-packages": true
+  }
+}
