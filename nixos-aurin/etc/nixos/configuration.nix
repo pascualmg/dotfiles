@@ -156,8 +156,8 @@
     useDHCP = false;
 
     # DNS configuración - SOLO LA VM COMO VESPINO
-    nameservers = [ "192.168.53.12" ];
-    search = [ "grupo.vocento" ];
+   # nameservers = [ "8.8.8.8" "192.168.53.12" ];
+   # search = [ "grupo.vocento" ];
 
     hosts = { "185.14.56.20" = [ "pascualmg" ]; };
     extraHosts = if builtins.pathExists "/home/passh/src/vocento/autoenv/hosts_all.txt" 
@@ -241,7 +241,7 @@
     # NetworkManager configuración - COMO VESPINO
     networkmanager = {
       enable = true;
-      dns = "default";
+      dns = "none";
       unmanaged = [
         "interface-name:enp7s0"                # Interface real de Aurin
         "interface-name:enp8s0"                # Segunda interface Aurin
@@ -289,6 +289,7 @@
     # FORZAR resolv.conf EXACTO COMO VESPINO
     "resolv.conf" = {
       text = ''
+        nameserver 8.8.8.8 
         nameserver 192.168.53.12
         search grupo.vocento
       '';
