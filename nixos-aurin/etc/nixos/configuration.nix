@@ -262,7 +262,7 @@
 
     firewall = {
       enable = true;
-      allowedTCPPorts = [ 53 80 443 22 8385 22000 8096 5900 5901 8000 8081 8080 3000 ];
+      allowedTCPPorts = [ 53 80 443 22 8385 22000 8096 5900 5901 8000 8081 8080 3000 5990 5991 5992 5993  ];
       allowedUDPPorts = [ 53 22000 21027 ];
       checkReversePath = false;
     };

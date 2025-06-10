@@ -1,0 +1,234 @@
+#+TITLE: Stow HowTo - Guía Práctica
+#+AUTHOR: puto amo
+#+DATE: 2025-06-11
+
+* TL;DR - Lo Mínimo para Trabajar
+
+** Estructura básica de dotfiles
+#+BEGIN_EXAMPLE
+~/dotfiles/
+├── nvim/
+│   └── .config/nvim/init.lua
+├── zsh/
+│   └── .zshrc
+└── nixos-aurin/
+    └── etc/nixos/configuration.nix
+#+END_EXAMPLE
+
+** Comandos esenciales
+#+BEGIN_SRC bash
+cd ~/dotfiles
+
+# Crear enlaces (primera vez)
+stow nvim
+stow zsh
+
+# Para NixOS (necesita root)
+sudo stow -t / nixos-aurin
+
+# Quitar enlaces
+stow -D nvim
+
+# Recrear enlaces (cuando cambias cosas)
+stow -R nvim
+#+END_SRC
+
+* Comandos Útiles
+
+** Básicos
+#+BEGIN_SRC bash
+# Crear enlaces simbólicos
+stow PAQUETE
+
+# Quitar enlaces
+stow -D PAQUETE
+
+# Recrear enlaces (delete + create)
+stow -R PAQUETE
+
+# Ver qué va a hacer sin ejecutar
+stow -n PAQUETE
+#+END_SRC
+
+** Con Flags Útiles
+#+BEGIN_SRC bash
+# Verbose - ver qué hace
+stow -v PAQUETE
+
+# Target específico - para rutas como /etc
+sudo stow -v -t / nixos-aurin
+
+# Recrear con verbose (el más usado)
+stow -v -R PAQUETE
+
+# Simular + verbose (debug)
+stow -v -n PAQUETE
+#+END_SRC
+
+** Workflows Comunes
+
+*** Añadir nueva configuración:
+#+BEGIN_SRC bash
+# 1. Mover archivo existente a dotfiles
+mv ~/.zshrc ~/dotfiles/zsh/
+
+# 2. Crear enlace
+cd ~/dotfiles
+stow zsh
+#+END_SRC
+
+*** Actualizar configuración existente:
+#+BEGIN_SRC bash
+# Editar archivo en dotfiles
+vim ~/dotfiles/nvim/.config/nvim/init.lua
+
+# Recrear enlaces (por si acaso)
+stow -R nvim
+#+END_SRC
+
+*** Para configuraciones del sistema (como NixOS):
+#+BEGIN_SRC bash
+# Siempre con sudo y target /
+sudo stow -v -R -t / nixos-aurin
+
+# Verificar enlaces
+ls -la /etc/nixos/
+#+END_SRC
+
+* Flags Explicadas
+
+| Flag    | Significado | Uso                        |
+|---------+-------------+----------------------------|
+| =-v=    | Verbose     | Ver qué hace stow          |
+| =-R=    | Restow      | Quitar y recrear enlaces   |
+| =-D=    | Delete      | Solo quitar enlaces        |
+| =-t DIR= | Target      | Directorio donde crear enlaces |
+| =-n=    | No execute  | Simular sin ejecutar       |
+
+* Estructura Recomendada
+
+#+BEGIN_EXAMPLE
+~/dotfiles/
+├── zsh/
+│   ├── .zshrc
+│   └── .zsh/
+│       └── aliases.zsh
+├── nvim/
+│   └── .config/
+│       └── nvim/
+│           ├── init.lua
+│           └── lua/
+├── git/
+│   ├── .gitconfig
+│   └── .gitignore_global
+├── nixos-aurin/
+│   └── etc/
+│       └── nixos/
+│           ├── configuration.nix
+│           └── hardware-configuration.nix
+└── README.org
+#+END_EXAMPLE
+
+* Casos Especiales
+
+** NixOS
+#+BEGIN_SRC bash
+# NixOS necesita root y target /
+sudo stow -v -R -t / nixos-aurin
+
+# Después rebuild
+sudo nixos-rebuild switch
+#+END_SRC
+
+** Conflictos de Archivos
+#+BEGIN_SRC bash
+# Si hay conflictos, stow te avisará
+# Solución: quitar archivo manual y volver a stow
+rm ~/.zshrc
+stow zsh
+#+END_SRC
+
+** Múltiples Máquinas
+#+BEGIN_EXAMPLE
+~/dotfiles/
+├── common/           # Configs compartidas
+├── nixos-aurin/     # Específicas de aurin
+├── macos-laptop/    # Específicas del Mac
+└── README.org
+#+END_EXAMPLE
+
+#+BEGIN_SRC bash
+# Uso
+stow common
+stow nixos-aurin     # Solo en aurin
+#+END_SRC
+
+* Troubleshooting
+
+** "Conflicts with existing target"
+#+BEGIN_SRC bash
+# Ver qué conflicta
+stow -v -n PAQUETE
+
+# Quitar archivo manual
+rm ARCHIVO_CONFLICTIVO
+
+# Volver a stow
+stow PAQUETE
+#+END_SRC
+
+** "Permission denied"
+#+BEGIN_SRC bash
+# Para archivos del sistema
+sudo stow -t / PAQUETE
+
+# Para archivos de usuario (nunca uses sudo)
+stow PAQUETE
+#+END_SRC
+
+** Ver enlaces existentes
+#+BEGIN_SRC bash
+# Ver todos los symlinks en home
+find ~ -maxdepth 2 -type l -ls
+
+# Ver específico
+ls -la ~/.zshrc
+#+END_SRC
+
+* Pro Tips
+
+- *Nunca uses =sudo stow=* para archivos de usuario (home)
+- *Siempre usa =sudo stow -t /=* para archivos del sistema
+- *Usa =-R=* cuando dudes, es más seguro
+- *Usa =-v=* siempre para ver qué hace
+- *Usa =-n=* para testing antes de ejecutar
+- *Estructura por función*, no por aplicación
+- *Git tu dotfiles* para backup/sync
+
+* Git Workflow
+
+#+BEGIN_SRC bash
+cd ~/dotfiles
+
+# Después de cambios
+git add .
+git commit -m "Update nvim config"
+git push
+
+# En otra máquina
+git pull
+stow -R nvim  # Recrear enlaces
+#+END_SRC
+
+* Comandos Más Usados
+
+#+BEGIN_SRC bash
+# El combo más usado día a día
+stow -v -R PAQUETE
+
+# Para NixOS
+sudo stow -v -R -t / nixos-aurin
+
+# Para testear
+stow -v -n PAQUETE
+#+END_SRC
