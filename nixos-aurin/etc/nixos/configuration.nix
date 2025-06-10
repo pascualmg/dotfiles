@@ -287,6 +287,13 @@
       '';
     };
     # FORZAR resolv.conf EXACTO COMO VESPINO
+    # OJO que este sobreescribe los de arriba . 
+    # DNS FORZADO: NetworkManager + resolvconf + resolved DESHABILITADOS por conflictos con VPN/bridge
+    # networking.nameservers no funciona porque resolvconf.enable = false
+    # Para cambiar DNS: editar aquí abajo o habilitar resolvconf + usar nameservers
+    # Alternativa: networkmanager.dns = "systemd-resolved" + services.resolved.enable = true
+    # Current: 8.8.8.8 (Google) + 192.168.53.12 (VM VPN Vocento)
+    text = ''
     "resolv.conf" = {
       text = ''
         nameserver 8.8.8.8 
