@@ -92,13 +92,13 @@
       # NVIDIA (NO TOCAR - FUNCIONABA)
       "nvidia" "nvidia_modeset" "nvidia_uvm" "nvidia_drm"
     ];
-    
+
     # Módulos de virtualización
     kernelModules = [
       "kvm-amd"
       "kvm-intel"
       "vfio"
-      "vfio_iommu_type1" 
+      "vfio_iommu_type1"
       "vfio_pci"
     ];
     blacklistedKernelModules = [ "nouveau" "ast" ];
@@ -160,10 +160,10 @@
    # search = [ "grupo.vocento" ];
 
     hosts = { "185.14.56.20" = [ "pascualmg" ]; };
-    extraHosts = if builtins.pathExists "/home/passh/src/vocento/autoenv/hosts_all.txt" 
+    extraHosts = if builtins.pathExists "/home/passh/src/vocento/autoenv/hosts_all.txt"
       then builtins.readFile "/home/passh/src/vocento/autoenv/hosts_all.txt"
       else "";
-    
+
     # Deshabilitar resolv.conf automático (como Vespino)
     resolvconf.enable = false;
 
@@ -178,7 +178,7 @@
       };
 
       # enp8s0 disponible para bridge futuro
-      
+
       br0 = {
         useDHCP = false;
         ipv4 = {
@@ -268,41 +268,40 @@
     };
   };
 
-  # ===== CONFIGURACIÓN ETC (SOLO FORZAR RESOLV.CONF) =====
-  environment.etc = {
-    hosts.mode = "0644";
-    "nsswitch.conf" = {
-      enable = true;
-      text = ''
-        passwd:    files systemd
-        group:     files [success=merge] systemd
-        shadow:    files
-        sudoers:   files
-        hosts:     files mymachines myhostname dns
-        networks:  files
-        ethers:    files
-        services:  files
-        protocols: files
-        rpc:       files
-      '';
-    };
-    # FORZAR resolv.conf EXACTO COMO VESPINO
-    # OJO que este sobreescribe los de arriba . 
-    # DNS FORZADO: NetworkManager + resolvconf + resolved DESHABILITADOS por conflictos con VPN/bridge
-    # networking.nameservers no funciona porque resolvconf.enable = false
-    # Para cambiar DNS: editar aquí abajo o habilitar resolvconf + usar nameservers
-    # Alternativa: networkmanager.dns = "systemd-resolved" + services.resolved.enable = true
-    # Current: 8.8.8.8 (Google) + 192.168.53.12 (VM VPN Vocento)
+ # FORZAR resolv.conf EXACTO COMO VESPINO
+ # OJO que este sobreescribe los de arriba .
+ # DNS FORZADO: NetworkManager + resolvconf + resolved DESHABILITADOS por conflictos con VPN/bridge
+ # networking.nameservers no funciona porque resolvconf.enable = false
+ # Para cambiar DNS: editar aquí abajo o habilitar resolvconf + usar nameservers
+ # Alternativa: networkmanager.dns = "systemd-resolved" + services.resolved.enable = true
+ # Current: 8.8.8.8 (Google) + 192.168.53.12 (VM VPN Vocento)
+ #tiene que ir antes la vm
+ environment.etc = {
+  hosts.mode = "0644";
+  "nsswitch.conf" = {
+    enable = true;
     text = ''
-    "resolv.conf" = {
-      text = ''
-        nameserver 8.8.8.8 
-        nameserver 192.168.53.12
-        search grupo.vocento
-      '';
-      mode = "0644";
-    };
+      passwd:    files systemd
+      group:     files [success=merge] systemd
+      shadow:    files
+      sudoers:   files
+      hosts:     files mymachines myhostname dns
+      networks:  files
+      ethers:    files
+      services:  files
+      protocols: files
+      rpc:       files
+    '';
   };
+  "resolv.conf" = {
+    text = ''
+      nameserver 192.168.53.12
+      nameserver 8.8.8.8
+      search grupo.vocento
+    '';
+    mode = "0644";
+  };
+};
 
   time.timeZone = "Europe/Madrid";
   i18n = {
@@ -397,7 +396,7 @@
         PasswordAuthentication = true;
       };
     };
-    
+
     # 🦙 OLLAMA BESTIAL - RTX 5080 16GB + 70GB RAM + 72 THREADS
     ollama = {
       enable = true;
@@ -408,31 +407,31 @@
         CUDA_LAUNCH_BLOCKING = "0";
         CUDA_CACHE_DISABLE = "0";
         CUDA_AUTO_BOOST = "1";
-        
+
         # ===== CONFIGURACIÓN BESTIAL =====
         OLLAMA_GPU_LAYERS = "70";              # MÁXIMO layers en GPU
         OLLAMA_CUDA_MEMORY = "15800MiB";       # CASI TODA la VRAM (15.8GB)
         OLLAMA_HOST_MEMORY = "70000MiB";       # 70GB RAM para resto del modelo
-        
+
         # Batch y contexto ENORMES para aprovechar TODO
         OLLAMA_BATCH_SIZE = "128";             # BATCH ENORME
         OLLAMA_CONTEXT_SIZE = "32768";         # CONTEXTO MÁXIMO
         OLLAMA_PREDICT = "8192";               # PREDICCIÓN LARGA
-        
+
         # ===== OPTIMIZACIONES RTX 5080 EXTREMAS =====
         NVIDIA_TF32_OVERRIDE = "1";            # TF32 activado
         CUBLAS_WORKSPACE_CONFIG = ":8192:16";  # Workspace MASIVO
         CUDA_DEVICE_ORDER = "PCI_BUS_ID";
-        
+
         # Aprovechar TODA la VRAM disponible
         OLLAMA_GPU_MEMORY_FRACTION = "0.98";   # 98% VRAM
         OLLAMA_TENSOR_PARALLEL = "1";
         OLLAMA_FLASH_ATTENTION = "1";
-        
+
         # Cache y optimizaciones GPU agresivas
         CUDA_CACHE_MAXSIZE = "2147483648";     # Cache 2GB
         NVIDIA_DRIVER_CAPABILITIES = "compute,utility";
-        
+
         # ===== DUAL XEON E5-2699v3 MÁXIMA POTENCIA =====
         OMP_NUM_THREADS = "72";                # TODOS los 72 threads
         MKL_NUM_THREADS = "72";                # Intel MKL completo
@@ -440,26 +439,26 @@
         OMP_PLACES = "cores";                  # Por cores físicos
         OMP_PROC_BIND = "spread";              # SPREAD para ambos Xeon
         OMP_SCHEDULE = "dynamic,4";            # Scheduling dinámico optimizado
-        
+
         # ===== OPTIMIZACIONES NUMA DUAL SOCKET =====
         OMP_THREAD_LIMIT = "72";
         NUMA_BALANCING = "1";
         MKL_ENABLE_INSTRUCTIONS = "AVX2";      # AVX2 para Haswell-EP
         MKL_DOMAIN_NUM_THREADS = "36,36";      # 36 threads por NUMA domain
-        
+
         # ===== GESTIÓN MEMORIA HÍBRIDA INTELIGENTE =====
         MALLOC_TRIM_THRESHOLD = "131072";      # Gestión memoria balanceada
         MALLOC_MMAP_THRESHOLD = "131072";
-        
+
         # Configuración para modelo gigante híbrido
         OLLAMA_KEEP_ALIVE = "24h";             # Mantener cargado TODO el día
         OLLAMA_MAX_LOADED_MODELS = "1";        # Solo Deepseek 70B
         OLLAMA_PRELOAD = "true";               # Pre-cargar automáticamente
-        
+
         # ===== COMUNICACIÓN GPU<->CPU OPTIMIZADA =====
         CUDA_HOST_MEMORY_BUFFER_SIZE = "2048"; # Buffer GRANDE para transferencias
         OLLAMA_GPU_CPU_SYNC = "1";             # Sincronización optimizada
-        
+
         # Optimizaciones híbridas avanzadas
         OLLAMA_PARALLEL_DECODE = "1";          # Decodificación paralela
         OLLAMA_MEMORY_POOL = "1";              # Pool de memoria eficiente
@@ -484,7 +483,7 @@
 
     # ===== SERVICIOS MONITOREO (AÑADIDO) =====
     # Nota: lm_sensors se configura automáticamente en NixOS 25.05
-    
+
     # Servicios de hardware monitoring
     smartd = {
       enable = true;
@@ -549,7 +548,7 @@
     stress                                     # Stress testing básico
     lm_sensors                                 # Sensores temperatura
     mission-center                             # GUI para sensores (reemplazo de psensor)
-    
+
     # Monitoreo avanzado
     iotop                                      # Monitoreo I/O
     iftop                                      # Monitoreo red
@@ -557,37 +556,37 @@
     s-tui                                      # Terminal UI para stress+temp
     hwinfo                                     # Info detallada hardware
     inxi                                       # System info
-    
+
     # NUMA tools
     numactl                                    # Control NUMA (incluye libnuma)
-    
+
     # Performance tools
     perf-tools                                 # Herramientas rendimiento kernel
     sysstat                                    # Estadísticas sistema (sar, iostat)
     dool                                       # Monitor recursos sistema (reemplazo de dstat)
-    
+
     # Benchmarking
     sysbench                                   # Benchmark sistema
     unixbench                                  # Unix benchmark suite
-    
+
     # Frequency scaling
     cpufrequtils                               # Control frecuencia CPU
     cpupower-gui                               # GUI control CPU
-    
+
     # Process management
     schedtool                                  # Scheduler tuning
     util-linux                                # Incluye taskset para CPU affinity
-    
+
     # ===== VIRTUALIZACIÓN COMPLETA (IGUAL QUE VESPINO) =====
     virt-manager virt-viewer qemu OVMF spice-gtk spice-protocol
     win-virtio swtpm bridge-utils dnsmasq iptables
-    
+
     # Temperature monitoring scripts
     (writeShellScriptBin "temp-monitor" ''
       #!/bin/bash
       watch -n 1 'sensors | grep -E "(Core|Package|temp)" | sort'
     '')
-    
+
     # Stress test script optimizado para dual Xeon
     (writeShellScriptBin "xeon-stress" ''
       #!/bin/bash
@@ -604,7 +603,7 @@
       echo "Ejecutando test básico de 60 segundos..."
       stress-ng --cpu 72 --timeout 60s --metrics-brief
     '')
-    
+
     # NUMA info script
     (writeShellScriptBin "numa-info" ''
       #!/bin/bash
@@ -617,7 +616,7 @@
       echo "=== ESTADÍSTICAS NUMA ==="
       numastat
     '')
-    
+
     # Aurin system info script
     (writeShellScriptBin "aurin-info" ''
       #!/bin/bash
