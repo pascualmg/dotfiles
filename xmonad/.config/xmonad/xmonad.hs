@@ -134,7 +134,7 @@ main = do
         , ("M-s", goToSelected def)
         , ("M1-<Tab>", spawn "alttab -w 1 -d 0")
         , ("M-S-w", spawn "nitrogen --random --set-zoom-fill ~/wallpapers")
-        , ("M-S-m", spawn " xwinwrap -ov -fs -- /nix/store/20pbjk24y1y5i9ipcpjr8mwhrq80dy70-xscreensaver-6.09/libexec/xscreensaver/glmatrix -window-id WID --speed 1 --density 50 --mode matrix --fog --texture --delay 10000 &")
+        , ("M-S-m", spawn " xwinwrap -ov -fs -- /nix/store/c2ln28b9rrjna70nrlj9b0ydrf92xhdc-xscreensaver-6.10.1/libexec/xscreensaver/glmatrix  -window-id WID --speed 1 --density 50 --mode matrix --fog --texture --delay 10000 &")
         -- Spacing controls
         , ("M-S-plus", incScreenWindowSpacing 2)
         , ("M-S-minus", decScreenWindowSpacing 2)
