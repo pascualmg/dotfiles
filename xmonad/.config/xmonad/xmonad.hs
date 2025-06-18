@@ -71,7 +71,7 @@ myLayoutHook = spacingWithEdge 5 $ avoidStruts $ smartBorders $
 -- Hook de inicio
 myStartupHook :: X ()
 myStartupHook = do
-    spawnOnce "xrandr --output DP-0 --mode 5120x1440 --rate 120 --primary --dpi 96"
+    spawnOnce "xrandr --output DP-4 --mode 5120x1440 --rate 120 --primary --dpi 96"
     spawnOnce "nitrogen --random --set-zoom-fill ~/wallpapers"
     spawnOnce "/home/passh/.nix-profile/bin/picom -b"
     spawnOnce "/home/passh/.nix-profile/bin/jetbrains-toolbox"
