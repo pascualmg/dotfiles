@@ -208,6 +208,8 @@ in {
         open-webui
         #unstable.ollama
         duckstation # para el xenogear , sin eso no se puede programar
+
+	nodejs_24
       ] ++ (with pkgs.python3Packages; [
         # Python packages 🐍
         pip
