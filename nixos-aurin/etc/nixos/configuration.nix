@@ -42,8 +42,33 @@
     # ===== SENSORES TEMPERATURA (SIMPLIFICADO PARA 25.05) =====
     # Nota: Los sensores se detectan automáticamente en NixOS 25.05
   };
+console = {
+  earlySetup = true;
+  
+  # FUENTES (descomenta una):
+   font = "ter-p20n";                    # ACTIVA: Terminus unicode ✅
+  # font = "ter-116n";                    # ACTIVA: Terminus unicode ✅
+  # font = "ter-120n";                  # Terminus grande con unicode ✅  
+  # font = "lat9u-16";                  # VGA con unicode ✅
+  # font = "lat9w-16";                  # Clásica VGA (sin unicode ❌)
+  # font = "Lat2-Terminus16";           # Híbrida con unicode ✅
+  # font = "iso01.16";                  # ISO básica (limitada ❌)
+  # font = "ter-112n";                  # Terminus pequeña unicode ✅
+  # font = "ter-132n";                  # Terminus gigante unicode ✅
+  # font = "cp850-8x16";                # CP850 (sin unicode ❌)
+  # font = "eurlatgr";                  # European latin ✅
+  # font = "latarcyrheb-sun16";         # Multi-idioma unicode ✅
+  
+  packages = [ 
+    pkgs.terminus_font        # Para ter-* (mejor unicode)
+    pkgs.kbd                  # Para lat*, iso*, cp*
+    pkgs.powerline-fonts      # Caracteres powerline limitados
+  ];
+  
+  keyMap = "us";
+  useXkbConfig = false;  # Usar keyMap simple para consola
+};  # ===== VARIABLES RTX 5080 =====
 
-  # ===== VARIABLES RTX 5080 =====
   environment.sessionVariables = {
     LIBVA_DRIVER_NAME = "nvidia";
     __GLX_VENDOR_LIBRARY_NAME = "nvidia";
@@ -283,8 +308,9 @@
         5991
         5992
         5993
+	631
       ];
-      allowedUDPPorts = [ 53 22000 21027 ];
+      allowedUDPPorts = [ 53 22000 21027 5353];
       checkReversePath = false;
     };
   };
@@ -355,6 +381,21 @@
 
   # ===== XORG + XMONAD (IGUAL QUE TENÍAS) =====
   services = {
+
+
+
+  printing = {
+    enable = true;
+    drivers = [ pkgs.hplip ];
+  };
+
+  # Autodescubrimiento WiFi (ESENCIAL para M148dw)
+  avahi = {
+    enable = true;
+    nssmdns4 = true;
+    openFirewall = true;
+  };
+
     xserver = {
       enable = true;
       videoDrivers = [ "nvidia" ]; # Solo NVIDIA RTX 5080
@@ -549,6 +590,7 @@
     nitrogen
     picom
     alacritty
+    gnome-terminal
     xscreensaver
 
     # X tools
@@ -622,6 +664,9 @@
     bridge-utils
     dnsmasq
     iptables
+
+    #lsp para nix 
+    nixd
 
     # Temperature monitoring scripts
     (writeShellScriptBin "temp-monitor" ''
@@ -709,7 +754,10 @@
   };
 
   # ===== PROGRAMAS =====
-  programs = { fish.enable = true; };
+  programs = { 
+   fish.enable = true; 
+   steam.enable = true;
+  };
 
   fileSystems."/mnt/vespino-storage" = {
     device = "192.168.2.125:/storage";

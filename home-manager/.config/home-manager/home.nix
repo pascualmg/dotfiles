@@ -94,7 +94,7 @@ in {
 
         # Emacs y dependencias
         unstable.emacs
-       # nodejs_19  para el copilot del doom .. entre otras cosas xD
+        # nodejs_19  para el copilot del doom .. entre otras cosas xD
         tree-sitter
         cmake
         gnumake
@@ -181,7 +181,9 @@ in {
         #grabaciones/reproducciones
         unstable.simplescreenrecorder
         unstable.vlc
-        unstable.obs-studio
+        unstable.mpv
+        (unstable.obs-studio.override { cudaSupport = true; })
+        unstable.ffmpeg-full
 
         #musiqueta algunas veces
         spotify
@@ -209,7 +211,7 @@ in {
         #unstable.ollama
         duckstation # para el xenogear , sin eso no se puede programar
 
-	nodejs_24
+        nodejs_24
       ] ++ (with pkgs.python3Packages; [
         # Python packages 🐍
         pip
@@ -312,23 +314,24 @@ in {
         };
       };
     };
-  #  picom = {
-  #    enable = true;
-  #    extraArgs = [ "--config" "${config.home.homeDirectory}/.config/picom/picom.conf" ];
-  #  };
+    #  picom = {
+    #    enable = true;
+    #    extraArgs = [ "--config" "${config.home.homeDirectory}/.config/picom/picom.conf" ];
+    #  };
   };
- systemd.user.services.picom = {
-  Unit = {
-    Description = "Picom compositor";
-    After = [ "graphical-session-pre.target" ];
-    PartOf = [ "graphical-session.target" ];
+  systemd.user.services.picom = {
+    Unit = {
+      Description = "Picom compositor";
+      After = [ "graphical-session-pre.target" ];
+      PartOf = [ "graphical-session.target" ];
+    };
+    Service = {
+      ExecStart =
+        "${pkgs.picom}/bin/picom --config ${config.home.homeDirectory}/.config/picom/picom.conf";
+      Restart = "on-failure";
+    };
+    Install.WantedBy = [ "graphical-session.target" ];
   };
-  Service = {
-    ExecStart = "${pkgs.picom}/bin/picom --config ${config.home.homeDirectory}/.config/picom/picom.conf";
-    Restart = "on-failure";
-  };
-  Install.WantedBy = [ "graphical-session.target" ];
-}; 
   #XDG dirs
   xdg = {
     enable = true;
