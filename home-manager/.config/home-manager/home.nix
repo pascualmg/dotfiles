@@ -95,6 +95,10 @@ in {
         # Emacs y dependencias
         unstable.emacs
         # nodejs_19  para el copilot del doom .. entre otras cosas xD
+        nodejs_24
+        unstable.claude-code
+        tdlib # para que funcione el telega ( telegram de emcas doom !   )
+
         tree-sitter
         cmake
         gnumake
@@ -211,7 +215,6 @@ in {
         #unstable.ollama
         duckstation # para el xenogear , sin eso no se puede programar
 
-        nodejs_24
       ] ++ (with pkgs.python3Packages; [
         # Python packages 🐍
         pip

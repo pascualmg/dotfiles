@@ -1,6 +1,6 @@
-# NixOS Aurin - Dual Xeon + RTX 5080 + Home Manager + Stress Testing Optimizado
+# NixOS Aurin - Dual Xeon + RTX 5080 + Home Manager + Stress Testing + SUNSHINE STREAMING
 
-# Configuración OPTIMIZADA para dual Xeon E5-2699v3 (72 threads total)
+# Configuración OPTIMIZADA para dual Xeon E5-2699v3 (72 threads total) + RTX 5080 streaming
 { config, pkgs, ... }: {
 
   imports = [
@@ -30,8 +30,7 @@
     # RTX 5080 - CONFIGURACIÓN ESPECÍFICA
     nvidia = {
       open = true; # CRÍTICO: RTX 5080 requiere drivers abiertos
-      package =
-        config.boot.kernelPackages.nvidiaPackages.beta; # Beta para RTX 5080
+      package = config.boot.kernelPackages.nvidiaPackages.beta; # Beta para RTX 5080
       modesetting.enable = true;
       nvidiaSettings = true;
       forceFullCompositionPipeline = true;
@@ -42,6 +41,7 @@
     # ===== SENSORES TEMPERATURA (SIMPLIFICADO PARA 25.05) =====
     # Nota: Los sensores se detectan automáticamente en NixOS 25.05
   };
+
 console = {
   earlySetup = true;
   
@@ -67,15 +67,28 @@ console = {
   
   keyMap = "us";
   useXkbConfig = false;  # Usar keyMap simple para consola
-};  # ===== VARIABLES RTX 5080 =====
+};  
 
+  # ===== VARIABLES RTX 5080 + SUNSHINE =====
   environment.sessionVariables = {
+    # NVIDIA RTX 5080
     LIBVA_DRIVER_NAME = "nvidia";
     __GLX_VENDOR_LIBRARY_NAME = "nvidia";
     __GL_SYNC_TO_VBLANK = "1";
     __GL_GSYNC_ALLOWED = "1";
     __GL_VRR_ALLOWED = "1";
     __GL_THREADED_OPTIMIZATIONS = "1";
+
+    # ===== SUNSHINE STREAMING OPTIMIZATIONS =====
+    # Configuración para NVENC en RTX 5080
+    CUDA_VISIBLE_DEVICES = "0";
+    NVIDIA_DRIVER_CAPABILITIES = "all";
+    __GL_SHOW_GRAPHICS_OSD = "0";  # Desactivar OSD en streaming
+    
+    # Variables para Wayland/X11 compatibility en streaming
+    XDG_SESSION_TYPE = "x11";  # Forzar X11 para mejor compatibilidad
+    GDK_BACKEND = "x11";       # GTK en X11 para streaming
+    QT_QPA_PLATFORM = "xcb";   # Qt en X11 para streaming
 
     # ===== VARIABLES OPTIMIZACIÓN DUAL XEON (AÑADIDO) =====
     OMP_NUM_THREADS = "72"; # Usar todos los threads
@@ -124,15 +137,21 @@ console = {
       "nvidia_drm"
     ];
 
-    # Módulos de virtualización
-    kernelModules =
-      [ "kvm-amd" "kvm-intel" "vfio" "vfio_iommu_type1" "vfio_pci" ];
+    # Módulos de virtualización + input para streaming
+    kernelModules = [ 
+      "kvm-amd" 
+      "kvm-intel" 
+      "vfio" 
+      "vfio_iommu_type1" 
+      "vfio_pci" 
+      "uinput"  # AÑADIDO: Para Sunshine input capture
+    ];
     blacklistedKernelModules = [ "nouveau" "ast" ];
 
     # ===== FILESYSTEMS ADICIONALES (AÑADIDO) =====
     supportedFilesystems = [ "ntfs" ];
 
-    # ===== OPTIMIZACIONES DUAL XEON MEJORADAS =====
+    # ===== OPTIMIZACIONES DUAL XEON MEJORADAS + STREAMING =====
     kernel.sysctl = {
       # Memoria (128GB RAM)
       "vm.swappiness" = 1;
@@ -144,7 +163,7 @@ console = {
 
       # File system
       "fs.inotify.max_user_watches" = 524288;
-      "vm.max_map_count" = 1048576; # Para RTX 5080
+      "vm.max_map_count" = 2147483647; # AUMENTADO: Para RTX 5080 + Sunshine
 
       # ===== NUMA DUAL XEON OPTIMIZADO (AÑADIDO) =====
       "kernel.numa_balancing" = 1; # NUMA balancing
@@ -157,11 +176,17 @@ console = {
       "kernel.sched_autogroup_enabled" = 0; # Mejor para stress testing
       "kernel.sched_tunable_scaling" = 0; # Scaling fijo
 
-      # Network optimizations
-      "net.core.rmem_max" = 134217728;
-      "net.core.wmem_max" = 134217728;
+      # ===== NETWORK OPTIMIZATIONS MEJORADAS PARA STREAMING =====
+      "net.core.rmem_default" = 262144;
+      "net.core.rmem_max" = 134217728;     # AÑADIDO: Para Sunshine streaming
+      "net.core.wmem_default" = 262144; 
+      "net.core.wmem_max" = 134217728;     # AÑADIDO: Para Sunshine streaming
+      "net.core.netdev_max_backlog" = 30000; # AÑADIDO: Para high throughput
       "net.ipv4.tcp_rmem" = "4096 12582912 134217728";
       "net.ipv4.tcp_wmem" = "4096 12582912 134217728";
+      "net.ipv4.tcp_congestion_control" = "bbr"; # AÑADIDO: Para mejor latencia
+      "net.ipv4.tcp_low_latency" = 1;      # AÑADIDO: Para streaming
+      "net.ipv4.tcp_no_delay" = 1;         # AÑADIDO: Para streaming
 
       # ===== OPTIMIZACIONES STRESS TESTING (AÑADIDO) =====
       "vm.overcommit_memory" = 1; # Permite overcommit para stress
@@ -308,9 +333,30 @@ console = {
         5991
         5992
         5993
-	631
+        631
+        # ===== SUNSHINE PORTS AÑADIDOS =====
+        47984  # HTTPS Web UI
+        47989  # HTTP Web UI  
+        47990  # HTTPS Web UI (secure)
+        48010  # RTSP
       ];
-      allowedUDPPorts = [ 53 22000 21027 5353];
+      allowedUDPPorts = [ 
+        53 
+        22000 
+        21027 
+        5353
+        # ===== SUNSHINE UDP PORTS AÑADIDOS =====
+        47998  # Video
+        47999  # Audio
+        48000  # Control
+        48002  # Audio control
+        48010  # RTSP
+      ];
+      allowedUDPPortRanges = [
+        # ===== SUNSHINE UDP RANGES AÑADIDOS =====
+        { from = 47998; to = 48000; }  # Core streaming
+        { from = 8000; to = 8010; }    # Extended range
+      ];
       checkReversePath = false;
     };
   };
@@ -359,7 +405,7 @@ console = {
     };
   };
 
-  # ===== USUARIO =====
+  # ===== USUARIO CON GRUPOS PARA STREAMING =====
   users.users.passh = {
     isNormalUser = true;
     description = "passh";
@@ -369,32 +415,50 @@ console = {
       "audio"
       "video"
       "docker"
-      "input"
-      "libvirtd" # Para virtualización
-      "kvm" # Para virtualización
-      "storage" # Para dispositivos
-      "disk" # Para dispositivos
-      "plugdev" # Para dispositivos
+      "input"        # CRÍTICO: Para Sunshine input capture
+      "libvirtd"     # Para virtualización
+      "kvm"          # Para virtualización
+      "storage"      # Para dispositivos
+      "disk"         # Para dispositivos
+      "plugdev"      # Para dispositivos
+      "render"       # AÑADIDO: Para GPU access en streaming
     ];
     shell = pkgs.fish; # Fish como en tu home.nix
   };
 
-  # ===== XORG + XMONAD (IGUAL QUE TENÍAS) =====
+  # ===== XORG + XMONAD + SUNSHINE =====
   services = {
 
+    # ===== SUNSHINE STREAMING SERVER =====
+    sunshine = {
+  enable = true;
+  autoStart = true;
+  capSysAdmin = true;
+  openFirewall = true;
+  package = pkgs.sunshine.override { cudaSupport = true; };
+};
 
+    xrdp = {
+      enable = true;
+      openFirewall = true;
+      defaultWindowManager = "${pkgs.writeShellScript "xmonad-session" ''
+        export XDG_DATA_DIRS=/run/current-system/sw/share
+        export PATH=/run/current-system/sw/bin:$PATH
+        exec ${pkgs.xmonad-with-packages}/bin/xmonad
+      ''}";
+    };
 
-  printing = {
-    enable = true;
-    drivers = [ pkgs.hplip ];
-  };
+    printing = {
+      enable = true;
+      drivers = [ pkgs.hplip ];
+    };
 
-  # Autodescubrimiento WiFi (ESENCIAL para M148dw)
-  avahi = {
-    enable = true;
-    nssmdns4 = true;
-    openFirewall = true;
-  };
+    # Autodescubrimiento WiFi (ESENCIAL para M148dw)
+    avahi = {
+      enable = true;
+      nssmdns4 = true;
+      openFirewall = true;
+    };
 
     xserver = {
       enable = true;
@@ -509,8 +573,7 @@ console = {
         OLLAMA_PRELOAD = "true"; # Pre-cargar automáticamente
 
         # ===== COMUNICACIÓN GPU<->CPU OPTIMIZADA =====
-        CUDA_HOST_MEMORY_BUFFER_SIZE =
-          "2048"; # Buffer GRANDE para transferencias
+        CUDA_HOST_MEMORY_BUFFER_SIZE = "2048"; # Buffer GRANDE para transferencias
         OLLAMA_GPU_CPU_SYNC = "1"; # Sincronización optimizada
 
         # Optimizaciones híbridas avanzadas
@@ -573,7 +636,7 @@ console = {
   # ===== NVIDIA CONTAINER TOOLKIT (NUEVA SINTAXIS 25.05) =====
   hardware.nvidia-container-toolkit.enable = true;
 
-  # ===== PAQUETES SISTEMA OPTIMIZADO PARA STRESS TESTING =====
+  # ===== PAQUETES SISTEMA + SUNSHINE =====
   environment.systemPackages = with pkgs; [
     # Basics mínimos
     wget
@@ -616,6 +679,11 @@ console = {
     neovim
     tmux
     byobu
+
+    # ===== SUNSHINE STREAMING TOOLS =====
+    (sunshine.override { cudaSupport = true; })  # Sunshine con CUDA para RTX 5080
+    moonlight-qt                                  # Cliente Moonlight local
+    ffmpeg-full                                   # FFmpeg completo para encoding tests
 
     # ===== HERRAMIENTAS STRESS TESTING DUAL XEON (AÑADIDO) =====
     stress-ng # Herramienta principal stress testing
@@ -668,6 +736,7 @@ console = {
     #lsp para nix 
     nixd
 
+    # ===== SCRIPTS SUNSHINE + MONITORING =====
     # Temperature monitoring scripts
     (writeShellScriptBin "temp-monitor" ''
       #!/bin/bash
@@ -704,7 +773,43 @@ console = {
       numastat
     '')
 
-    # Aurin system info script
+    # Sunshine test script
+    (writeShellScriptBin "sunshine-test" ''
+      #!/bin/bash
+      echo "=== SUNSHINE STREAMING TEST ==="
+      echo "GPU: $(nvidia-smi --query-gpu=name --format=csv,noheader,nounits 2>/dev/null || echo 'No detectada')"
+      echo "Driver: $(nvidia-smi --query-gpu=driver_version --format=csv,noheader,nounits 2>/dev/null || echo 'No detectado')"
+      echo ""
+      echo "=== VERIFICANDO SUNSHINE ==="
+      if systemctl --user is-active sunshine >/dev/null 2>&1; then
+        echo "✅ Sunshine está corriendo"
+      else
+        echo "❌ Sunshine NO está corriendo"
+        echo "Iniciando Sunshine..."
+        systemctl --user start sunshine
+      fi
+      echo ""
+      echo "=== VERIFICANDO PUERTOS ==="
+      echo "Web UI: https://localhost:47990"
+      if ss -tulpn | grep 47990 >/dev/null; then
+        echo "✅ Puerto 47990 abierto"
+      else
+        echo "❌ Puerto 47990 cerrado"
+      fi
+      echo ""
+      echo "=== NVENC TEST ==="
+      ffmpeg -hide_banner -f lavfi -i testsrc2=duration=1:size=1920x1080:rate=60 \
+             -c:v h264_nvenc -preset fast -f null - 2>/dev/null && \
+        echo "✅ H.264 NVENC funcionando" || echo "❌ H.264 NVENC falló"
+      
+      ffmpeg -hide_banner -f lavfi -i testsrc2=duration=1:size=1920x1080:rate=60 \
+             -c:v hevc_nvenc -preset fast -f null - 2>/dev/null && \
+        echo "✅ H.265 NVENC funcionando" || echo "❌ H.265 NVENC falló"
+      echo ""
+      echo "🎮 Conecta desde cliente Moonlight a: $(hostname -I | awk '{print $1}'):47989"
+    '')
+
+    # Aurin system info script (actualizado)
     (writeShellScriptBin "aurin-info" ''
       #!/bin/bash
       echo "=== INFORMACIÓN SISTEMA AURIN ==="
@@ -716,6 +821,10 @@ console = {
       echo "=== RED ==="
       echo "Interface principal: enp7s0 ($(ip addr show enp7s0 | grep 'inet ' | awk '{print $2}' || echo 'no configurada'))"
       echo "Interface secundaria: enp8s0 ($(ip addr show enp8s0 | grep 'inet ' | awk '{print $2}' || echo 'no configurada'))"
+      echo ""
+      echo "=== STREAMING ==="
+      echo "Sunshine: $(systemctl --user is-active sunshine 2>/dev/null || echo 'inactivo')"
+      echo "XRDP: $(systemctl is-active xrdp 2>/dev/null || echo 'inactivo')"
       echo ""
       echo "=== VMs ACTIVAS ==="
       if command -v virsh &> /dev/null; then
@@ -730,12 +839,20 @@ console = {
 
   ];
 
-  # ===== SECURITY =====
+  # ===== SECURITY CON SUNSHINE =====
   security = {
     rtkit.enable = true;
     polkit.enable = true;
     sudo.wheelNeedsPassword = true;
   };
+
+  # ===== UDEV RULES PARA SUNSHINE =====
+  services.udev.extraRules = ''
+    # Sunshine input device rules
+    KERNEL=="uinput", GROUP="input", MODE="0660", OPTIONS+="static_node=uinput"
+    SUBSYSTEM=="input", GROUP="input", MODE="0664"
+    KERNEL=="event*", GROUP="input", MODE="0664"
+  '';
 
   # ===== NIX SETTINGS =====
   nix = {
