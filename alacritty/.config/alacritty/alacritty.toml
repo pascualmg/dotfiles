@@ -57,6 +57,6 @@ save_to_clipboard = true
 [general]
 # Configuración de Alacritty con temas Spacemacs (Dark y Light)
 import = [
- "~/.config/alacritty/themes/themes/spacemacs-dark.toml"
+ "~/.config/alacritty/themes/themes/spacemacs-light.toml"
 ]
 
