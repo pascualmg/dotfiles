@@ -439,7 +439,7 @@ console = {
 };
 
     xrdp = {
-      enable = true;
+      enable = false;
       openFirewall = true;
       defaultWindowManager = "${pkgs.writeShellScript "xmonad-session" ''
         export XDG_DATA_DIRS=/run/current-system/sw/share

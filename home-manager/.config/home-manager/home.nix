@@ -96,7 +96,7 @@ in {
         unstable.emacs
         # nodejs_19  para el copilot del doom .. entre otras cosas xD
         nodejs_24
-        unstable.claude-code
+        master.claude-code
         tdlib # para que funcione el telega ( telegram de emcas doom !   )
 
         tree-sitter
@@ -126,7 +126,6 @@ in {
         mission-center
 
         # Java & PlantUML
-        jdk17
         plantuml
 
         # Audio
@@ -164,8 +163,9 @@ in {
         xorg.xkill
 
         # Browsers
-        firefox
-        google-chrome
+        master.firefox
+        master.google-chrome
+        master.qutebrowser
 
         # Markdown
         pandoc
@@ -180,7 +180,7 @@ in {
         unstable.slack
         unstable.teams-for-linux
         unstable.telegram-desktop
-        unstable.postman
+        postman
 
         #grabaciones/reproducciones
         unstable.simplescreenrecorder
@@ -214,6 +214,10 @@ in {
         open-webui
         #unstable.ollama
         duckstation # para el xenogear , sin eso no se puede programar
+
+        #mineria
+        unstable.prismlauncher
+        unstable.jdk21
 
       ] ++ (with pkgs.python3Packages; [
         # Python packages 🐍

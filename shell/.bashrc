@@ -126,3 +126,10 @@ export PATH="$PATH:/opt/Postman"
 export PATH="$HOME/go/bin:$PATH"
 export PATH="$HOME/go/bin:$PATH"
 export PATH="$HOME/go/bin:$PATH"
+export GDK_SCALE=2
+export QT_SCALE_FACTOR=2
+
+# BEGIN SNIPPET: Platform.sh CLI configuration
+HOME=${HOME:-'/home/passh'}
+export PATH="$HOME/"'.platformsh/bin':"$PATH"
+if [ -f "$HOME/"'.platformsh/shell-config.rc' ]; then . "$HOME/"'.platformsh/shell-config.rc'; fi # END SNIPPET
