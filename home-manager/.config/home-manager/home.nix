@@ -49,7 +49,7 @@ in {
         file # para saber que eres
         lsof # para saber que haces
         v4l-utils # para que la webcam funcione
-        unstable.guvcview # para verme la cara
+        #master.guvcview # para verme la cara
         docker-compose # para componer contenedores
         unstable.lazydocker # tui para docker
         unstable.eza # ls pero con coloricos
@@ -96,7 +96,7 @@ in {
         unstable.emacs
         # nodejs_19  para el copilot del doom .. entre otras cosas xD
         nodejs_24
-        master.claude-code
+        unstable.claude-code
         tdlib # para que funcione el telega ( telegram de emcas doom !   )
 
         tree-sitter
