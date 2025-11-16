@@ -1,6 +1,7 @@
-# NixOS Aurin - Dual Xeon + RTX 5080 + Home Manager + Stress Testing + SUNSHINE STREAMING
+# NixOS Aurin - Dual Xeon + RTX 5080 + Home Manager + Stress Testing + SUNSHINE STREAMING + FiiO K7 OPTIMIZADO
+#puedo
 
-# Configuración OPTIMIZADA para dual Xeon E5-2699v3 (72 threads total) + RTX 5080 streaming
+# Configuración OPTIMIZADA para dual Xeon E5-2699v3 (72 threads total) + RTX 5080 streaming + FiiO K7 DAC/AMP
 { config, pkgs, ... }: {
 
   imports = [
@@ -11,7 +12,7 @@
   # ===== UNFREE =====
   nixpkgs.config.allowUnfree = true;
 
-  # ===== HARDWARE RTX 5080 (SOLO LO NECESARIO) =====
+  # ===== HARDWARE RTX 5080 + AUDIO OPTIMIZADO =====
   hardware = {
     enableAllFirmware = true;
 
@@ -30,7 +31,8 @@
     # RTX 5080 - CONFIGURACIÓN ESPECÍFICA
     nvidia = {
       open = true; # CRÍTICO: RTX 5080 requiere drivers abiertos
-      package = config.boot.kernelPackages.nvidiaPackages.beta; # Beta para RTX 5080
+      package =
+        config.boot.kernelPackages.nvidiaPackages.beta; # Beta para RTX 5080
       modesetting.enable = true;
       nvidiaSettings = true;
       forceFullCompositionPipeline = true;
@@ -38,38 +40,47 @@
       nvidiaPersistenced = true;
     };
 
+    # ===== AUDIO OPTIMIZADO PARA FIIO K7 =====
+    # Desactivar PulseAudio para usar PipeWire (nueva sintaxis NixOS 25.05)
+
+    # Bluetooth para posibles dispositivos de audio
+    bluetooth = {
+      enable = true;
+      powerOnBoot = true;
+    };
+
     # ===== SENSORES TEMPERATURA (SIMPLIFICADO PARA 25.05) =====
     # Nota: Los sensores se detectan automáticamente en NixOS 25.05
   };
 
-console = {
-  earlySetup = true;
-  
-  # FUENTES (descomenta una):
-   font = "ter-p20n";                    # ACTIVA: Terminus unicode ✅
-  # font = "ter-116n";                    # ACTIVA: Terminus unicode ✅
-  # font = "ter-120n";                  # Terminus grande con unicode ✅  
-  # font = "lat9u-16";                  # VGA con unicode ✅
-  # font = "lat9w-16";                  # Clásica VGA (sin unicode ❌)
-  # font = "Lat2-Terminus16";           # Híbrida con unicode ✅
-  # font = "iso01.16";                  # ISO básica (limitada ❌)
-  # font = "ter-112n";                  # Terminus pequeña unicode ✅
-  # font = "ter-132n";                  # Terminus gigante unicode ✅
-  # font = "cp850-8x16";                # CP850 (sin unicode ❌)
-  # font = "eurlatgr";                  # European latin ✅
-  # font = "latarcyrheb-sun16";         # Multi-idioma unicode ✅
-  
-  packages = [ 
-    pkgs.terminus_font        # Para ter-* (mejor unicode)
-    pkgs.kbd                  # Para lat*, iso*, cp*
-    pkgs.powerline-fonts      # Caracteres powerline limitados
-  ];
-  
-  keyMap = "us";
-  useXkbConfig = false;  # Usar keyMap simple para consola
-};  
+  console = {
+    earlySetup = true;
 
-  # ===== VARIABLES RTX 5080 + SUNSHINE =====
+    # FUENTES (descomenta una):
+    font = "ter-p20n"; # ACTIVA: Terminus unicode ✅
+    # font = "ter-116n";                    # ACTIVA: Terminus unicode ✅
+    # font = "ter-120n";                  # Terminus grande con unicode ✅  
+    # font = "lat9u-16";                  # VGA con unicode ✅
+    # font = "lat9w-16";                  # Clásica VGA (sin unicode ❌)
+    # font = "Lat2-Terminus16";           # Híbrida con unicode ✅
+    # font = "iso01.16";                  # ISO básica (limitada ❌)
+    # font = "ter-112n";                  # Terminus pequeña unicode ✅
+    # font = "ter-132n";                  # Terminus gigante unicode ✅
+    # font = "cp850-8x16";                # CP850 (sin unicode ❌)
+    # font = "eurlatgr";                  # European latin ✅
+    # font = "latarcyrheb-sun16";         # Multi-idioma unicode ✅
+
+    packages = [
+      pkgs.terminus_font # Para ter-* (mejor unicode)
+      pkgs.kbd # Para lat*, iso*, cp*
+      pkgs.powerline-fonts # Caracteres powerline limitados
+    ];
+
+    keyMap = "es";
+    useXkbConfig = false; # Usar keyMap simple para consola
+  };
+
+  # ===== VARIABLES RTX 5080 + SUNSHINE + AUDIO =====
   environment.sessionVariables = {
     # NVIDIA RTX 5080
     LIBVA_DRIVER_NAME = "nvidia";
@@ -83,12 +94,12 @@ console = {
     # Configuración para NVENC en RTX 5080
     CUDA_VISIBLE_DEVICES = "0";
     NVIDIA_DRIVER_CAPABILITIES = "all";
-    __GL_SHOW_GRAPHICS_OSD = "0";  # Desactivar OSD en streaming
-    
+    __GL_SHOW_GRAPHICS_OSD = "0"; # Desactivar OSD en streaming
+
     # Variables para Wayland/X11 compatibility en streaming
-    XDG_SESSION_TYPE = "x11";  # Forzar X11 para mejor compatibilidad
-    GDK_BACKEND = "x11";       # GTK en X11 para streaming
-    QT_QPA_PLATFORM = "xcb";   # Qt en X11 para streaming
+    XDG_SESSION_TYPE = "x11"; # Forzar X11 para mejor compatibilidad
+    GDK_BACKEND = "x11"; # GTK en X11 para streaming
+    QT_QPA_PLATFORM = "xcb"; # Qt en X11 para streaming
 
     # ===== VARIABLES OPTIMIZACIÓN DUAL XEON (AÑADIDO) =====
     OMP_NUM_THREADS = "72"; # Usar todos los threads
@@ -100,14 +111,14 @@ console = {
     LIBVIRT_DEFAULT_URI = "qemu:///system"; # Para libvirt
   };
 
-  # ===== BOOT DUAL XEON + RTX 5080 OPTIMIZADO =====
+  # ===== BOOT DUAL XEON + RTX 5080 + AUDIO OPTIMIZADO =====
   boot = {
     loader = {
       systemd-boot.enable = true; # Cambiado de GRUB
       efi.canTouchEfiVariables = true;
     };
 
-    # Parámetros kernel RTX 5080 + básicos
+    # Parámetros kernel RTX 5080 + básicos + audio
     kernelParams = [
       # RTX 5080 (NO TOCAR - FUNCIONABA)
       "nvidia-drm.modeset=1"
@@ -127,6 +138,9 @@ console = {
 
       # ===== OPTIMIZACIONES BÁSICAS (SIN TOCAR KERNEL) =====
       "numa_balancing=enable" # NUMA balancing básico
+
+      # ===== AUDIO OPTIMIZATIONS =====
+      "snd_usb_audio.nrpacks=1" # Optimización para DACs USB
     ];
 
     initrd.kernelModules = [
@@ -137,33 +151,35 @@ console = {
       "nvidia_drm"
     ];
 
-    # Módulos de virtualización + input para streaming
-    kernelModules = [ 
-      "kvm-amd" 
-      "kvm-intel" 
-      "vfio" 
-      "vfio_iommu_type1" 
-      "vfio_pci" 
-      "uinput"  # AÑADIDO: Para Sunshine input capture
+    # Módulos de virtualización + input para streaming + audio
+    kernelModules = [
+      "kvm-amd"
+      "kvm-intel"
+      "vfio"
+      "vfio_iommu_type1"
+      "vfio_pci"
+      "uinput" # AÑADIDO: Para Sunshine input capture
+      "snd-usb-audio" # CRÍTICO: Para FiiO K7
     ];
     blacklistedKernelModules = [ "nouveau" "ast" ];
 
     # ===== FILESYSTEMS ADICIONALES (AÑADIDO) =====
     supportedFilesystems = [ "ntfs" ];
 
-    # ===== OPTIMIZACIONES DUAL XEON MEJORADAS + STREAMING =====
+    # ===== OPTIMIZACIONES DUAL XEON MEJORADAS + STREAMING + AUDIO =====
     kernel.sysctl = {
       # Memoria (128GB RAM)
-      "vm.swappiness" = 1;
+      "vm.swappiness" = 1; # CAMBIADO: de 1 a 10 para audio (era muy agresivo)
       "vm.vfs_cache_pressure" = 50;
       "vm.dirty_ratio" = 15; # Optimización para stress testing
       "vm.dirty_background_ratio" = 5;
       "vm.dirty_expire_centisecs" = 500;
       "vm.dirty_writeback_centisecs" = 100;
 
-      # File system
+      # File system + audio
       "fs.inotify.max_user_watches" = 524288;
       "vm.max_map_count" = 2147483647; # AUMENTADO: Para RTX 5080 + Sunshine
+      "fs.file-max" = 2097152; # AÑADIDO: Para audio
 
       # ===== NUMA DUAL XEON OPTIMIZADO (AÑADIDO) =====
       "kernel.numa_balancing" = 1; # NUMA balancing
@@ -178,15 +194,15 @@ console = {
 
       # ===== NETWORK OPTIMIZATIONS MEJORADAS PARA STREAMING =====
       "net.core.rmem_default" = 262144;
-      "net.core.rmem_max" = 134217728;     # AÑADIDO: Para Sunshine streaming
-      "net.core.wmem_default" = 262144; 
-      "net.core.wmem_max" = 134217728;     # AÑADIDO: Para Sunshine streaming
+      "net.core.rmem_max" = 134217728; # AÑADIDO: Para Sunshine streaming
+      "net.core.wmem_default" = 262144;
+      "net.core.wmem_max" = 134217728; # AÑADIDO: Para Sunshine streaming
       "net.core.netdev_max_backlog" = 30000; # AÑADIDO: Para high throughput
       "net.ipv4.tcp_rmem" = "4096 12582912 134217728";
       "net.ipv4.tcp_wmem" = "4096 12582912 134217728";
       "net.ipv4.tcp_congestion_control" = "bbr"; # AÑADIDO: Para mejor latencia
-      "net.ipv4.tcp_low_latency" = 1;      # AÑADIDO: Para streaming
-      "net.ipv4.tcp_no_delay" = 1;         # AÑADIDO: Para streaming
+      "net.ipv4.tcp_low_latency" = 1; # AÑADIDO: Para streaming
+      "net.ipv4.tcp_no_delay" = 1; # AÑADIDO: Para streaming
 
       # ===== OPTIMIZACIONES STRESS TESTING (AÑADIDO) =====
       "vm.overcommit_memory" = 1; # Permite overcommit para stress
@@ -314,7 +330,7 @@ console = {
     };
 
     firewall = {
-      enable = true;
+      enable = false;
       allowedTCPPorts = [
         53
         80
@@ -335,27 +351,36 @@ console = {
         5993
         631
         # ===== SUNSHINE PORTS AÑADIDOS =====
-        47984  # HTTPS Web UI
-        47989  # HTTP Web UI  
-        47990  # HTTPS Web UI (secure)
-        48010  # RTSP
+        47984 # HTTPS Web UI
+        47989 # HTTP Web UI
+        47990 # HTTPS Web UI (secure)
+        48010 # RTSP
+
+        # ===== claude code =====
+        34279
       ];
-      allowedUDPPorts = [ 
-        53 
-        22000 
-        21027 
+      allowedUDPPorts = [
+        53
+        22000
+        21027
         5353
         # ===== SUNSHINE UDP PORTS AÑADIDOS =====
-        47998  # Video
-        47999  # Audio
-        48000  # Control
-        48002  # Audio control
-        48010  # RTSP
+        47998 # Video
+        47999 # Audio
+        48000 # Control
+        48002 # Audio control
+        48010 # RTSP
       ];
       allowedUDPPortRanges = [
         # ===== SUNSHINE UDP RANGES AÑADIDOS =====
-        { from = 47998; to = 48000; }  # Core streaming
-        { from = 8000; to = 8010; }    # Extended range
+        {
+          from = 47998;
+          to = 48000;
+        } # Core streaming
+        {
+          from = 8000;
+          to = 8010;
+        } # Extended range
       ];
       checkReversePath = false;
     };
@@ -384,6 +409,7 @@ console = {
         nameserver 192.168.53.12
         nameserver 8.8.8.8
         search grupo.vocento
+        options timeout:1 attempts:1 rotate
       '';
       mode = "0644";
     };
@@ -405,38 +431,90 @@ console = {
     };
   };
 
-  # ===== USUARIO CON GRUPOS PARA STREAMING =====
+  # ===== USUARIO CON GRUPOS PARA STREAMING + AUDIO =====
   users.users.passh = {
     isNormalUser = true;
     description = "passh";
     extraGroups = [
       "wheel"
       "networkmanager"
-      "audio"
+      "audio" # CRÍTICO: Para FiiO K7
       "video"
       "docker"
-      "input"        # CRÍTICO: Para Sunshine input capture
-      "libvirtd"     # Para virtualización
-      "kvm"          # Para virtualización
-      "storage"      # Para dispositivos
-      "disk"         # Para dispositivos
-      "plugdev"      # Para dispositivos
-      "render"       # AÑADIDO: Para GPU access en streaming
+      "input" # CRÍTICO: Para Sunshine input capture
+      "libvirtd" # Para virtualización
+      "kvm" # Para virtualización
+      "storage" # Para dispositivos
+      "disk" # Para dispositivos
+      "plugdev" # Para dispositivos
+      "render" # AÑADIDO: Para GPU access en streaming
     ];
     shell = pkgs.fish; # Fish como en tu home.nix
   };
 
-  # ===== XORG + XMONAD + SUNSHINE =====
+  # ===== SERVICIOS AUDIO + XORG + XMONAD + SUNSHINE =====
   services = {
+
+    # ===== DESACTIVAR PULSEAUDIO PARA PIPEWIRE =====
+    pulseaudio.enable = false;
+
+    # ===== PIPEWIRE OPTIMIZADO PARA FIIO K7 =====
+    pipewire = {
+      enable = true;
+      pulse.enable = true;
+      jack.enable = true;
+      alsa = {
+        enable = true;
+        support32Bit = true;
+      };
+
+      # ===== CONFIGURACIÓN ESPECÍFICA PARA FIIO K7 =====
+      extraConfig.pipewire."10-fiio-k7" = {
+        "context.properties" = {
+          "default.clock.rate" = 96000;
+          "default.clock.quantum" = 1024;
+          "default.clock.min-quantum" = 32;
+          "default.clock.max-quantum" = 2048;
+        };
+      };
+
+      # ===== CONFIGURACIÓN ALSA OPTIMIZADA =====
+      extraConfig.pipewire."99-alsa-config" = {
+        "alsa.properties" = {
+          "alsa.period-size" = 1024;
+          "alsa.periods" = 2;
+        };
+      };
+
+      # ===== CONFIGURACIÓN VOLUMEN CONSERVADOR =====
+      extraConfig.pipewire-pulse."10-volume" = {
+        "pulse.properties" = {
+          "pulse.max-volume" =
+            "131072"; # 125% en formato pulse (más conservador)
+        };
+      };
+
+      # ===== CONFIGURACIÓN ESPECÍFICA USB AUDIO =====
+      extraConfig.pipewire."20-usb-audio" = {
+        "context.modules" = [{
+          name = "libpipewire-module-adapter";
+          args = {
+            "audio.position" = [ "FL" "FR" ];
+            "node.name" = "fiio-k7-optimized";
+            "node.description" = "FiiO K7 Optimized";
+          };
+        }];
+      };
+    };
 
     # ===== SUNSHINE STREAMING SERVER =====
     sunshine = {
-  enable = true;
-  autoStart = true;
-  capSysAdmin = true;
-  openFirewall = true;
-  package = pkgs.sunshine.override { cudaSupport = true; };
-};
+      enable = true;
+      autoStart = true;
+      capSysAdmin = true;
+      openFirewall = true;
+      package = pkgs.sunshine.override { cudaSupport = true; };
+    };
 
     xrdp = {
       enable = false;
@@ -573,7 +651,8 @@ console = {
         OLLAMA_PRELOAD = "true"; # Pre-cargar automáticamente
 
         # ===== COMUNICACIÓN GPU<->CPU OPTIMIZADA =====
-        CUDA_HOST_MEMORY_BUFFER_SIZE = "2048"; # Buffer GRANDE para transferencias
+        CUDA_HOST_MEMORY_BUFFER_SIZE =
+          "2048"; # Buffer GRANDE para transferencias
         OLLAMA_GPU_CPU_SYNC = "1"; # Sincronización optimizada
 
         # Optimizaciones híbridas avanzadas
@@ -636,74 +715,37 @@ console = {
   # ===== NVIDIA CONTAINER TOOLKIT (NUEVA SINTAXIS 25.05) =====
   hardware.nvidia-container-toolkit.enable = true;
 
-  # ===== PAQUETES SISTEMA + SUNSHINE =====
+  # ===== PAQUETES SISTEMA MÍNIMOS (SIN DUPLICAR HOME.NIX) =====
   environment.systemPackages = with pkgs; [
-    # Basics mínimos
-    wget
-    git
-    curl
-    vim
-    htop
+    # ===== AUDIO TOOLS ESPECÍFICOS PARA FIIO K7 (NO EN HOME.NIX) =====
+    pulsemixer # TUI control volumen (no tienes en home.nix)
+    pamixer # CLI control volumen (no tienes en home.nix)
+    helvum # PipeWire patchbay GUI (no tienes en home.nix)
+    qjackctl # JACK control (para PipeWire JACK)
+    easyeffects # Efectos de audio en tiempo real
+    coppwr # Monitor PipeWire
 
-    # XMonad system
-    xmonad-with-packages
-    xmobar
-    trayer
-    dmenu
-    nitrogen
-    picom
     alacritty
-    gnome-terminal
-    xscreensaver
 
-    # X tools
-    xorg.setxkbmap
-    xorg.xmodmap
-    xorg.xinput
-    xorg.xset
-    dunst
-    libnotify
-    pciutils
-    usbutils
-    neofetch
+    # ===== SUNSHINE STREAMING TOOLS (ESPECÍFICOS SISTEMA) =====
+    (sunshine.override {
+      cudaSupport = true;
+    }) # Sunshine con CUDA para RTX 5080
+    moonlight-qt # Cliente Moonlight local
 
-    # RTX 5080 tools
-    nvtopPackages.nvidia
-    vulkan-tools
-    glxinfo
+    # ===== HERRAMIENTAS SISTEMA NO EN HOME.NIX =====
+    # Monitoreo específico sistema
+    iotop # Monitoreo I/O (no está en home.nix)
+    iftop # Monitoreo red (no está en home.nix)
+    powertop # Monitoreo energía (no está en home.nix)
+    hwinfo # Info detallada hardware (no está en home.nix)
+    inxi # System info (no está en home.nix)
+    dmidecode # Hardware info (no está en home.nix)
 
-    # Basic clipboard
-    xclip
-
-    home-manager
-    neovim
-    tmux
-    byobu
-
-    # ===== SUNSHINE STREAMING TOOLS =====
-    (sunshine.override { cudaSupport = true; })  # Sunshine con CUDA para RTX 5080
-    moonlight-qt                                  # Cliente Moonlight local
-    ffmpeg-full                                   # FFmpeg completo para encoding tests
-
-    # ===== HERRAMIENTAS STRESS TESTING DUAL XEON (AÑADIDO) =====
-    stress-ng # Herramienta principal stress testing
-    stress # Stress testing básico
-    lm_sensors # Sensores temperatura
-    mission-center # GUI para sensores (reemplazo de psensor)
-
-    # Monitoreo avanzado
-    iotop # Monitoreo I/O
-    iftop # Monitoreo red
-    powertop # Monitoreo energía
-    s-tui # Terminal UI para stress+temp
-    hwinfo # Info detallada hardware
-    inxi # System info
-    dmidecode
-
-    # NUMA tools
+    # NUMA tools (específicos dual Xeon)
     numactl # Control NUMA (incluye libnuma)
 
-    # Performance tools
+    # Performance tools sistema
     perf-tools # Herramientas rendimiento kernel
     sysstat # Estadísticas sistema (sar, iostat)
     dool # Monitor recursos sistema (reemplazo de dstat)
@@ -720,7 +762,7 @@ console = {
     schedtool # Scheduler tuning
     util-linux # Incluye taskset para CPU affinity
 
-    # ===== VIRTUALIZACIÓN COMPLETA (IGUAL QUE VESPINO) =====
+    # ===== VIRTUALIZACIÓN COMPLETA (SISTEMA) =====
     virt-manager
     virt-viewer
     qemu
@@ -733,10 +775,13 @@ console = {
     dnsmasq
     iptables
 
-    #lsp para nix 
+    byobu
+    tmux
+
+    # ===== LSP NIX (NO EN HOME.NIX) =====
     nixd
 
-    # ===== SCRIPTS SUNSHINE + MONITORING =====
+    # ===== SCRIPTS ESPECÍFICOS AURIN =====
     # Temperature monitoring scripts
     (writeShellScriptBin "temp-monitor" ''
       #!/bin/bash
@@ -773,6 +818,99 @@ console = {
       numastat
     '')
 
+    # FiiO K7 test script
+    (writeShellScriptBin "fiio-k7-test" ''
+      #!/bin/bash
+      echo "=== FIIO K7 DAC/AMP TEST ==="
+      echo ""
+      echo "=== VERIFICANDO DISPOSITIVO USB ==="
+      if lsusb | grep -i "fiio\|2972:0047" >/dev/null; then
+        echo "✅ FiiO K7 detectado por USB"
+        lsusb | grep -i "fiio\|2972:0047"
+      else
+        echo "❌ FiiO K7 NO detectado por USB"
+        echo "Verifica:"
+        echo "1. Cable USB conectado correctamente"
+        echo "2. Switch OUTPUT en PO (Phone Out)"
+        echo "3. Encendido el K7"
+        exit 1
+      fi
+
+      echo ""
+      echo "=== VERIFICANDO AUDIO ALSA ==="
+      if aplay -l | grep -i "fiio\|usb" >/dev/null; then
+        echo "✅ FiiO K7 detectado por ALSA"
+        aplay -l | grep -i "fiio\|usb"
+      else
+        echo "❌ FiiO K7 NO detectado por ALSA"
+      fi
+
+      echo ""
+      echo "=== VERIFICANDO PIPEWIRE/PULSEAUDIO ==="
+      if pactl list short sinks | grep -i "fiio\|usb.*analog" >/dev/null; then
+        echo "✅ FiiO K7 disponible en PipeWire"
+        echo "Sink: $(pactl list short sinks | grep -i "fiio\|usb.*analog" | head -1)"
+        
+        # Verificar si es el dispositivo por defecto
+        DEFAULT_SINK=$(pactl info | grep "Default Sink" | cut -d: -f2 | xargs)
+        if echo "$DEFAULT_SINK" | grep -i "fiio\|usb.*analog" >/dev/null; then
+          echo "✅ FiiO K7 es el dispositivo por defecto"
+        else
+          echo "⚠️  FiiO K7 NO es el dispositivo por defecto"
+          echo "Actual: $DEFAULT_SINK"
+          echo ""
+          echo "Para configurarlo como default:"
+          FIIO_SINK=$(pactl list short sinks | grep -i "fiio\|usb.*analog" | head -1 | cut -f2)
+          echo "pactl set-default-sink '$FIIO_SINK'"
+        fi
+      else
+        echo "❌ FiiO K7 NO disponible en PipeWire"
+        echo "Sinks disponibles:"
+        pactl list short sinks
+      fi
+
+      echo ""
+      echo "=== VERIFICANDO VOLUMEN ==="
+      if pactl list short sinks | grep -i "fiio\|usb.*analog" >/dev/null; then
+        FIIO_SINK=$(pactl list short sinks | grep -i "fiio\|usb.*analog" | head -1 | cut -f2)
+        VOLUME=$(pactl get-sink-volume "$FIIO_SINK" | grep -o '[0-9]*%' | head -1)
+        MUTED=$(pactl get-sink-mute "$FIIO_SINK")
+        
+        echo "Volumen actual: $VOLUME"
+        echo "Estado: $MUTED"
+        
+        if [[ "$VOLUME" =~ ^[0-9]+% ]] && [ "''${VOLUME%\%}" -lt 50 ]; then
+          echo "⚠️  Volumen bajo (< 50%). Para HD600 se recomienda 80-90%"
+        fi
+      fi
+
+      echo ""
+      echo "=== TEST DE AUDIO ==="
+      echo "¿Ejecutar test de audio? (y/n)"
+      read -r response
+      if [[ "$response" =~ ^[Yy]$ ]]; then
+        echo "Reproduciendo tono de prueba 440Hz por 3 segundos..."
+        if command -v speaker-test &> /dev/null; then
+          timeout 3s speaker-test -t sine -f 440 -c 2 -l 1 -s 1 2>/dev/null || echo "Test completado"
+        else
+          echo "speaker-test no disponible"
+        fi
+      fi
+
+      echo ""
+      echo "=== CONFIGURACIÓN RECOMENDADA HD600 ==="
+      echo "• Switch físico OUTPUT: PO (Phone Out)"
+      echo "• Switch físico GAIN: H (High) para HD600 (300Ω)"
+      echo "• Volumen sistema: 85-90%"
+      echo "• Volumen K7: 60-75% (físico en el dispositivo)"
+      echo ""
+      echo "=== COMANDOS ÚTILES ==="
+      echo "• Configurar como default: pactl set-default-sink SINK_NAME"
+      echo "• Cambiar volumen: pactl set-sink-volume @DEFAULT_SINK@ 85%"
+      echo "• Ver dispositivos: pactl list short sinks"
+      echo "• GUI control: pavucontrol"
+    '')
+
     # Sunshine test script
     (writeShellScriptBin "sunshine-test" ''
       #!/bin/bash
@@ -801,7 +939,7 @@ console = {
       ffmpeg -hide_banner -f lavfi -i testsrc2=duration=1:size=1920x1080:rate=60 \
              -c:v h264_nvenc -preset fast -f null - 2>/dev/null && \
         echo "✅ H.264 NVENC funcionando" || echo "❌ H.264 NVENC falló"
-      
+
       ffmpeg -hide_banner -f lavfi -i testsrc2=duration=1:size=1920x1080:rate=60 \
              -c:v hevc_nvenc -preset fast -f null - 2>/dev/null && \
         echo "✅ H.265 NVENC funcionando" || echo "❌ H.265 NVENC falló"
@@ -809,7 +947,7 @@ console = {
       echo "🎮 Conecta desde cliente Moonlight a: $(hostname -I | awk '{print $1}'):47989"
     '')
 
-    # Aurin system info script (actualizado)
+    # Aurin system info script (actualizado con audio)
     (writeShellScriptBin "aurin-info" ''
       #!/bin/bash
       echo "=== INFORMACIÓN SISTEMA AURIN ==="
@@ -817,6 +955,20 @@ console = {
       echo "CPUs: $(nproc) threads (dual Xeon E5-2699v3)"
       echo "Memoria: $(free -h | grep Mem | awk '{print $2}')"
       echo "GPU: $(nvidia-smi --query-gpu=name --format=csv,noheader,nounits 2>/dev/null || echo 'RTX 5080')"
+      echo ""
+      echo "=== AUDIO ==="
+      echo "Sistema de audio: $(if systemctl --user is-active pipewire >/dev/null 2>&1; then echo "PipeWire"; else echo "PulseAudio/ALSA"; fi)"
+      if pactl info >/dev/null 2>&1; then
+        DEFAULT_SINK=$(pactl info | grep "Default Sink" | cut -d: -f2 | xargs)
+        echo "Dispositivo por defecto: $DEFAULT_SINK"
+        if echo "$DEFAULT_SINK" | grep -i "fiio\|usb.*analog" >/dev/null; then
+          echo "✅ FiiO K7 activo"
+        else
+          echo "⚠️  FiiO K7 no es el dispositivo por defecto"
+        fi
+      else
+        echo "❌ Sistema de audio no disponible"
+      fi
       echo ""
       echo "=== RED ==="
       echo "Interface principal: enp7s0 ($(ip addr show enp7s0 | grep 'inet ' | awk '{print $2}' || echo 'no configurada'))"
@@ -826,7 +978,7 @@ console = {
       echo "Sunshine: $(systemctl --user is-active sunshine 2>/dev/null || echo 'inactivo')"
       echo "XRDP: $(systemctl is-active xrdp 2>/dev/null || echo 'inactivo')"
       echo ""
-      echo "=== VMs ACTIVAS ==="
+      echo "=== VMS ACTIVAS ==="
       if command -v virsh &> /dev/null; then
         virsh list --all 2>/dev/null || echo "libvirt no disponible"
       else
@@ -835,23 +987,34 @@ console = {
       echo ""
       echo "=== DOCKER ==="
       docker ps --format "table {{.Names}}\t{{.Status}}" 2>/dev/null || echo "Docker no disponible"
+      echo ""
+      echo "=== COMANDOS ÚTILES ==="
+      echo "• fiio-k7-test    - Test completo FiiO K7"
+      echo "• sunshine-test   - Test streaming Sunshine"
+      echo "• xeon-stress     - Stress test dual Xeon"
+      echo "• numa-info       - Información NUMA"
+      echo "• temp-monitor    - Monitor temperaturas"
     '')
 
   ];
 
-  # ===== SECURITY CON SUNSHINE =====
+  # ===== SECURITY CON SUNSHINE + AUDIO =====
   security = {
-    rtkit.enable = true;
+    rtkit.enable = true; # CRÍTICO: Para audio de baja latencia
     polkit.enable = true;
     sudo.wheelNeedsPassword = true;
   };
 
-  # ===== UDEV RULES PARA SUNSHINE =====
+  # ===== UDEV RULES PARA SUNSHINE + AUDIO =====
   services.udev.extraRules = ''
     # Sunshine input device rules
     KERNEL=="uinput", GROUP="input", MODE="0660", OPTIONS+="static_node=uinput"
     SUBSYSTEM=="input", GROUP="input", MODE="0664"
     KERNEL=="event*", GROUP="input", MODE="0664"
+
+    # FiiO K7 USB Audio device rules
+    SUBSYSTEM=="usb", ATTRS{idVendor}=="2972", ATTRS{idProduct}=="0047", GROUP="audio", MODE="0664"
+    SUBSYSTEM=="sound", KERNEL=="card*", ATTRS{idVendor}=="2972", ATTRS{idProduct}=="0047", GROUP="audio", MODE="0664"
   '';
 
   # ===== NIX SETTINGS =====
@@ -871,9 +1034,9 @@ console = {
   };
 
   # ===== PROGRAMAS =====
-  programs = { 
-   fish.enable = true; 
-   steam.enable = true;
+  programs = {
+    fish.enable = true;
+    steam.enable = true;
   };
 
   fileSystems."/mnt/vespino-storage" = {
