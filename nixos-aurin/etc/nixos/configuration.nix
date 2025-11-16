@@ -76,7 +76,8 @@
       pkgs.powerline-fonts # Caracteres powerline limitados
     ];
 
-    keyMap = "es";
+    keyMap = "us";
+
     useXkbConfig = false; # Usar keyMap simple para consola
   };
 
