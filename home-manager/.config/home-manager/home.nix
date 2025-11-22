@@ -137,9 +137,36 @@ in {
         python3
         #poetry
 
-        # Haskell
-        stack
-        # Dependencias que Stack necesita
+        # ═══════════════════════════════════════════════════════════
+        # HASKELL TOOLCHAIN - Enfoque Híbrido
+        # ═══════════════════════════════════════════════════════════
+        # Herramientas globales del sistema. Los flakes pueden override.
+
+        # Core toolchain
+        haskellPackages.ghc                    # GHC 9.8.x
+        haskell-language-server                # Wrapper + binarios para múltiples GHC
+        haskellPackages.cabal-install          # Build tool
+        stack                                  # Build tool alternativo
+
+        # Formatters
+        haskellPackages.ormolu
+        haskellPackages.fourmolu               # Recomendado
+        haskellPackages.stylish-haskell
+
+        # Linting
+        haskellPackages.hlint
+        haskellPackages.apply-refact
+
+        # Development
+        haskellPackages.ghcid
+        haskellPackages.hoogle
+
+        # Utilidades
+        haskellPackages.implicit-hie
+        haskellPackages.cabal-fmt
+        haskellPackages.retrie
+
+        # Dependencias del sistema
         gmp
         zlib
         gcc

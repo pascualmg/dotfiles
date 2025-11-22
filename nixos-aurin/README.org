@@ -1,0 +1,401 @@
+#+TITLE: NixOS Aurin Configuration
+#+AUTHOR: passh
+#+DATE: 2025-11-22
+#+STARTUP: overview
+
+* Descripción
+
+Configuración de NixOS para *Aurin*, una workstation de alto rendimiento con:
+
+- *Hardware:* Dual Intel Xeon E5-2699v3 (72 threads total)
+- *GPU:* NVIDIA RTX 5080 (16GB VRAM, drivers open-source)
+- *RAM:* 128GB
+- *Audio:* FiiO K7 DAC/AMP USB (optimizado para Sennheiser HD600)
+- *Display:* 5120x1440@120Hz
+- *Network:* Dual NICs con bridge para VMs
+
+* Estructura del proyecto
+
+#+BEGIN_SRC text
+nixos-aurin/
+├── README.org                        # Este archivo
+└── etc/
+    └── nixos/
+        ├── configuration.nix         # Configuración principal del sistema
+        └── hardware-configuration.nix # Configuración de hardware (VERSIONADO)
+#+END_SRC
+
+** ¿Por qué hardware-configuration.nix está versionado?
+
+Este archivo está *copiado y versionado* en lugar de ser un enlace simbólico porque:
+
+1. *Control total:* Queremos versionar TODO el sistema en git
+2. *Estabilidad:* hardware-configuration.nix casi nunca cambia (solo con cambios físicos)
+3. *Portabilidad:* El dotfiles contiene la configuración completa
+4. *Historial:* Podemos ver cambios de hardware en git history
+
+*IMPORTANTE:* Si cambias hardware físico (discos, particiones, etc.):
+#+BEGIN_SRC bash
+# 1. Regenerar hardware-configuration.nix
+sudo nixos-generate-config --show-hardware-config > /tmp/new-hardware.nix
+
+# 2. Copiar al dotfiles
+cp /tmp/new-hardware.nix /home/passh/dotfiles/nixos-aurin/etc/nixos/hardware-configuration.nix
+
+# 3. Revisar cambios y hacer commit
+cd /home/passh/dotfiles/nixos-aurin
+git diff etc/nixos/hardware-configuration.nix
+git add etc/nixos/hardware-configuration.nix
+git commit -m "Update hardware configuration: [describe changes]"
+#+END_SRC
+
+* Instalación/Activación
+
+** Primera vez (nueva máquina)
+
+#+BEGIN_SRC bash
+# 1. Clonar dotfiles
+git clone <repo-url> ~/dotfiles
+
+# 2. Crear enlace simbólico
+sudo ln -sf /home/passh/dotfiles/nixos-aurin/etc/nixos/configuration.nix /etc/nixos/configuration.nix
+
+# 3. Aplicar configuración
+sudo nixos-rebuild switch
+#+END_SRC
+
+** Actualizar sistema
+
+#+BEGIN_SRC bash
+# Rebuild sin actualizar paquetes
+sudo nixos-rebuild switch
+
+# Rebuild CON actualización de paquetes (upgrade)
+sudo nixos-rebuild switch --upgrade
+
+# Test sin activar (para probar)
+sudo nixos-rebuild test
+#+END_SRC
+
+* Características principales
+
+** Sistema Base
+- NixOS 25.05
+- Kernel optimizado para dual Xeon + NUMA
+- Virtualización KVM/QEMU habilitada
+- Docker habilitado
+
+** GPU: NVIDIA RTX 5080
+- Drivers *open-source* (=nvidia.open = true=)
+- Package: =beta= (requerido para RTX 5080)
+- NVENC habilitado para streaming
+- Configuración para 5120x1440@120Hz
+
+** Audio: FiiO K7 DAC/AMP
+- *PipeWire* (NO PulseAudio)
+- Sample rate: 96kHz
+- Quantum: 1024 (balance latencia/calidad)
+- Optimizado para impedancia alta (HD600 300Ω)
+
+** Streaming: Sunshine
+- NVENC hardware encoding (H.264/H.265)
+- Puertos: 47984-47990, 47998-48010
+- CUDA support habilitado
+- Input capture habilitado (=uinput= module)
+
+** Red
+- Interface principal: =enp7s0= (192.168.2.147)
+- Bridge: =br0= (192.168.53.10) para VMs
+- NAT configurado para VMs
+- Rutas VPN Vocento configuradas
+- DNS: 192.168.53.12, 8.8.8.8
+
+** Virtualización
+- libvirtd + QEMU/KVM
+- OVMF (UEFI) habilitado
+- Bridge =br0= para networking VMs
+- Docker con auto-prune semanal
+
+** IA: Ollama
+- CUDA acceleration (RTX 5080)
+- 15.8GB VRAM + 70GB RAM para modelos
+- Optimizado para Deepseek 70B
+- Open WebUI en puerto 3000
+
+* Comandos útiles
+
+** Scripts del sistema
+
+Estos comandos están disponibles globalmente:
+
+| Comando          | Descripción                                  |
+|------------------+----------------------------------------------|
+| =aurin-info=     | Información completa del sistema             |
+| =fiio-k7-test=   | Test y diagnóstico del DAC FiiO K7           |
+| =sunshine-test=  | Test del servidor Sunshine streaming         |
+| =xeon-stress=    | Stress test optimizado para dual Xeon        |
+| =numa-info=      | Información de arquitectura NUMA             |
+| =temp-monitor=   | Monitor de temperaturas en tiempo real       |
+
+** Audio (PipeWire)
+
+#+BEGIN_SRC bash
+# Ver dispositivos de audio
+pactl list short sinks
+
+# Configurar FiiO K7 como default
+pactl set-default-sink <sink-name>
+
+# Cambiar volumen
+pactl set-sink-volume @DEFAULT_SINK@ 85%
+
+# GUI de control
+pavucontrol
+#+END_SRC
+
+** GPU (NVIDIA)
+
+#+BEGIN_SRC bash
+# Info GPU
+nvidia-smi
+
+# Test NVENC
+ffmpeg -f lavfi -i testsrc2=duration=1:size=1920x1080:rate=60 \
+       -c:v h264_nvenc -preset fast -f null -
+
+# Monitor GPU en tiempo real
+watch -n 1 nvidia-smi
+#+END_SRC
+
+** Virtualización
+
+#+BEGIN_SRC bash
+# Listar VMs
+virsh list --all
+
+# Iniciar VM
+virsh start <vm-name>
+
+# Manager GUI
+virt-manager
+#+END_SRC
+
+** Docker
+
+#+BEGIN_SRC bash
+# Ver contenedores
+docker ps -a
+
+# Limpiar sistema
+docker system prune -a
+#+END_SRC
+
+* Optimizaciones específicas
+
+** NUMA (Dual Xeon)
+
+La configuración incluye optimizaciones NUMA para dual socket:
+
+- =numa_balancing= habilitado en kernel
+- =OMP_PROC_BIND= configurado para distribuir carga
+- Scheduler tunning para 72 threads
+- Memory allocation optimizada
+
+Ver estado NUMA:
+#+BEGIN_SRC bash
+numa-info
+numastat
+#+END_SRC
+
+** Red (BBR + Low Latency)
+
+#+BEGIN_SRC bash
+# TCP congestion control
+sysctl net.ipv4.tcp_congestion_control  # Debería ser "bbr"
+
+# Buffers para streaming
+sysctl net.core.rmem_max  # 134217728 (128MB)
+sysctl net.core.wmem_max  # 134217728 (128MB)
+#+END_SRC
+
+** Memoria (128GB RAM)
+
+#+BEGIN_SRC bash
+sysctl vm.swappiness        # 1 (mínimo swap)
+sysctl vm.dirty_ratio       # 15
+sysctl vm.max_map_count     # 2147483647 (para RTX 5080)
+#+END_SRC
+
+* Troubleshooting
+
+** Error: "path does not exist" al hacer rebuild
+
+*Síntoma:* =error: path '/home/passh/dotfiles/nixos-aurin/etc/nixos/hardware-configuration.nix' does not exist=
+
+*Solución:*
+#+BEGIN_SRC bash
+# Copiar hardware-configuration.nix al dotfiles
+sudo cp /etc/nixos/hardware-configuration.nix \
+        /home/passh/dotfiles/nixos-aurin/etc/nixos/hardware-configuration.nix
+
+# Cambiar owner
+sudo chown passh:users /home/passh/dotfiles/nixos-aurin/etc/nixos/hardware-configuration.nix
+#+END_SRC
+
+** FiiO K7 no detectado
+
+#+BEGIN_SRC bash
+# 1. Verificar conexión USB
+lsusb | grep -i "fiio\|2972:0047"
+
+# 2. Verificar módulo kernel
+lsmod | grep snd_usb_audio
+
+# 3. Test completo
+fiio-k7-test
+
+# 4. Checklist físico:
+# - Cable USB conectado a puerto USB 2.0/3.0 trasero
+# - Switch OUTPUT en PO (Phone Out)
+# - Switch GAIN en H (High) para HD600
+# - FiiO K7 encendido
+#+END_SRC
+
+** Sunshine no inicia
+
+#+BEGIN_SRC bash
+# 1. Verificar servicio
+systemctl --user status sunshine
+
+# 2. Reiniciar servicio
+systemctl --user restart sunshine
+
+# 3. Verificar logs
+journalctl --user -u sunshine -f
+
+# 4. Test completo
+sunshine-test
+
+# 5. Verificar Web UI
+firefox https://localhost:47990
+#+END_SRC
+
+** GPU no detectada
+
+#+BEGIN_SRC bash
+# 1. Verificar driver cargado
+lsmod | grep nvidia
+
+# 2. Info GPU
+nvidia-smi
+
+# 3. Si falla, verificar configuración:
+# - hardware.nvidia.open = true
+# - hardware.nvidia.package = beta
+# - Parámetros kernel nvidia-drm.modeset=1
+
+# 4. Rebuild
+sudo nixos-rebuild switch
+#+END_SRC
+
+** VMs no tienen red
+
+#+BEGIN_SRC bash
+# 1. Verificar bridge
+ip addr show br0
+
+# 2. Verificar NAT
+sudo iptables -t nat -L -n -v | grep 192.168.53
+
+# 3. Verificar IP forwarding
+sysctl net.ipv4.ip_forward  # Debería ser 1
+
+# 4. Reiniciar networking
+sudo systemctl restart NetworkManager
+#+END_SRC
+
+* Montajes NFS
+
+Aurin tiene montados dos shares NFS de Vespino:
+
+| Punto montaje           | Origen                   | Uso                      |
+|-------------------------+--------------------------+--------------------------|
+| =/mnt/vespino-storage=  | =192.168.2.125:/storage= | Storage general          |
+| =/mnt/vespino-NFS=      | =192.168.2.125:/NFS=     | Compartido NFS           |
+
+Verificar montajes:
+#+BEGIN_SRC bash
+mount | grep vespino
+df -h | grep vespino
+#+END_SRC
+
+* Configuración recomendada
+
+** Audio (FiiO K7 + HD600)
+- *Switch físico OUTPUT:* PO (Phone Out)
+- *Switch físico GAIN:* H (High) - para 300Ω
+- *Volumen sistema:* 85-90%
+- *Volumen K7 (físico):* 60-75%
+
+** Display
+- *Resolución:* 5120x1440
+- *Refresh rate:* 120Hz
+- *DPI:* 96
+- *Output:* DP-4
+
+** Streaming (Sunshine)
+- *Codec preferido:* H.265 (HEVC) para mejor calidad
+- *Bitrate:* 30-50 Mbps para 1440p@120Hz
+- *Cliente:* Moonlight
+
+* Notas de desarrollo
+
+** Home Manager
+La configuración usa Home Manager (=<home-manager/nixos>=) para gestión de configuración de usuario.
+
+** Flakes
+Actualmente NO usa flakes (configuración tradicional con channels). Si quieres migrar a flakes, ver: https://nixos.wiki/wiki/Flakes
+
+** Channels
+#+BEGIN_SRC bash
+# Ver channels activos
+sudo nix-channel --list
+
+# Debería mostrar:
+# nixos https://nixos.org/channels/nixos-25.05
+# home-manager https://github.com/nix-community/home-manager/archive/release-25.05.tar.gz
+#+END_SRC
+
+* Referencias
+
+- [[https://nixos.org/manual/nixos/stable/][NixOS Manual]]
+- [[https://github.com/nix-community/home-manager][Home Manager]]
+- [[https://github.com/LizardByte/Sunshine][Sunshine Streaming]]
+- [[https://wiki.archlinux.org/title/PipeWire][PipeWire Wiki]]
+- [[https://www.kernel.org/doc/html/latest/admin-guide/mm/numa.html][NUMA Linux Kernel]]
+
+* TODO Tareas pendientes
+
+- [ ] Configurar backup automático de dotfiles
+- [ ] Añadir configuración de impresora HP M148dw
+- [ ] Documentar setup de VMs específicas
+- [ ] Configurar Jellyfin (puerto 8096 está en firewall)
+- [ ] Migrar a Flakes (opcional)
+
+* Changelog
+
+** 2025-11-22
+- Versionado =hardware-configuration.nix= en dotfiles
+- Creado README.org con documentación completa
+- Fix error "path does not exist" en nixos-rebuild
+
+** 2025-11-16
+- Configuración inicial Aurin
+- Migración desde configuración anterior
+- Setup FiiO K7 + Sunshine streaming
+
+---
+
+*Última actualización:* 2025-11-22
+*NixOS Version:* 25.05
+*Machine:* Aurin (Dual Xeon E5-2699v3 + RTX 5080)

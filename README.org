@@ -1,234 +1,516 @@
-#+TITLE: Stow HowTo - Guía Práctica
-#+AUTHOR: puto amo
-#+DATE: 2025-06-11
+#+TITLE: Dotfiles - passh@aurin
+#+AUTHOR: passh
+#+DATE: 2025-11-22
+#+STARTUP: overview
 
-* TL;DR - Lo Mínimo para Trabajar
+* TL;DR - Setup Rápido
 
-** Estructura básica de dotfiles
-#+BEGIN_EXAMPLE
-~/dotfiles/
-├── nvim/
-│   └── .config/nvim/init.lua
-├── zsh/
-│   └── .zshrc
-└── nixos-aurin/
-    └── etc/nixos/configuration.nix
-#+END_EXAMPLE
+#+BEGIN_SRC bash
+# Clonar dotfiles
+git clone <repo> ~/dotfiles
+cd ~/dotfiles
 
-** Comandos esenciales
+# Aplicar configs importantes
+stow -v home-manager  # Home Manager (gestión de paquetes)
+stow -v fish          # Shell
+stow -v xmonad        # Window manager
+stow -v xmobar        # Status bar
+stow -v picom         # Compositor (transparencias, sombras, etc.)
+stow -v alacritty     # Terminal
+
+# NixOS config (necesita root)
+sudo stow -v -t / nixos-aurin
+
+# Rebuild NixOS
+sudo nixos-rebuild switch
+#+END_SRC
+
+* Estructura del Proyecto
+
+#+BEGIN_SRC text
+dotfiles/
+├── home-manager/     ★ Home Manager (paquetes, config base)
+├── nixos-aurin/      ★ Configuración NixOS específica de Aurin
+├── xmonad/           ★ Window manager
+├── xmobar/           ★ Status bar
+├── picom/            ★ Compositor X11
+├── fish/             ★ Fish shell
+├── alacritty/        ★ Terminal emulator
+├── shell/            • Bashrc/Zshrc (legacy?)
+├── scripts/          • Scripts útiles
+├── wallpapers/       • Fondos de pantalla
+├── composer/         • PHP Composer config
+└── README.org        • Este archivo
+#+END_SRC
+
+*Leyenda:* =★ Activo= | =• Posiblemente legacy/sin usar=
+
+* Configuraciones Principales
+
+** Home Manager (~/.config/home-manager/home.nix) ★
+
+*Gestiona:* Instalación de paquetes user-level con Nix
+
+*Características:*
+- Paquetes desde =stable=, =unstable= y =master=
+- Desactiva gestión de configs (usamos stow)
+- 200+ paquetes instalados
+
+*Paquetes destacados:*
+| Categoría       | Paquetes                                      |
+|-----------------+-----------------------------------------------|
+| Shells          | fish, zsh, bash                               |
+| Editores        | emacs (unstable), neovim, doom-emacs          |
+| Development     | php83, nodejs_24, go, python3, rust           |
+| Window Manager  | xmonad, xmobar, picom, dmenu                  |
+| Tools           | docker, lazydocker, k9s, direnv               |
+| Media           | vlc, spotify, obs-studio                      |
+| Communication   | telegram-desktop, slack, discord              |
+| AI              | ollama, claude-code                           |
+| Browsers        | firefox, brave, google-chrome                 |
+
+*Aplicar cambios:*
+#+BEGIN_SRC bash
+# Editar
+vim ~/.config/home-manager/home.nix
+
+# Aplicar
+home-manager switch
+
+# O si usas stow
+stow -R home-manager
+home-manager switch
+#+END_SRC
+
+** NixOS Aurin (/etc/nixos/configuration.nix) ★
+
+*Ver documentación completa:* [[file:nixos-aurin/README.org][nixos-aurin/README.org]]
+
+*Sistema:* Dual Xeon E5-2699v3 + RTX 5080 + FiiO K7 + 128GB RAM
+
+*Características principales:*
+- NVIDIA RTX 5080 (drivers open-source beta)
+- PipeWire optimizado para FiiO K7 DAC/AMP
+- Sunshine streaming server (NVENC)
+- Virtualización KVM/QEMU + Docker
+- Ollama + Open WebUI (AI local)
+- Dual NIC + bridge para VMs
+- NUMA optimizations para dual socket
+
+*Scripts del sistema:*
+| Comando          | Descripción                      |
+|------------------+----------------------------------|
+| =aurin-info=     | Info completa del sistema        |
+| =fiio-k7-test=   | Test DAC/AMP FiiO K7             |
+| =sunshine-test=  | Test streaming Sunshine          |
+| =xeon-stress=    | Stress test dual Xeon            |
+| =numa-info=      | Info NUMA dual socket            |
+| =temp-monitor=   | Monitor temperaturas             |
+
+** XMonad (~/.config/xmonad/xmonad.hs) ★
+
+*Tiling window manager* escrito en Haskell
+
+*Características:*
+- Layouts: Tall, ThreeCol, Grid, MultiCol
+- Scratchpads: terminal, emacs, jetbrains-toolbox
+- Grid selector (M-g)
+- Integración con xmobar
+- Keybindings personalizados
+
+*Keybindings importantes:*
+| Tecla               | Acción                              |
+|---------------------+-------------------------------------|
+| =M-p=               | Dmenu (launcher)                    |
+| =M-g=               | Grid selector                       |
+| =M-S-<Enter>=       | Alacritty                           |
+| =M-S-c=             | Cerrar ventana                      |
+| =M-<Space>=         | Cambiar layout                      |
+| =M-S-f=             | Fullscreen                          |
+| =M-[1-9]=           | Cambiar workspace                   |
+| =M-S-[1-9]=         | Mover ventana a workspace           |
+| =M-j/k=             | Focus siguiente/anterior            |
+| =M-h/l=             | Resize master                       |
+| =M-S-a=             | Sink all (des-float todas)          |
+| =M-S-s=             | Sticky window (all workspaces)      |
+| =M-S-k=             | Kill sticky copies                  |
+| =M-<F1>=            | Scratchpad terminal                 |
+| =M-<F2>=            | Scratchpad Emacs                    |
+| =M-<F3>=            | JetBrains Toolbox                   |
+| =M-<Print>=         | Flameshot screenshot                |
+| =XF86AudioMute=     | Toggle mute                         |
+| =XF86AudioRaise=    | Volumen +5%                         |
+| =XF86AudioLower=    | Volumen -5%                         |
+
+*Dmenu:* Busca en flatpak apps + nix-profile + $PATH
+
+*Recargar config:*
+#+BEGIN_SRC bash
+# Recompilar y recargar
+M-q
+
+# O manualmente
+xmonad --recompile && xmonad --restart
+#+END_SRC
+
+** Picom (~/.config/picom/picom.conf) ★
+
+*Compositor X11* para transparencias, sombras, animaciones, blur
+
+*Características:*
+- Backend: GLX (optimizado para RTX 5080)
+- VSync: enabled (120Hz)
+- Refresh rate: 120
+- Transparencias: terminals, rofi, etc.
+- Sombras suaves en ventanas
+- No borders cuando fullscreen
+
+*Configuración importante:*
+#+BEGIN_SRC conf
+backend = "glx";
+vsync = true;
+refresh-rate = 120;
+unredir-if-possible = true;  # Mejor para gaming/video
+#+END_SRC
+
+*Recargar:*
+#+BEGIN_SRC bash
+killall picom
+picom &
+#+END_SRC
+
+** Fish Shell (~/.config/fish/config.fish) ★
+
+*Shell moderno* con autocompletado y syntax highlighting
+
+*Config actual:*
+#+BEGIN_SRC fish
+# PATH additions
+set -x PATH /home/passh/.config/emacs/bin $PATH      # Doom Emacs
+set -x PATH /home/passh/node_modules/.bin $PATH      # Node local
+set -x PATH /home/passh/.local/bin $PATH             # Local bins
+#+END_SRC
+
+*Features:*
+- =completions/= - Autocompletados personalizados
+- =conf.d/= - Configs adicionales
+- =functions/= - Funciones personalizadas
+
+*Uso:*
+#+BEGIN_SRC bash
+# Cambiar a fish
+chsh -s $(which fish)
+
+# O usar temporalmente
+fish
+#+END_SRC
+
+** Alacritty (~/.config/alacritty/) ★
+
+*Terminal emulator* GPU-accelerated
+
+*Configuración:* Ver =~/.config/alacritty/alacritty.yml=
+
+*Features:*
+- Renderizado GPU (OpenGL)
+- Scrollback history
+- True color support
+- Integración con tmux/byobu
+
+** XMobar (~/.config/xmobar/) ★
+
+*Status bar* para XMonad
+
+*Muestra:*
+- Workspaces activos
+- Layout actual
+- Window title
+- Posiblemente: CPU, RAM, fecha/hora (ver config)
+
+*Recargar:*
+#+BEGIN_SRC bash
+killall xmobar
+xmobar &
+#+END_SRC
+
+** Scripts (~/scripts/) •
+
+*Scripts útiles del sistema*
+
+| Script                            | Descripción                    |
+|-----------------------------------+--------------------------------|
+| =ubuntu-vm-ivanti-configurator.sh= | Configurador VM Ubuntu Ivanti  |
+| =hdmon.sh=                        | Monitor discos duros?          |
+| =vm-backupeitor.sh=               | Backup VMs?                    |
+
+*Nota:* Puede que algunos estén obsoletos o sean específicos de otro setup
+
+** Wallpapers (~/wallpapers/) •
+
+Fondos de pantalla
+
+*Gestión:*
+- Nitrogen (GUI)
+- O directamente con =feh=
+
+** Shell (bashrc/zshrc) •
+
+*Posiblemente legacy* - Fish es el shell principal
+
+Contiene:
+- =.bashrc= - Configuración Bash
+- =.zshrc= - Configuración Zsh
+
+*¿Usar?* Probablemente no si usas Fish, pero mantienen compatibilidad
+
+** Composer (~/.config/composer/) •
+
+*PHP Composer* config
+
+Probablemente para desarrollo PHP (tienes php83 en home.nix)
+
+* Guía Stow - Gestión de Dotfiles
+
+** ¿Qué es Stow?
+
+GNU Stow crea *enlaces simbólicos* desde tu dotfiles repo a tu $HOME
+
+** Comandos Esenciales
+
 #+BEGIN_SRC bash
 cd ~/dotfiles
 
 # Crear enlaces (primera vez)
-stow nvim
-stow zsh
-
-# Para NixOS (necesita root)
-sudo stow -t / nixos-aurin
-
-# Quitar enlaces
-stow -D nvim
-
-# Recrear enlaces (cuando cambias cosas)
-stow -R nvim
-#+END_SRC
-
-* Comandos Útiles
-
-** Básicos
-#+BEGIN_SRC bash
-# Crear enlaces simbólicos
 stow PAQUETE
 
 # Quitar enlaces
 stow -D PAQUETE
 
-# Recrear enlaces (delete + create)
+# Recrear enlaces (cuando cambias cosas)
 stow -R PAQUETE
 
 # Ver qué va a hacer sin ejecutar
 stow -n PAQUETE
-#+END_SRC
 
-** Con Flags Útiles
-#+BEGIN_SRC bash
-# Verbose - ver qué hace
+# Verbose (siempre recomendado)
 stow -v PAQUETE
-
-# Target específico - para rutas como /etc
-sudo stow -v -t / nixos-aurin
-
-# Recrear con verbose (el más usado)
-stow -v -R PAQUETE
-
-# Simular + verbose (debug)
-stow -v -n PAQUETE
 #+END_SRC
 
 ** Workflows Comunes
 
-*** Añadir nueva configuración:
+*** Activar configuración por primera vez:
 #+BEGIN_SRC bash
-# 1. Mover archivo existente a dotfiles
-mv ~/.zshrc ~/dotfiles/zsh/
-
-# 2. Crear enlace
 cd ~/dotfiles
-stow zsh
+stow -v xmonad
+stow -v fish
 #+END_SRC
 
 *** Actualizar configuración existente:
 #+BEGIN_SRC bash
 # Editar archivo en dotfiles
-vim ~/dotfiles/nvim/.config/nvim/init.lua
+vim ~/dotfiles/fish/.config/fish/config.fish
 
 # Recrear enlaces (por si acaso)
-stow -R nvim
+stow -R fish
 #+END_SRC
 
-*** Para configuraciones del sistema (como NixOS):
+*** Para NixOS (necesita root y target /):
 #+BEGIN_SRC bash
-# Siempre con sudo y target /
 sudo stow -v -R -t / nixos-aurin
 
-# Verificar enlaces
+# Verificar
 ls -la /etc/nixos/
-#+END_SRC
 
-* Flags Explicadas
-
-| Flag    | Significado | Uso                        |
-|---------+-------------+----------------------------|
-| =-v=    | Verbose     | Ver qué hace stow          |
-| =-R=    | Restow      | Quitar y recrear enlaces   |
-| =-D=    | Delete      | Solo quitar enlaces        |
-| =-t DIR= | Target      | Directorio donde crear enlaces |
-| =-n=    | No execute  | Simular sin ejecutar       |
-
-* Estructura Recomendada
-
-#+BEGIN_EXAMPLE
-~/dotfiles/
-├── zsh/
-│   ├── .zshrc
-│   └── .zsh/
-│       └── aliases.zsh
-├── nvim/
-│   └── .config/
-│       └── nvim/
-│           ├── init.lua
-│           └── lua/
-├── git/
-│   ├── .gitconfig
-│   └── .gitignore_global
-├── nixos-aurin/
-│   └── etc/
-│       └── nixos/
-│           ├── configuration.nix
-│           └── hardware-configuration.nix
-└── README.org
-#+END_EXAMPLE
-
-* Casos Especiales
-
-** NixOS
-#+BEGIN_SRC bash
-# NixOS necesita root y target /
-sudo stow -v -R -t / nixos-aurin
-
-# Después rebuild
+# Aplicar cambios
 sudo nixos-rebuild switch
 #+END_SRC
 
-** Conflictos de Archivos
-#+BEGIN_SRC bash
-# Si hay conflictos, stow te avisará
-# Solución: quitar archivo manual y volver a stow
-rm ~/.zshrc
-stow zsh
-#+END_SRC
+** Flags Explicadas
 
-** Múltiples Máquinas
-#+BEGIN_EXAMPLE
-~/dotfiles/
-├── common/           # Configs compartidas
-├── nixos-aurin/     # Específicas de aurin
-├── macos-laptop/    # Específicas del Mac
-└── README.org
-#+END_EXAMPLE
+| Flag     | Significado  | Uso                              |
+|----------+--------------+----------------------------------|
+| =-v=     | Verbose      | Ver qué hace stow                |
+| =-R=     | Restow       | Quitar y recrear enlaces         |
+| =-D=     | Delete       | Solo quitar enlaces              |
+| =-t DIR= | Target       | Directorio donde crear enlaces   |
+| =-n=     | No execute   | Simular sin ejecutar (dry-run)   |
 
-#+BEGIN_SRC bash
-# Uso
-stow common
-stow nixos-aurin     # Solo en aurin
-#+END_SRC
+** Pro Tips
 
-* Troubleshooting
+- *Nunca uses =sudo stow=* para archivos de usuario (home)
+- *Siempre usa =sudo stow -t /=* para archivos del sistema (/etc)
+- *Usa =-R=* cuando dudes, es más seguro
+- *Usa =-v=* siempre para ver qué hace
+- *Usa =-n=* para testing antes de ejecutar
+- *Git tu dotfiles* para backup/sync
 
-** "Conflicts with existing target"
+** Troubleshooting
+
+*** "Conflicts with existing target"
 #+BEGIN_SRC bash
 # Ver qué conflicta
 stow -v -n PAQUETE
 
-# Quitar archivo manual
-rm ARCHIVO_CONFLICTIVO
+# Quitar archivo manual (backup primero)
+mv ~/.config/fish/config.fish ~/.config/fish/config.fish.backup
 
 # Volver a stow
-stow PAQUETE
+stow fish
 #+END_SRC
 
-** "Permission denied"
+*** "Permission denied"
 #+BEGIN_SRC bash
-# Para archivos del sistema
+# Para archivos del sistema (/etc)
 sudo stow -t / PAQUETE
 
 # Para archivos de usuario (nunca uses sudo)
 stow PAQUETE
 #+END_SRC
 
-** Ver enlaces existentes
+*** Ver enlaces existentes
 #+BEGIN_SRC bash
 # Ver todos los symlinks en home
-find ~ -maxdepth 2 -type l -ls
+find ~ -maxdepth 3 -type l -ls | grep dotfiles
 
 # Ver específico
-ls -la ~/.zshrc
+ls -la ~/.config/fish/config.fish
 #+END_SRC
-
-* Pro Tips
-
-- *Nunca uses =sudo stow=* para archivos de usuario (home)
-- *Siempre usa =sudo stow -t /=* para archivos del sistema
-- *Usa =-R=* cuando dudes, es más seguro
-- *Usa =-v=* siempre para ver qué hace
-- *Usa =-n=* para testing antes de ejecutar
-- *Estructura por función*, no por aplicación
-- *Git tu dotfiles* para backup/sync
 
 * Git Workflow
 
 #+BEGIN_SRC bash
 cd ~/dotfiles
 
-# Después de cambios
+# Ver cambios
+git status
+git diff
+
+# Commit cambios
 git add .
-git commit -m "Update nvim config"
+git commit -m "Update xmonad keybindings"
 git push
 
 # En otra máquina
 git pull
-stow -R nvim  # Recrear enlaces
+stow -R xmonad  # Recrear enlaces
 #+END_SRC
 
 * Comandos Más Usados
 
 #+BEGIN_SRC bash
-# El combo más usado día a día
+# Activar config (con verbose)
 stow -v -R PAQUETE
 
 # Para NixOS
 sudo stow -v -R -t / nixos-aurin
+sudo nixos-rebuild switch
 
-# Para testear
+# Home Manager
+stow -v -R home-manager
+home-manager switch
+
+# Testear sin aplicar
 stow -v -n PAQUETE
 #+END_SRC
+
+* Setup Completo Nueva Máquina
+
+#+BEGIN_SRC bash
+# 1. Clonar dotfiles
+git clone <repo-url> ~/dotfiles
+cd ~/dotfiles
+
+# 2. Aplicar Home Manager
+stow -v home-manager
+home-manager switch
+
+# 3. Aplicar configs de usuario
+stow -v fish
+stow -v xmonad
+stow -v xmobar
+stow -v picom
+stow -v alacritty
+
+# 4. NixOS config (solo en NixOS)
+sudo stow -v -t / nixos-aurin
+sudo nixos-rebuild switch
+
+# 5. Recargar shell
+fish
+
+# 6. Reiniciar sesión X (logout/login) o:
+xmonad --recompile && xmonad --restart
+#+END_SRC
+
+* Notas de Desarrollo
+
+** Home Manager vs NixOS config
+
+- *NixOS config* (=/etc/nixos/configuration.nix=): Sistema base, servicios, hardware
+- *Home Manager* (=~/.config/home-manager/home.nix=): Paquetes usuario, configs user-level
+
+** Channels
+
+#+BEGIN_SRC bash
+# Ver channels
+nix-channel --list
+
+# Debería mostrar:
+# home-manager https://github.com/nix-community/home-manager/archive/release-25.05.tar.gz
+#+END_SRC
+
+** Direnv
+
+Tienes =direnv= instalado. Usa =.envrc= en proyectos para cargar variables automáticamente:
+
+#+BEGIN_SRC bash
+# En directorio proyecto
+echo "use nix" > .envrc
+direnv allow
+#+END_SRC
+
+* TODO Tareas Pendientes
+
+- [ ] Revisar y limpiar configs obsoletas (shell/, composer/)
+- [ ] Documentar scripts útiles en scripts/
+- [ ] Añadir config de alacritty al README
+- [ ] Migrar a Home Manager Flakes (opcional)
+- [ ] Backup automático dotfiles a GitHub/GitLab
+- [ ] Documentar xmobar config específica
+
+* Estructura Recomendada para Nuevas Configs
+
+Al añadir nueva configuración:
+
+#+BEGIN_SRC text
+dotfiles/
+└── nueva-app/
+    └── .config/
+        └── nueva-app/
+            └── config.conf
+#+END_SRC
+
+Luego:
+#+BEGIN_SRC bash
+stow nueva-app
+#+END_SRC
+
+Esto crea: =~/.config/nueva-app/config.conf= → =~/dotfiles/nueva-app/.config/nueva-app/config.conf=
+
+* Referencias
+
+- [[https://nixos.org/manual/nixos/stable/][NixOS Manual]]
+- [[https://nix-community.github.io/home-manager/][Home Manager Manual]]
+- [[https://xmonad.org/][XMonad Documentation]]
+- [[https://www.gnu.org/software/stow/manual/stow.html][GNU Stow Manual]]
+- [[https://github.com/alacritty/alacritty][Alacritty]]
+- [[https://wiki.archlinux.org/title/Picom][Picom Wiki]]
+- [[file:nixos-aurin/README.org][NixOS Aurin Specific Docs]]
+
+---
+
+*Última actualización:* 2025-11-22
+*Sistema:* Aurin (NixOS 25.05)
+*Shell principal:* Fish
+*Window Manager:* XMonad
+*Terminal:* Alacritty
