@@ -1,1 +1,7 @@
 .aider*
+
+# Wallpapers - too large for git
+wallpapers/
+
+# Aider cache
+.aider.tags.cache.v4/
