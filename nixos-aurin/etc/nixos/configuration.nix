@@ -294,6 +294,11 @@
               prefixLength = 16;
               via = "192.168.53.12";
             }
+            {
+              address = "34.13.0.0";
+              prefixLength = 16;
+              via = "192.168.53.12";
+            }
           ];
         };
       };
@@ -331,7 +336,7 @@
     };
 
     firewall = {
-      enable = false;
+      enable = true;
       allowedTCPPorts = [
         53
         80

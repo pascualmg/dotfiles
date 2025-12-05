@@ -32,6 +32,9 @@ in {
 
     packages = with pkgs;
       [
+
+        #master.antigravity-fhs #por el momento no funca :S
+
         # Core utils
         killall # para matarlos a todos
         stow # para los dotfiles
@@ -49,7 +52,7 @@ in {
         file # para saber que eres
         lsof # para saber que haces
         v4l-utils # para que la webcam funcione
-        #master.guvcview # para verme la cara
+        unstable.guvcview # para verme la cara
         docker-compose # para componer contenedores
         unstable.lazydocker # tui para docker
         unstable.eza # ls pero con coloricos
@@ -105,8 +108,6 @@ in {
         graphviz
         # para compilar la vterm o lo que sea
         gcc
-        gnumake
-        cmake
         libtool
         pkg-config
 
@@ -143,14 +144,14 @@ in {
         # Herramientas globales del sistema. Los flakes pueden override.
 
         # Core toolchain
-        haskellPackages.ghc                    # GHC 9.8.x
-        haskell-language-server                # Wrapper + binarios para múltiples GHC
-        haskellPackages.cabal-install          # Build tool
-        stack                                  # Build tool alternativo
+        haskellPackages.ghc # GHC 9.8.x
+        haskell-language-server # Wrapper + binarios para múltiples GHC
+        haskellPackages.cabal-install # Build tool
+        stack # Build tool alternativo
 
         # Formatters
         haskellPackages.ormolu
-        haskellPackages.fourmolu               # Recomendado
+        haskellPackages.fourmolu # Recomendado
         haskellPackages.stylish-haskell
 
         # Linting
@@ -169,7 +170,6 @@ in {
         # Dependencias del sistema
         gmp
         zlib
-        gcc
 
         # Rust ecosystem
         #rustc
@@ -298,7 +298,7 @@ in {
       #      '';
 
       # Directorios base
-      createDirectories = lib.hm.dag.entryAfter [ "installDoom" ] ''
+      createDirectories = lib.hm.dag.entryAfter [ "linkDotfiles" ] ''
         echo "📁 Creando estructura de directorios..."
         mkdir -p $HOME/org/roam
         mkdir -p $HOME/src
