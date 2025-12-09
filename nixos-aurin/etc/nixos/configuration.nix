@@ -30,7 +30,8 @@
 
     # RTX 5080 - CONFIGURACIÓN ESPECÍFICA
     nvidia = {
-      open = true; # CRÍTICO: RTX 5080 requiere drivers abiertos
+      open = true; # CRÍTICO: RTX 5080 NO soportada en drivers propietarios (575.51.02)
+      # open = false; # ❌ INTENTADO 2025-12-09: Drivers propietarios no soportan RTX 5080 - X11 falla con "GPU not supported"
       package =
         config.boot.kernelPackages.nvidiaPackages.beta; # Beta para RTX 5080
       modesetting.enable = true;
@@ -679,6 +680,41 @@
       };
     };
 
+    # ===== SYNCTHING - SINCRONIZACIÓN CON VESPINO =====
+    syncthing = {
+      enable = true;
+      user = "passh";
+      dataDir = "/home/passh";
+      openDefaultPorts = true;  # 22000 TCP/UDP, 21027 UDP
+      guiAddress = "0.0.0.0:8385";  # Puerto diferente a vespino (8384)
+
+      settings = {
+        devices = {
+          "vespino" = {
+            id = "C2DZIRD-A65IMBL-34MTS3M-ULVUMOL-6436UPS-DNZU5QI-ITPPIER-LWZCOAG";
+          };
+          "cohete" = {
+            id = "MJCXI4B-EA5DX64-SY4QGGI-TKPDYG5-Y3OKBIU-XXAAWML-7TXS57Q-GLNQ4AY";
+          };
+          "pocapullos" = {
+            id = "OYORVJB-XKOUBKT-NPILWWO-FYXSBAB-Q2FFRMC-YIZB4FW-XX5HDWR-X6K65QE";
+          };
+        };
+        folders = {
+          "org" = {
+            path = "/home/passh/org";
+            devices = ["vespino" "cohete" "pocapullos"];
+            type = "sendreceive";
+            ignorePerms = false;
+          };
+        };
+        gui = {
+          user = "passh";
+          password = "capullo100";
+        };
+      };
+    };
+
     # ===== SERVICIOS VIRTUALIZACIÓN (AÑADIDO) =====
     spice-vdagentd.enable = true; # Para mejor integración con SPICE
     qemuGuest.enable = true; # Soporte para guest
@@ -1008,7 +1044,7 @@
   security = {
     rtkit.enable = true; # CRÍTICO: Para audio de baja latencia
     polkit.enable = true;
-    sudo.wheelNeedsPassword = true;
+    sudo.wheelNeedsPassword = false; # Sin contraseña para wheel
   };
 
   # ===== UDEV RULES PARA SUNSHINE + AUDIO =====
@@ -1042,7 +1078,64 @@
   # ===== PROGRAMAS =====
   programs = {
     fish.enable = true;
-    steam.enable = true;
+
+    # ===== STEAM CON SOPORTE NVIDIA RTX 5080 =====
+    steam = {
+      enable = true;
+      remotePlay.openFirewall = true;
+      dedicatedServer.openFirewall = true;
+
+      # Paquetes extra para el FHS environment
+      extraCompatPackages = with pkgs; [
+        proton-ge-bin
+      ];
+
+      # CRÍTICO: Librerías gráficas para NVIDIA en el contenedor FHS
+      package = pkgs.steam.override {
+        extraPkgs = pkgs: with pkgs; [
+          # OpenGL/Vulkan libraries
+          libGL
+          libGLU
+          vulkan-loader
+          vulkan-tools
+          mesa
+
+          # NVIDIA específico
+          nvidia-vaapi-driver
+          libva
+          libva-utils
+
+          # X11 libraries completas para CEF
+          xorg.libX11
+          xorg.libXcursor
+          xorg.libXrandr
+          xorg.libXi
+          xorg.libXext
+          xorg.libXfixes
+          xorg.libXrender
+          xorg.libXScrnSaver
+          xorg.libXcomposite
+          xorg.libXdamage
+          xorg.libXtst
+
+          # Otras dependencias CEF
+          nss
+          nspr
+          at-spi2-atk
+          at-spi2-core
+          dbus
+          cups
+          libdrm
+          expat
+          libxkbcommon
+          alsa-lib
+          pango
+          cairo
+          gdk-pixbuf
+          gtk3
+        ];
+      };
+    };
   };
 
   fileSystems."/mnt/vespino-storage" = {

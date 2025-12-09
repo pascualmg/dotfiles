@@ -1,0 +1,574 @@
+#+TITLE: Aurin System Notes - RTX 5080 & Steam Issues
+#+AUTHOR: passh
+#+DATE: 2025-12-09
+#+STARTUP: overview
+
+* Sistema Aurin - Hardware
+** CPU
+- Dual Xeon E5-2699v3 (72 threads total, 36 cores físicos cada uno)
+- NUMA dual socket
+- AVX2 support (Haswell-EP)
+
+** GPU
+- NVIDIA GeForce RTX 5080 (16GB VRAM)
+- PCI: 03:00.0
+- *CRÍTICO*: RTX 5080 es MUY NUEVA - Solo soportada por drivers OPEN
+
+** Audio
+- FiiO K7 DAC/AMP
+- Sennheiser HD600
+- PipeWire + ALSA optimizado
+
+** Memoria
+- 128GB RAM
+
+** Red
+- enp7s0: 192.168.2.147/24 (interface principal)
+- br0: 192.168.53.10/24 (bridge para VMs)
+- Vocento VPN: Rutas estáticas a 172.30.56.0/23, 172.30.58.0/23, 10.254.252.0/24
+
+* Entorno de Desarrollo
+
+** Editores y IDEs
+- *Doom Emacs* (unstable) - Editor principal, config en ~/doom
+- *Neovim* (unstable) - Editor secundario
+- *JetBrains Toolbox* (master) - Para IntelliJ PHP principalmente
+- *Claude Code* (unstable) - AI coding assistant
+
+** Lenguajes y Toolchains
+
+*** Haskell (Completo)
+- GHC 9.8.x + haskell-language-server
+- Build tools: cabal, stack
+- Formatters: ormolu, fourmolu, stylish-haskell
+- Linting: hlint, apply-refact
+- Dev tools: ghcid, hoogle, implicit-hie
+- Sistema de deps: gmp, zlib
+
+*** Python 3
+- Herramientas: black, flake8, pylint, pytest, isort
+- Paquetes: pip, pynvim, ipython, setuptools
+
+*** Node.js 24
+- Para Doom Emacs copilot y desarrollo web
+- LSP: typescript-language-server, intelephense (PHP)
+- Utils: js-beautify, stylelint
+
+*** C/C++
+- GCC, clang-tools, cmake, libtool
+- Para compilar vterm y extensiones Emacs
+
+*** Java
+- JDK21 + Minecraft (Prismlauncher)
+
+** Shell y Utilidades
+- *Fish* - Shell principal
+- Zsh, Bash - Shells secundarios
+- ripgrep, fd - Búsqueda rápida
+- eza - ls mejorado con color
+- bat - cat con syntax highlighting
+- direnv - Variables de entorno automáticas
+
+** Window Manager y Compositor
+- *XMonad* (Haskell) - Tiling WM principal
+- XMobar - Barra de estado
+- dmenu - Launcher
+- Picom - Compositor (blur, transparencias, animaciones, bordes redondeados)
+- Nitrogen - Gestor de wallpapers
+- Flameshot - Screenshots
+- Alttab - Switcher de ventanas estilo Windows
+
+* Software y Servicios
+
+** Multimedia y Streaming
+- *OBS Studio* (CUDA-enabled) - Grabación con aceleración GPU
+- *Sunshine* - Servidor streaming con NVENC H264/H265
+- *FFmpeg-full* - Procesamiento de video
+- VLC, MPV - Reproductores
+- SimpleScreenRecorder - Grabación simple
+- Spotify - Música
+
+** Comunicación
+- Slack, Teams for Linux, Telegram Desktop
+- Postman - API testing
+
+** Media Server
+- *Jellyfin* (master) - Servidor multimedia local
+- qBittorrent - Cliente torrent
+
+** LLMs y AI
+- *Ollama* - Servidor LLM local con optimización extrema:
+  - 70 GPU layers
+  - 15.8GB VRAM dedicados
+  - 70GB RAM del sistema
+  - CUDA 12.4 con compute 8.9
+  - NUMA optimizado para dual socket
+  - AVX2, FMA activado
+- *Open-webui* - Interfaz web para Ollama
+
+** Virtualización y Contenedores
+- *libvirt/KVM* - Virtualización con VFIO
+- *Docker* + nvidia-container-toolkit
+- lazydocker - TUI para Docker
+
+** Networking y Seguridad
+- nmap, wireshark, etherape - Análisis de red
+- traceroute, tcpdump - Debugging red
+- OpenVPN cliente - Conexión a Vocento
+- GnuPG + pinentry - Gestión de claves
+
+** Browsers
+- Firefox (master)
+- Google Chrome (master)
+- Qutebrowser (master) - Vim-style browser
+
+** Gaming
+- *Steam* + Proton GE - Juegos con GPU (UI con bug de aceleración)
+- *Duckstation* - Emulador PlayStation (Xenogears!)
+- *Prismlauncher* - Minecraft con JDK21
+
+** System Monitoring
+- btop (master) - Monitor de recursos avanzado
+- s-tui (master) - Stress testing y monitoring CPU
+- dysk - df mejorado
+- mission-center - Monitor estilo Task Manager
+
+** Servicios Systemd User
+- *picom* - Compositor X11 con config custom
+- *dunst* - Notificaciones de escritorio (font Monoid 18, colores Gruvbox)
+
+* Scripts Custom del Sistema
+
+** aurin-info
+Info completa del sistema: CPU, GPU, RAM, red, servicios.
+
+** sunshine-test
+Test de Sunshine streaming y NVENC (H264/H265).
+
+** fiio-k7-test
+Test del DAC FiiO K7 a 96kHz con PipeWire.
+
+** xeon-stress
+Stress test para los dual Xeon E5-2699v3 (72 threads).
+
+** temp-monitor
+Monitoreo de temperaturas CPU/GPU en tiempo real.
+
+** numa-info
+Información detallada de arquitectura NUMA dual socket.
+
+* Optimizaciones Específicas
+
+** PipeWire para FiiO K7
+#+begin_src nix
+pipewire.extraConfig.pipewire."10-fiio-k7" = {
+  "context.properties" = {
+    "default.clock.rate" = 96000;      # 96kHz nativo
+    "default.clock.quantum" = 1024;
+    "default.clock.min-quantum" = 1024;
+  };
+};
+#+end_src
+
+** Ollama Extremo (RTX 5080 + Dual Xeon)
+#+begin_src bash
+OLLAMA_GPU_LAYERS=70
+OLLAMA_CUDA_MEMORY=15800MiB    # Casi toda la VRAM
+OLLAMA_HOST_MEMORY=70000MiB    # 70GB de RAM
+OMP_NUM_THREADS=72             # Todos los threads
+CUDA_VISIBLE_DEVICES=0
+CUDA_CACHE_MAXSIZE=2147483648  # 2GB cache
+GOMP_CPU_AFFINITY="0-71"       # Todos los cores
+#+end_src
+
+** Sunshine Streaming
+#+begin_src nix
+sunshine = {
+  enable = true;
+  autoStart = true;
+  capSysAdmin = true;
+  openFirewall = true;
+  settings = {
+    encoder = "nvenc";         # NVENC hardware
+    nvenc_preset = "p7";       # Máxima calidad
+    nvenc_h264_cavlc = true;
+  };
+};
+#+end_src
+
+* Gestión de Dotfiles
+
+** GNU Stow
+Dotfiles gestionados con stow en =~/dotfiles=:
+- Automatización en home-manager activation
+- Linkeo automático al hacer =home-manager switch=
+- Configs: xmonad, picom, fish, alacritty, etc.
+
+** Home Manager
+- Channels: stable (24.05), unstable, master
+- Separación clara: system-level (NixOS) vs user-level (home-manager)
+- allowUnfree habilitado
+- Git config: Pascual Muñoz Galian (pmunozg@ces.vocento.com)
+
+* Syncthing - Sincronización
+
+** Configuración (2025-12-09)
+Syncthing activado para sincronizar =~/org= con otras máquinas.
+
+*** Device ID aurin
+#+begin_example
+I5C3RVM-G3NN7HI-PU44PDV-GHSR7XK-3TKCRT5-L3SG4QW-GDT2O5D-YOT3DQJ
+#+end_example
+
+*** Dispositivos conectados
+| Dispositivo | Device ID                                        | IP              | Versión  |
+|-------------+--------------------------------------------------+-----------------+----------|
+| vespino     | C2DZIRD-A65IMBL-34MTS3M-ULVUMOL-6436UPS-...     | 192.168.2.125   | v1.27.7  |
+| cohete      | MJCXI4B-EA5DX64-SY4QGGI-TKPDYG5-Y3OKBIU-...     | 185.14.56.20    | v1.28.0  |
+| pocapullos  | OYORVJB-XKOUBKT-NPILWWO-FYXSBAB-Q2FFRMC-...     | dynamic         | -        |
+
+*** Carpetas sincronizadas
+- *org* → =/home/passh/org=
+  - Sincroniza con: vespino, cohete, pocapullos
+  - Tipo: sendreceive (bidireccional)
+  - Contenido: 62+ archivos .org, org-roam notes, journal, imágenes
+
+*** GUI Web
+- URL: http://192.168.2.147:8385 (aurin)
+- User: passh
+- Password: capullo100
+
+*** Encriptación GPG
+Keys GPG copiadas desde vespino para descifrar archivos .org:
+- Key ID: 26E24A1C50A0807A18982DC624DF2F36A9D03ABB
+- User: Pascual Muñoz Galián (the root) <info@pascualmg.dev>
+- Tipo: RSA 4096
+
+*** Puertos
+- TCP 22000 - Transferencias
+- UDP 22000 - Transferencias
+- UDP 21027 - Discovery
+- TCP 8385 - GUI Web
+
+* Problema Principal: NVIDIA RTX 5080 Drivers
+
+** Estado Actual (2025-12-09)
+*** Drivers NVIDIA Open (FUNCIONANDO)
+#+begin_example
+hardware.nvidia.open = true;
+package = config.boot.kernelPackages.nvidiaPackages.beta;
+#+end_example
+
+- ✅ X11 funciona correctamente
+- ✅ Aceleración GPU funcional
+- ✅ NVENC funciona (Sunshine streaming)
+- ✅ Sistema estable
+- ❌ Steam CEF/Chromium NO funciona con aceleración GPU
+
+*** Drivers NVIDIA Propietarios (NO FUNCIONAN)
+#+begin_example
+hardware.nvidia.open = false;  # ❌ FALLA
+#+end_example
+
+*Error*:
+#+begin_example
+(EE) NVIDIA(GPU-0): The NVIDIA GPU at PCI:3:0:0 is not supported by the 575.51.02 NVIDIA driver.
+(EE) NVIDIA(GPU-0): Failed to initialize the NVIDIA graphics device!
+Fatal server error: no screens found
+#+end_example
+
+*Resultado*: X11 no arranca, display manager falla
+
+** Por qué Open es obligatorio
+La RTX 5080 (Blackwell architecture, lanzada Q1 2025) es TAN nueva que:
+1. Drivers propietarios 575.51.02 (beta más reciente) NO la soportan aún
+2. Solo drivers open source de NVIDIA pueden inicializarla
+3. Probablemente necesitará drivers propietarios 580+ cuando salgan
+
+* Problema Secundario: Steam + NVIDIA Open Drivers
+
+** El Bug
+Steam usa Chromium Embedded Framework (CEF) para su interfaz.
+En NixOS, cuando Steam corre en el contenedor Pressure Vessel:
+- Con drivers NVIDIA open → GPU process falla (error_code=1002)
+- CEF no puede iniciar el proceso GPU
+- Steam funciona pero SIN aceleración de hardware en la UI
+
+** Logs del Error
+#+begin_src text
+[2025-12-09 13:37:07] GPU process launch failed: error_code=1002
+[2025-12-09 13:37:07] FATAL:gpu_data_manager_impl_private.cc(449)]
+    GPU process isn't usable. Goodbye.
+#+end_src
+
+** Path del problema
+#+begin_example
+/run/opengl-driver/share/drirc.d is unlikely to appear in /run/host
+#+end_example
+
+Steam en pressure-vessel no encuentra los drivers OpenGL correctamente.
+
+** Referencias
+- Issue NixOS: https://github.com/NixOS/nixpkgs/issues/238101
+- Discourse: https://discourse.nixos.org/t/nvidia-open-breaks-hardware-acceleration/58770
+- Wiki: https://nixos.wiki/wiki/Steam
+
+* Intentos de Solución (2025-12-09)
+
+** Intento 1: Agregar librerías al Steam FHS
+#+begin_src nix
+programs.steam = {
+  enable = true;
+  package = pkgs.steam.override {
+    extraPkgs = pkgs: with pkgs; [
+      libGL libGLU vulkan-loader vulkan-tools mesa
+      nvidia-vaapi-driver libva libva-utils
+      xorg.libX11 xorg.libXcursor xorg.libXrandr xorg.libXi
+      xorg.libXext xorg.libXfixes xorg.libXrender
+      xorg.libXScrnSaver xorg.libXcomposite xorg.libXdamage
+      xorg.libXtst
+      nss nspr at-spi2-atk at-spi2-core dbus cups
+      libdrm expat libxkbcommon alsa-lib
+      pango cairo gdk-pixbuf gtk3
+    ];
+  };
+};
+#+end_src
+
+*Resultado*: ❌ Steam sigue sin poder iniciar GPU process
+
+** Intento 2: Cambiar a drivers propietarios
+#+begin_src nix
+hardware.nvidia.open = false;
+#+end_src
+
+*Resultado*: ❌ X11 falla completamente (GPU not supported)
+
+** Intento 3: Variables de entorno
+#+begin_src bash
+STEAM_DISABLE_GPU=1 steam
+MESA_LOADER_DRIVER_OVERRIDE=i965 steam
+#+end_src
+
+*Resultado*: ❌ CEF ignora las variables, sigue intentando GPU
+
+* Configuración Actual (ESTABLE)
+
+** /etc/nixos/configuration.nix
+#+begin_src nix
+hardware = {
+  graphics = {
+    enable = true;
+    enable32Bit = true;  # Crítico para Steam
+    extraPackages = with pkgs; [
+      nvidia-vaapi-driver
+      vaapiVdpau
+      libvdpau-va-gl
+      vulkan-loader
+    ];
+  };
+
+  nvidia = {
+    open = true;  # OBLIGATORIO para RTX 5080
+    package = config.boot.kernelPackages.nvidiaPackages.beta;
+    modesetting.enable = true;
+    nvidiaSettings = true;
+    forceFullCompositionPipeline = true;
+    powerManagement.enable = true;
+    nvidiaPersistenced = true;
+  };
+};
+
+programs.steam = {
+  enable = true;
+  remotePlay.openFirewall = true;
+  dedicatedServer.openFirewall = true;
+  extraCompatPackages = with pkgs; [ proton-ge-bin ];
+  package = pkgs.steam.override {
+    extraPkgs = pkgs: with pkgs; [
+      # Todas las librerías CEF necesarias
+      libGL libGLU vulkan-loader vulkan-tools mesa
+      nvidia-vaapi-driver libva libva-utils
+      xorg.libX11 xorg.libXcursor xorg.libXrandr
+      xorg.libXi xorg.libXext xorg.libXfixes
+      xorg.libXrender xorg.libXScrnSaver
+      xorg.libXcomposite xorg.libXdamage xorg.libXtst
+      nss nspr at-spi2-atk at-spi2-core
+      dbus cups libdrm expat libxkbcommon
+      alsa-lib pango cairo gdk-pixbuf gtk3
+    ];
+  };
+};
+#+end_src
+
+** Generaciones NixOS
+- Gen 84: Pre-modificaciones Steam (ESTABLE)
+- Gen 85: Primera config Steam con libs básicas
+- Gen 86: Config Steam con todas las libs CEF
+- Gen 87: Drivers propietarios (FALLA - X11 no arranca)
+- Gen 88: Revert a drivers open (ACTUAL - ESTABLE)
+
+* Workarounds Actuales
+
+** Steam sin aceleración GPU (funcional pero lento)
+#+begin_src bash
+LIBGL_ALWAYS_SOFTWARE=1 steam
+#+end_src
+
+La UI de Steam funcionará con software rendering (llvmpipe).
+Lento pero funcional. Los juegos usan GPU normal.
+
+** Alternativas
+- Usar Steam desde otro sistema con drivers propietarios
+- Esperar a que NVIDIA lance drivers propietarios con soporte RTX 5080
+- Esperar a que se arregle el bug de NixOS + pressure-vessel + nvidia open
+
+* Estado de Componentes
+
+| Componente                    | Estado  | Notas                                |
+|-------------------------------+---------+--------------------------------------|
+| X11 + NVIDIA open             | ✅ OK   | Funciona perfectamente               |
+| Drivers NVIDIA open           | ✅ OK   | Único que soporta RTX 5080           |
+| Drivers NVIDIA propietarios   | ❌ FAIL | GPU not supported                    |
+| Aceleración GPU general       | ✅ OK   | CUDA, NVENC, Vulkan funcionan        |
+| Sunshine streaming            | ✅ OK   | NVENC H264/H265 funcional            |
+| Steam juegos                  | ✅ OK   | Proton funciona, juegos usan GPU     |
+| Steam UI con GPU              | ❌ FAIL | CEF GPU process error 1002           |
+| Steam UI software rendering   | ⚠️ OK   | Lento pero funcional                 |
+| Audio FiiO K7                 | ✅ OK   | PipeWire 96kHz funcionando           |
+| Virtualización (libvirt)      | ✅ OK   | KVM + VFIO disponibles               |
+| Docker + NVIDIA               | ✅ OK   | nvidia-container-toolkit funciona    |
+| Syncthing                     | ✅ OK   | ~/org sincronizado con 4 dispositivos|
+| GPG Keys                      | ✅ OK   | RSA 4096 importadas desde vespino    |
+
+* Próximos Pasos / Esperando
+
+** Drivers NVIDIA Propietarios
+Esperar release de drivers propietarios 580+ que soporten RTX 5080.
+Fecha estimada: Q2 2025 (3-6 meses)
+
+Una vez disponibles:
+1. Cambiar =hardware.nvidia.open = false=
+2. Actualizar package a stable cuando soporte RTX 5080
+3. Steam debería funcionar con GPU
+
+** Fix de NixOS
+Monitorear issues de NixOS/nixpkgs:
+- https://github.com/NixOS/nixpkgs/issues/238101
+- https://discourse.nixos.org/t/nvidia-open-breaks-hardware-acceleration/58770
+
+Posible fix en pressure-vessel o configuración de FHS environment.
+
+** Mientras tanto
+Sistema ESTABLE con drivers open. Todo funciona excepto Steam UI con GPU.
+Para uso intensivo de Steam, considerar dual boot o VM con drivers que funcionen.
+
+* Comandos Útiles
+
+** Ver drivers cargados
+#+begin_src bash
+nvidia-smi
+lsmod | grep nvidia
+#+end_src
+
+** Ver generaciones NixOS
+#+begin_src bash
+sudo nix-env -p /nix/var/nix/profiles/system --list-generations
+#+end_src
+
+** Rollback
+#+begin_src bash
+sudo nixos-rebuild switch --rollback          # A generación anterior
+sudo nixos-rebuild switch --rollback-generation 84  # A específica
+#+end_src
+
+** Ver logs display manager
+#+begin_src bash
+journalctl -u display-manager.service
+cat /var/log/X.0.log | grep EE
+#+end_src
+
+** Test Steam
+#+begin_src bash
+# Con software rendering (workaround)
+LIBGL_ALWAYS_SOFTWARE=1 steam
+
+# Con aceleración GPU (fallará con drivers open)
+steam
+
+# Ver logs
+tail -f ~/.local/share/Steam/logs/webhelper-linux.txt
+#+end_src
+
+** Info sistema
+#+begin_src bash
+aurin-info          # Script custom de info del sistema
+sunshine-test       # Test NVENC y streaming
+fiio-k7-test        # Test audio DAC
+nvidia-smi          # Info GPU
+#+end_src
+
+* Problemas Conocidos
+
+** Home Manager: claude-code build failure (2025-12-09)
+*** Error
+#+begin_example
+error: builder for '/nix/store/...-claude-code-2.0.59-npm-deps.drv' failed with exit code 1
+npm error code ERR_HTTP2_STREAM_ERROR
+npm error Stream closed with error code PROTOCOL_ERROR
+#+end_example
+
+*** Causa
+Error transitorio del npm registry con HTTP/2 al descargar =@img/sharp-libvips-linux-arm64=.
+NO es problema de la configuración, es del upstream npm registry.
+
+*** Solución
+*Opción 1* (recomendada): Reintentar el build
+#+begin_src bash
+home-manager switch
+#+end_src
+
+El error es transitorio y probablemente funcione en el siguiente intento.
+
+*Opción 2*: Comentar temporalmente claude-code
+Si el error persiste, editar =~/.config/home-manager/home.nix= línea 102:
+#+begin_src nix
+# unstable.claude-code  # Temporalmente deshabilitado
+#+end_src
+
+Luego:
+#+begin_src bash
+home-manager switch
+#+end_src
+
+Una vez que npm registry se estabilice, descomentar y volver a intentar.
+
+** Steam UI sin aceleración GPU
+Ver sección principal del documento. Workaround disponible con software rendering.
+
+* Conclusión
+
+Sistema Aurin está ESTABLE y FUNCIONAL con drivers NVIDIA open.
+
+La única limitación es Steam UI sin aceleración GPU, que es un bug conocido
+de NixOS + pressure-vessel + NVIDIA open drivers.
+
+La RTX 5080 es demasiado nueva para drivers propietarios actuales.
+
+*Hay que esperar*:
+- A que NVIDIA lance drivers propietarios con soporte RTX 5080 (Q2 2025)
+- O a que se arregle el bug de NixOS con drivers open + Steam CEF
+
+Mientras tanto, todo el resto funciona perfectamente:
+juegos, streaming, CUDA, virtualización, audio.
+
+*Setup de desarrollo*:
+- Haskell, Python, Node.js, C/C++, Java completos
+- Doom Emacs + Neovim + JetBrains
+- Ollama con 70GB RAM + 15.8GB VRAM para LLMs
+- Dual Xeon (72 threads) + RTX 5080 completamente aprovechados
+
+*Sincronización*:
+- Syncthing activo sincronizando ~/org con vespino, cohete, pocapullos
+- 62+ archivos org-roam, journal, imágenes
+- GPG keys configuradas para archivos encriptados
