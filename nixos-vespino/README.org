@@ -1,0 +1,77 @@
+#+TITLE: NixOS Configuration - Vespino
+#+AUTHOR: passh
+#+DATE: 2025-12-09
+
+* Vespino System
+
+Workstation con AMD Ryzen, NVIDIA (drivers propietarios), configuración de servidor local.
+
+** Hardware
+- CPU: AMD Ryzen (verificar modelo exacto)
+- GPU: NVIDIA (drivers propietarios stable)
+- RAM: (verificar)
+- Storage: /storage + /NFS exports
+
+** Red
+- enp10s0: 192.168.2.125/24 (interface principal)
+- br0: 192.168.53.10/24 (bridge para VMs)
+- DNS: 192.168.53.12 (VM OpenVPN)
+- Rutas VPN a infraestructura Vocento
+
+** Servicios principales
+
+*** RustDesk Server
+- Puerto 21115-21119 TCP
+- Puerto 21116 UDP
+- Servidor de escritorio remoto self-hosted
+
+*** Minecraft Server
+- Puerto 25565
+- Configuración en minecraft.nix
+- Admin: pascualmg
+- Modo: Survival cooperativo
+- Scripts: mc-admin (status, logs, restart, backup)
+
+*** Jellyfin Media Server
+- Puerto 8096
+- Servidor multimedia local
+
+*** Ollama + Open-webui
+- Ollama: localhost:11434
+- Open-webui: 0.0.0.0:3000
+- CUDA acceleration con NVIDIA
+- 8 threads OMP
+- 4GB VRAM dedicados
+
+*** Syncthing
+- Puerto 8384 (GUI)
+- Puerto 22000/21027 (sync)
+- Sincroniza ~/org con: aurin, cohete, pocapullos
+- User: passh / Password: capullo100
+
+*** NFS Server
+- /storage → 192.168.2.0/24
+- /NFS → 192.168.2.0/24
+
+*** Virtualización
+- libvirt/KVM con VFIO
+- QEMU + OVMF
+- Docker con autoPrune
+
+** Instalación
+
+Esta configuración se gestiona con GNU Stow desde ~/dotfiles:
+
+#+begin_src bash
+cd ~/dotfiles
+sudo stow -v -t / nixos-vespino
+sudo nixos-rebuild switch
+#+end_src
+
+** Documentación adicional
+
+Ver =vespino-system-notes.org= en la raíz del repo para documentación completa del sistema.
+
+** Generaciones importantes
+
+Usar =sudo nix-env -p /nix/var/nix/profiles/system --list-generations= para ver historial.
