@@ -702,6 +702,7 @@
         };
         folders = {
           "org" = {
+            id = "pgore-xe7pu";  # Mismo ID que cohete y vespino
             path = "/home/passh/org";
             devices = ["vespino" "cohete" "pocapullos"];
             type = "sendreceive";
