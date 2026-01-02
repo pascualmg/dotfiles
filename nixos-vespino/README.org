@@ -1,40 +1,58 @@
 #+TITLE: NixOS Configuration - Vespino
 #+AUTHOR: passh
-#+DATE: 2025-12-09
+#+DATE: 2026-01-01
+#+STARTUP: overview
 
 * Vespino System
 
-Workstation con AMD Ryzen, NVIDIA (drivers propietarios), configuración de servidor local.
+Maquina secundaria con servidor Minecraft, NFS, y Ollama.
+
+*Estado:* Vespino va "en las ultimas". Pendiente migrar Minecraft a aurin.
 
 ** Hardware
-- CPU: AMD Ryzen (verificar modelo exacto)
+- CPU: Intel/AMD con soporte KVM
 - GPU: NVIDIA (drivers propietarios stable)
-- RAM: (verificar)
-- Storage: /storage + /NFS exports
+- Red: enp10s0 (192.168.2.125) + br0 (192.168.53.10)
 
-** Red
-- enp10s0: 192.168.2.125/24 (interface principal)
-- br0: 192.168.53.10/24 (bridge para VMs)
-- DNS: 192.168.53.12 (VM OpenVPN)
-- Rutas VPN a infraestructura Vocento
+** Red - ZONA SAGRADA
+
+#+begin_example
+Internet
+    |
+    v
+enp10s0 (192.168.2.125/24) --> Gateway 192.168.2.1
+    |
+    +-- br0 (192.168.53.10/24)
+            |
+            +-- VM Ubuntu (192.168.53.12)
+                    |
+                    +-- Cliente Ivanti VPN
+                            |
+                            v
+                    Infraestructura Vocento
+                    (10.180.0.0/16, 10.182.0.0/16, etc.)
+#+end_example
+
+*CRITICO:* La configuracion de red (bridge br0, rutas via 192.168.53.12) permite
+acceso a la VPN de Vocento via VM Ubuntu con cliente Ivanti.
+
+*NO MODIFICAR* la seccion de networking sin:
+1. Backup de la VM Ubuntu
+2. Snapshot de la generacion NixOS actual
+3. Plan de rollback documentado
 
 ** Servicios principales
 
-*** RustDesk Server
-- Puerto 21115-21119 TCP
-- Puerto 21116 UDP
-- Servidor de escritorio remoto self-hosted
-
 *** Minecraft Server
-- Puerto 25565
-- Configuración en minecraft.nix
+- Puerto: 25565
+- Configuracion: =minecraft.nix=
 - Admin: pascualmg
 - Modo: Survival cooperativo
-- Scripts: mc-admin (status, logs, restart, backup)
+- Scripts: =mc-admin= (status, logs, restart, backup)
 
-*** Jellyfin Media Server
-- Puerto 8096
-- Servidor multimedia local
+*** NFS Server
+- =/storage= -> 192.168.2.0/24
+- =/NFS= -> 192.168.2.0/24
 
 *** Ollama + Open-webui
 - Ollama: localhost:11434
@@ -44,34 +62,72 @@ Workstation con AMD Ryzen, NVIDIA (drivers propietarios), configuración de serv
 - 4GB VRAM dedicados
 
 *** Syncthing
-- Puerto 8384 (GUI)
-- Puerto 22000/21027 (sync)
-- Sincroniza ~/org con: aurin, cohete, pocapullos
+- GUI: http://192.168.2.125:8384
 - User: passh / Password: capullo100
+- Carpetas sincronizadas:
+  - =~/org= -> aurin, cohete, pocapullos
+  - =~/storage/Camera= -> pocapullos
 
-*** NFS Server
-- /storage → 192.168.2.0/24
-- /NFS → 192.168.2.0/24
-
-*** Virtualización
+*** Virtualizacion
 - libvirt/KVM con VFIO
 - QEMU + OVMF
 - Docker con autoPrune
 
-** Instalación
+** Limpieza 2026-01-01
 
-Esta configuración se gestiona con GNU Stow desde ~/dotfiles:
+Se eliminaron servicios no utilizados:
+- RustDesk server (hbbs/hbbr) - No se usaba
+- spice-vdagentd - Es para VMs invitadas, vespino es HOST
+- qemuGuest - Es para VMs invitadas, vespino es HOST
+- sound.enable - Deprecated, PipeWire lo maneja
+
+Se actualizo sintaxis deprecated:
+- =hardware.opengl= -> =hardware.graphics=
+
+** Instalacion
+
+Esta configuracion se gestiona con GNU Stow desde ~/dotfiles:
 
 #+begin_src bash
 cd ~/dotfiles
 sudo stow -v -t / nixos-vespino
-sudo nixos-rebuild switch
+sudo nixos-rebuild test    # Probar primero!
+sudo nixos-rebuild switch  # Aplicar si test OK
 #+end_src
 
-** Documentación adicional
+** Rollback de emergencia
 
-Ver =vespino-system-notes.org= en la raíz del repo para documentación completa del sistema.
+#+begin_src bash
+# Rollback a generacion anterior
+sudo nixos-rebuild switch --rollback
 
-** Generaciones importantes
+# Ver generaciones disponibles
+sudo nix-env -p /nix/var/nix/profiles/system --list-generations
 
-Usar =sudo nix-env -p /nix/var/nix/profiles/system --list-generations= para ver historial.
+# En GRUB: seleccionar "NixOS - Old configurations"
+#+end_src
+
+** Pendiente
+
+- [ ] Arreglar WiFi Atheros (no funciona en el pueblo)
+- [ ] Migrar servidor Minecraft a aurin
+- [ ] Migrar a flakes (junto con aurin)
+
+** Archivos de configuracion
+
+| Archivo | Descripcion |
+|---------+-------------|
+| =configuration.nix= | Config principal (~525 lineas) |
+| =hardware-configuration.nix= | Generado por nixos-generate-config |
+| =minecraft.nix= | Servidor Minecraft modular |
+
+** Diferencias con Aurin
+
+| Aspecto | Vespino | Aurin |
+|---------+---------+-------|
+| Rol | Secundaria | Principal/Produccion |
+| GPU | NVIDIA (drivers propietarios) | RTX 5080 (drivers open) |
+| Modularizacion | Minima (solo minecraft.nix) | Completa (7 modulos) |
+| CPU | Standard | Dual Xeon (72 threads) |
+| RAM | Standard | 128GB |
+| Servicios | Minecraft, NFS, Ollama | Sunshine, Audio FiiO, etc |

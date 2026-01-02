@@ -1,0 +1,446 @@
+#+TITLE: Plan de Migracion a Flakes - Aurin y Vespino
+#+AUTHOR: NixOS Guru
+#+DATE: 2026-01-01
+#+STARTUP: overview
+
+* Estado Actual
+
+** Aurin (Produccion)
+- Ubicacion: =/home/passh/dotfiles/nixos-aurin/etc/nixos/=
+- Modulos: 7 (nvidia, audio, sunshine, printing, xrdp, virtualization, xmonad)
+- Gestion: stow + nixos-rebuild tradicional
+- Channels: fetchTarball en home.nix para unstable/master
+
+** Vespino (Secundaria)
+- Ubicacion: =/home/passh/dotfiles/nixos-vespino/etc/nixos/=
+- Modulos: 1 (minecraft.nix)
+- Estado: Limpiado 2026-01-01 (RustDesk, qemu guest eliminados)
+- Pendiente: Arreglar WiFi, migrar Minecraft a aurin
+
+** Home Manager
+- Ubicacion: =~/.config/home-manager/home.nix= (via stow)
+- Channels: Usa fetchTarball para unstable/master
+
+* Estructura Objetivo
+
+#+begin_example
+/home/passh/dotfiles/
+|-- flake.nix                    # Punto de entrada
+|-- flake.lock                   # Versiones pinneadas
+|
+|-- hosts/
+|   |-- aurin/
+|   |   |-- default.nix          # Imports y config especifica
+|   |   +-- hardware-configuration.nix
+|   +-- vespino/
+|       |-- default.nix
+|       +-- hardware-configuration.nix
+|
+|-- modules/
+|   |-- nixos/                   # Modulos NixOS (system-level)
+|   |   |-- common.nix           # Compartido: locale, nix settings, etc
+|   |   |-- vpn-vocento.nix      # ZONA SAGRADA - red VPN
+|   |   |-- virtualization.nix   # Docker + libvirt
+|   |   |-- nvidia-rtx5080.nix   # Solo aurin
+|   |   |-- nvidia-legacy.nix    # Solo vespino
+|   |   |-- audio-fiio-k7.nix    # Solo aurin
+|   |   |-- audio-pipewire.nix   # Base compartida
+|   |   |-- sunshine.nix         # Solo aurin
+|   |   |-- xmonad.nix           # Compartido
+|   |   |-- printing.nix         # Solo aurin
+|   |   +-- minecraft.nix        # Solo vespino (por ahora)
+|   |
+|   +-- home/                    # Modulos Home Manager (user-level)
+|       |-- common.nix           # Shell, editor base
+|       |-- development.nix      # Tools desarrollo
+|       +-- desktop.nix          # Apps graficas
+|
+|-- home/
+|   +-- passh.nix                # Config Home Manager usuario passh
+|
++-- docs/
+    |-- FLAKES-GUIDE.org         # Tutorial pedagogico
+    +-- MIGRATION-PLAN.org       # Este archivo
+#+end_example
+
+* Fases de Migracion
+
+** Fase 0: Preparacion (ANTES DE EMPEZAR)
+
+*** Backup
+#+begin_src bash
+# Snapshot del estado actual
+cd ~/dotfiles
+git add -A
+git commit -m "Pre-migration snapshot"
+git push
+
+# Guardar generacion actual de aurin
+sudo nix-env -p /nix/var/nix/profiles/system --list-generations | tail -1
+# Anotar el numero de generacion
+#+end_src
+
+*** Verificar que flakes funciona
+#+begin_src bash
+nix --version  # Debe ser 2.4+
+nix flake --help  # Debe funcionar
+#+end_src
+
+** Fase 1: Estructura Base
+
+*** Crear directorios
+#+begin_src bash
+cd ~/dotfiles
+mkdir -p hosts/aurin hosts/vespino
+mkdir -p modules/nixos modules/home
+mkdir -p home
+#+end_src
+
+*** Crear flake.nix inicial
+Ver archivo completo en siguiente seccion.
+
+*** Mover hardware-configuration.nix
+#+begin_src bash
+cp nixos-aurin/etc/nixos/hardware-configuration.nix hosts/aurin/
+cp nixos-vespino/etc/nixos/hardware-configuration.nix hosts/vespino/
+#+end_src
+
+** Fase 2: Extraer Modulos Compartidos
+
+Modulos que se pueden compartir entre aurin y vespino:
+
+| Modulo | Aurin | Vespino | Notas |
+|--------+-------+---------+-------|
+| common.nix | SI | SI | locale, nix settings, user base |
+| vpn-vocento.nix | SI | SI | ZONA SAGRADA - red identica |
+| virtualization.nix | SI | SI | docker + libvirt |
+| xmonad.nix | SI | SI | window manager |
+| audio-pipewire.nix | SI | SI | config base |
+
+Modulos especificos:
+
+| Modulo | Solo en | Razon |
+|--------+---------+-------|
+| nvidia-rtx5080.nix | aurin | Drivers open para RTX 5080 |
+| nvidia-legacy.nix | vespino | Drivers propietarios |
+| audio-fiio-k7.nix | aurin | Hardware especifico |
+| sunshine.nix | aurin | Streaming |
+| printing.nix | aurin | Impresora |
+| minecraft.nix | vespino | Servidor MC (temporal) |
+
+** Fase 3: Host Configs
+
+Cada host tendra un =default.nix= que importa lo que necesita:
+
+*** hosts/aurin/default.nix
+#+begin_src nix
+{ config, pkgs, pkgs-unstable, ... }:
+
+{
+  imports = [
+    ./hardware-configuration.nix
+
+    # Modulos compartidos
+    ../../modules/nixos/common.nix
+    ../../modules/nixos/vpn-vocento.nix
+    ../../modules/nixos/virtualization.nix
+    ../../modules/nixos/xmonad.nix
+    ../../modules/nixos/audio-pipewire.nix
+
+    # Modulos especificos aurin
+    ../../modules/nixos/nvidia-rtx5080.nix
+    ../../modules/nixos/audio-fiio-k7.nix
+    ../../modules/nixos/sunshine.nix
+    ../../modules/nixos/printing.nix
+  ];
+
+  networking.hostName = "aurin";
+
+  # Config especifica aurin
+  networking.interfaces.enp7s0 = {
+    useDHCP = false;
+    ipv4.addresses = [{ address = "192.168.2.147"; prefixLength = 24; }];
+  };
+
+  networking.defaultGateway = {
+    address = "192.168.2.1";
+    interface = "enp7s0";
+  };
+
+  # ... resto config especifica
+}
+#+end_src
+
+*** hosts/vespino/default.nix
+#+begin_src nix
+{ config, pkgs, pkgs-unstable, ... }:
+
+{
+  imports = [
+    ./hardware-configuration.nix
+
+    # Modulos compartidos
+    ../../modules/nixos/common.nix
+    ../../modules/nixos/vpn-vocento.nix
+    ../../modules/nixos/virtualization.nix
+    ../../modules/nixos/xmonad.nix
+    ../../modules/nixos/audio-pipewire.nix
+
+    # Modulos especificos vespino
+    ../../modules/nixos/nvidia-legacy.nix
+    ../../modules/nixos/minecraft.nix
+  ];
+
+  networking.hostName = "vespino";
+
+  # Config especifica vespino
+  networking.interfaces.enp10s0 = {
+    useDHCP = false;
+    ipv4.addresses = [{ address = "192.168.2.125"; prefixLength = 24; }];
+  };
+
+  networking.defaultGateway = {
+    address = "192.168.2.1";
+    interface = "enp10s0";
+  };
+
+  # ... resto config especifica
+}
+#+end_src
+
+** Fase 4: Integracion Home Manager
+
+*** home/passh.nix
+#+begin_src nix
+{ config, pkgs, pkgs-unstable, ... }:
+
+{
+  imports = [
+    ../modules/home/common.nix
+    ../modules/home/development.nix
+    ../modules/home/desktop.nix
+  ];
+
+  home.username = "passh";
+  home.homeDirectory = "/home/passh";
+  home.stateVersion = "24.11";
+
+  # Paquetes unstable que ahora vienen via flake
+  home.packages = with pkgs-unstable; [
+    alacritty
+    emacs
+    # ... los que tenias con fetchTarball
+  ];
+}
+#+end_src
+
+** Fase 5: Testing
+
+*** En Aurin (con extremo cuidado)
+#+begin_src bash
+cd ~/dotfiles
+
+# 1. Verificar sintaxis
+nix flake check
+
+# 2. Construir sin activar
+sudo nixos-rebuild build --flake .#aurin
+
+# 3. Ver diferencias
+nix store diff-closures /run/current-system ./result
+
+# 4. Test (activa pero no cambia boot default)
+sudo nixos-rebuild test --flake .#aurin
+
+# 5. Verificar que TODO funciona:
+#    - VPN Vocento (CRITICO)
+#    - Audio FiiO K7
+#    - NVIDIA/GPU
+#    - Sunshine
+#    - Docker/VMs
+
+# 6. Si TODO OK, switch
+sudo nixos-rebuild switch --flake .#aurin
+
+# 7. Si algo falla
+sudo nixos-rebuild switch --rollback
+#+end_src
+
+* flake.nix Completo para Tu Setup
+
+#+begin_src nix
+{
+  description = "NixOS configuration for passh - aurin and vespino";
+
+  inputs = {
+    # Nixpkgs - usando 25.05 ya que es lo que tienes
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
+
+    # Unstable para paquetes bleeding-edge
+    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
+
+    # Master para casos especiales (minecraft, etc)
+    nixpkgs-master.url = "github:NixOS/nixpkgs/master";
+
+    # Home Manager
+    home-manager = {
+      url = "github:nix-community/home-manager/release-25.05";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+  };
+
+  outputs = { self, nixpkgs, nixpkgs-unstable, nixpkgs-master, home-manager, ... }@inputs:
+  let
+    system = "x86_64-linux";
+
+    # Overlay para tener acceso a unstable/master en pkgs
+    overlay-unstable = final: prev: {
+      unstable = import nixpkgs-unstable {
+        inherit system;
+        config.allowUnfree = true;
+      };
+      master = import nixpkgs-master {
+        inherit system;
+        config.allowUnfree = true;
+      };
+    };
+
+    # Funcion para crear hosts
+    mkHost = hostname: extraModules: nixpkgs.lib.nixosSystem {
+      inherit system;
+
+      specialArgs = {
+        inherit inputs hostname;
+        pkgs-unstable = import nixpkgs-unstable {
+          inherit system;
+          config.allowUnfree = true;
+        };
+        pkgs-master = import nixpkgs-master {
+          inherit system;
+          config.allowUnfree = true;
+        };
+      };
+
+      modules = [
+        # Overlay
+        { nixpkgs.overlays = [ overlay-unstable ]; }
+
+        # Permitir unfree
+        { nixpkgs.config.allowUnfree = true; }
+
+        # Host config
+        ./hosts/${hostname}
+
+        # Home Manager
+        home-manager.nixosModules.home-manager
+        {
+          home-manager = {
+            useGlobalPkgs = true;
+            useUserPackages = true;
+            extraSpecialArgs = {
+              inherit inputs;
+              pkgs-unstable = import nixpkgs-unstable {
+                inherit system;
+                config.allowUnfree = true;
+              };
+            };
+            users.passh = import ./home/passh.nix;
+          };
+        }
+      ] ++ extraModules;
+    };
+
+  in {
+    nixosConfigurations = {
+      aurin = mkHost "aurin" [];
+      vespino = mkHost "vespino" [];
+    };
+
+    # Para usar: nix develop
+    devShells.${system}.default = nixpkgs.legacyPackages.${system}.mkShell {
+      packages = with nixpkgs.legacyPackages.${system}; [
+        nil  # LSP Nix
+        nixfmt-classic
+      ];
+    };
+  };
+}
+#+end_src
+
+* Checklist Pre-Migracion
+
+- [ ] Backup de ~/dotfiles en git
+- [ ] Anotar generacion actual de aurin y vespino
+- [ ] Verificar que VPN funciona (antes de tocar nada)
+- [ ] Leer FLAKES-GUIDE.org completo
+- [ ] Entender estructura de flake.nix
+
+* Checklist Post-Migracion
+
+- [ ] VPN Vocento funciona
+- [ ] Audio FiiO K7 funciona (aurin)
+- [ ] NVIDIA funciona (ambos)
+- [ ] Sunshine funciona (aurin)
+- [ ] Docker funciona (ambos)
+- [ ] VMs libvirt funcionan (ambos)
+- [ ] Home Manager switch funciona
+- [ ] Git commit del nuevo setup
+
+* Rollback de Emergencia
+
+Si algo sale muy mal durante la migracion:
+
+#+begin_src bash
+# 1. Rollback NixOS a generacion anterior
+sudo nixos-rebuild switch --rollback
+
+# 2. O seleccionar generacion especifica en GRUB
+
+# 3. Restaurar configs tradicionales
+cd ~/dotfiles
+git checkout pre-migration-snapshot -- nixos-aurin nixos-vespino
+
+# 4. Re-stow
+sudo stow -v -R -t / nixos-aurin
+
+# 5. Rebuild tradicional
+sudo nixos-rebuild switch
+#+end_src
+
+* Timeline Sugerido
+
+| Dia | Actividad |
+|-----+-----------|
+| 1 | Leer documentacion, entender conceptos |
+| 2 | Crear estructura, mover archivos |
+| 3 | Crear flake.nix, extraer modulos compartidos |
+| 4 | Testing en vespino (menos critico) |
+| 5 | Testing exhaustivo en aurin (produccion) |
+| 6 | Switch final, limpiar archivos legacy |
+
+* Preguntas Frecuentes
+
+** Puedo volver atras?
+
+SI. Siempre puedes:
+1. =nixos-rebuild switch --rollback=
+2. Restaurar los archivos de stow desde git
+3. Usar la configuracion tradicional
+
+** El stow ya no sirve?
+
+Para NixOS, ya no necesitas stow con flakes (usas =--flake .#hostname=).
+Para dotfiles de usuario (fish, xmonad, etc), stow sigue siendo util.
+
+** Y si vespino esta en el pueblo sin red?
+
+La migracion de vespino puede esperar. Hazla cuando tengas acceso fisico.
+Aurin puede migrar independientemente.
+
+** Como actualizo con flakes?
+
+#+begin_src bash
+cd ~/dotfiles
+nix flake update                    # Actualizar inputs
+sudo nixos-rebuild switch --flake .#aurin
+#+end_src

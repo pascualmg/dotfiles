@@ -1,0 +1,780 @@
+#+TITLE: Guia de Nix Flakes - De Principiante a Maestro
+#+AUTHOR: NixOS Guru
+#+DATE: 2026-01-01
+#+STARTUP: overview
+#+OPTIONS: toc:3
+
+* Introduccion: Que Son los Flakes?
+
+** El Problema que Resuelven
+
+Imagina que tienes una receta de cocina que dice "usa harina". Pero... que harina? De que marca? Molida cuando?
+
+En NixOS tradicional, tenemos el mismo problema:
+
+#+begin_src nix
+# configuration.nix tradicional
+{ pkgs, ... }:
+{
+  environment.systemPackages = [ pkgs.firefox ];
+}
+#+end_src
+
+*Pregunta:* Que version de Firefox? Depende de cuando ejecutes =nixos-rebuild=, del channel que tengas, de si hiciste =nix-channel --update=...
+
+*Flakes resuelve esto* haciendo que TODAS las dependencias sean explicitas y pinneadas.
+
+** Analogia: Flakes como Docker Compose
+
+Si conoces Docker:
+- *Dockerfile* = archivo .nix (instrucciones de construccion)
+- *docker-compose.yml* = *flake.nix* (orquestacion y dependencias)
+- *docker-compose.lock* = *flake.lock* (versiones exactas pinneadas)
+
+** La Gran Diferencia
+
+| Aspecto | Tradicional (Channels) | Flakes |
+|---------+------------------------+--------|
+| Versiones | "Lo que haya en el channel" | Pinneadas en flake.lock |
+| Reproducibilidad | "Deberia funcionar" | Garantizada |
+| Dependencias | Implicitas | Explicitas |
+| Compartir config | "Usa mi channel" | "Clona mi repo" |
+| Multi-maquina | Duplicar archivos | Modulos compartidos |
+
+* Anatomia de un Flake
+
+** Estructura Minima
+
+Un flake es simplemente un directorio con:
+
+#+begin_example
+mi-flake/
+|-- flake.nix      # Definicion del flake (OBLIGATORIO)
++-- flake.lock     # Versiones pinneadas (generado automaticamente)
+#+end_example
+
+** El Archivo flake.nix
+
+Todo flake.nix tiene esta estructura:
+
+#+begin_src nix
+{
+  description = "Descripcion de lo que hace este flake";
+
+  # INPUTS: De donde viene todo (las dependencias)
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
+    # mas inputs...
+  };
+
+  # OUTPUTS: Que produce este flake
+  outputs = { self, nixpkgs, ... }: {
+    # Aqui van las cosas que el flake "exporta"
+  };
+}
+#+end_src
+
+** Inputs: Las Dependencias
+
+Los inputs son las "fuentes" de las que tu flake obtiene cosas:
+
+#+begin_src nix
+inputs = {
+  # Nixpkgs estable (NixOS 24.11)
+  nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
+
+  # Nixpkgs unstable (ultimas versiones)
+  nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
+
+  # Home Manager
+  home-manager = {
+    url = "github:nix-community/home-manager/release-24.11";
+    inputs.nixpkgs.follows = "nixpkgs";  # Usa el mismo nixpkgs
+  };
+
+  # Cualquier repo de GitHub
+  mi-proyecto.url = "github:usuario/repo";
+
+  # Un directorio local
+  mi-lib.url = "path:./lib";
+};
+#+end_src
+
+*** El Patron "follows"
+
+#+begin_src nix
+home-manager.inputs.nixpkgs.follows = "nixpkgs";
+#+end_src
+
+Esto significa: "Home Manager, en lugar de traer tu propia copia de nixpkgs, usa la misma que yo ya defini."
+
+*Beneficios:*
+- Menos descargas (no duplica nixpkgs)
+- Consistencia (todos usan la misma version)
+- Menos conflictos
+
+** Outputs: Lo que Produces
+
+Los outputs son lo que el flake "exporta" al mundo:
+
+#+begin_src nix
+outputs = { self, nixpkgs, ... }:
+let
+  system = "x86_64-linux";
+  pkgs = nixpkgs.legacyPackages.${system};
+in {
+  # Configuracion NixOS para una maquina
+  nixosConfigurations.mi-maquina = nixpkgs.lib.nixosSystem {
+    inherit system;
+    modules = [ ./configuration.nix ];
+  };
+
+  # Paquetes que otros pueden instalar
+  packages.${system}.default = pkgs.hello;
+
+  # Development shells
+  devShells.${system}.default = pkgs.mkShell {
+    packages = [ pkgs.nodejs pkgs.yarn ];
+  };
+
+  # Overlays
+  overlays.default = final: prev: {
+    mi-paquete = prev.hello;
+  };
+};
+#+end_src
+
+** flake.lock: El Candado de Versiones
+
+Cuando ejecutas cualquier comando con flakes, Nix genera/actualiza =flake.lock=:
+
+#+begin_src json
+{
+  "nodes": {
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1704067354,
+        "narHash": "sha256-...",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "a3c0b3b21cc...",  // <-- COMMIT EXACTO
+        "type": "github"
+      }
+    }
+  }
+}
+#+end_src
+
+*Este archivo es CRITICO:*
+- Guarda el commit exacto de cada input
+- Garantiza que mañana se construya lo mismo que hoy
+- DEBE estar en git (=git add flake.lock=)
+
+* Comandos Esenciales
+
+** nix flake update
+
+Actualiza TODOS los inputs a sus ultimas versiones:
+
+#+begin_src bash
+nix flake update
+#+end_src
+
+Esto modifica =flake.lock=. Despues debes:
+1. Probar que todo funciona
+2. Hacer commit del nuevo =flake.lock=
+
+** nix flake lock --update-input
+
+Actualiza solo UN input especifico:
+
+#+begin_src bash
+# Solo actualizar nixpkgs
+nix flake lock --update-input nixpkgs
+
+# Solo actualizar home-manager
+nix flake lock --update-input home-manager
+#+end_src
+
+** nix flake show
+
+Muestra que exporta un flake:
+
+#+begin_src bash
+nix flake show
+# o para un flake remoto
+nix flake show github:NixOS/nixpkgs
+#+end_src
+
+** nix flake check
+
+Verifica que el flake es valido:
+
+#+begin_src bash
+nix flake check
+#+end_src
+
+* Flakes para Configuracion NixOS
+
+** Estructura Recomendada
+
+#+begin_example
+dotfiles/
+|-- flake.nix              # Punto de entrada
+|-- flake.lock             # Versiones pinneadas
+|
+|-- hosts/                 # Configuraciones por maquina
+|   |-- aurin/
+|   |   |-- configuration.nix
+|   |   +-- hardware-configuration.nix
+|   +-- vespino/
+|       |-- configuration.nix
+|       +-- hardware-configuration.nix
+|
+|-- modules/               # Modulos compartidos
+|   |-- common.nix         # Config comun a todas las maquinas
+|   |-- nvidia.nix         # NVIDIA generico
+|   |-- audio-pipewire.nix # Audio base
+|   +-- vpn-vocento.nix    # VPN (compartido aurin/vespino)
+|
++-- home/                  # Home Manager configs
+    |-- common.nix
+    +-- passh.nix
+#+end_example
+
+** flake.nix para Multi-Maquina
+
+#+begin_src nix
+{
+  description = "Configuracion NixOS de passh - aurin y vespino";
+
+  inputs = {
+    # Nixpkgs estable
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
+
+    # Nixpkgs unstable (para paquetes bleeding-edge)
+    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
+
+    # Home Manager
+    home-manager = {
+      url = "github:nix-community/home-manager/release-24.11";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+  };
+
+  outputs = { self, nixpkgs, nixpkgs-unstable, home-manager, ... }:
+  let
+    system = "x86_64-linux";
+
+    # Funcion helper para crear configuraciones NixOS
+    mkHost = hostname: nixpkgs.lib.nixosSystem {
+      inherit system;
+
+      # Argumentos especiales que pasan a todos los modulos
+      specialArgs = {
+        inherit hostname;
+        # Acceso a paquetes unstable desde cualquier modulo
+        pkgs-unstable = import nixpkgs-unstable {
+          inherit system;
+          config.allowUnfree = true;
+        };
+      };
+
+      modules = [
+        # Configuracion especifica de la maquina
+        ./hosts/${hostname}/configuration.nix
+        ./hosts/${hostname}/hardware-configuration.nix
+
+        # Modulos compartidos
+        ./modules/common.nix
+
+        # Home Manager como modulo NixOS
+        home-manager.nixosModules.home-manager
+        {
+          home-manager.useGlobalPkgs = true;
+          home-manager.useUserPackages = true;
+          home-manager.users.passh = import ./home/passh.nix;
+        }
+      ];
+    };
+  in {
+    # Configuraciones NixOS
+    nixosConfigurations = {
+      aurin = mkHost "aurin";
+      vespino = mkHost "vespino";
+    };
+  };
+}
+#+end_src
+
+** Usando Paquetes Unstable
+
+En tus modulos, ahora puedes:
+
+#+begin_src nix
+# modules/common.nix
+{ config, pkgs, pkgs-unstable, ... }:
+
+{
+  environment.systemPackages = with pkgs; [
+    # Paquetes estables
+    vim
+    git
+
+    # Paquetes unstable (pasados via specialArgs)
+    pkgs-unstable.alacritty
+    pkgs-unstable.ollama
+  ];
+}
+#+end_src
+
+** Aplicar Configuracion con Flakes
+
+#+begin_src bash
+# Desde el directorio del flake
+sudo nixos-rebuild switch --flake .#aurin
+
+# O especificando path completo
+sudo nixos-rebuild switch --flake /home/passh/dotfiles#aurin
+
+# Test antes de switch
+sudo nixos-rebuild test --flake .#aurin
+
+# Build sin activar
+sudo nixos-rebuild build --flake .#aurin
+#+end_src
+
+* Modulos Compartidos
+
+** El Poder de la Reutilizacion
+
+En lugar de copiar codigo entre aurin y vespino, creas modulos:
+
+#+begin_src nix
+# modules/vpn-vocento.nix
+# ZONA SAGRADA - Configuracion VPN Vocento
+# Compartido entre aurin y vespino
+{ config, lib, ... }:
+
+{
+  networking = {
+    bridges.br0.interfaces = [ ];
+
+    interfaces.br0 = {
+      useDHCP = false;
+      ipv4 = {
+        addresses = [{ address = "192.168.53.10"; prefixLength = 24; }];
+        routes = [
+          { address = "10.180.0.0"; prefixLength = 16; via = "192.168.53.12"; }
+          { address = "10.182.0.0"; prefixLength = 16; via = "192.168.53.12"; }
+          { address = "10.184.0.0"; prefixLength = 16; via = "192.168.53.12"; }
+          { address = "10.186.0.0"; prefixLength = 16; via = "192.168.53.12"; }
+          { address = "192.168.196.0"; prefixLength = 24; via = "192.168.53.12"; }
+          { address = "10.200.26.0"; prefixLength = 24; via = "192.168.53.12"; }
+          { address = "34.175.0.0"; prefixLength = 16; via = "192.168.53.12"; }
+        ];
+      };
+    };
+
+    nat = {
+      enable = true;
+      internalInterfaces = [ "br0" ];
+      extraCommands = ''
+        iptables -t nat -A POSTROUTING -s 192.168.53.0/24 -j MASQUERADE
+      '';
+    };
+  };
+}
+#+end_src
+
+** Modulos con Opciones
+
+Para mayor flexibilidad, puedes crear modulos con opciones:
+
+#+begin_src nix
+# modules/nvidia.nix
+{ config, lib, pkgs, ... }:
+
+with lib;
+
+let
+  cfg = config.hardware.nvidia-custom;
+in {
+  # Definir opciones
+  options.hardware.nvidia-custom = {
+    enable = mkEnableOption "NVIDIA custom configuration";
+
+    openDrivers = mkOption {
+      type = types.bool;
+      default = false;
+      description = "Use open-source NVIDIA drivers (required for RTX 50xx)";
+    };
+
+    package = mkOption {
+      type = types.package;
+      default = config.boot.kernelPackages.nvidiaPackages.stable;
+      description = "NVIDIA driver package";
+    };
+  };
+
+  # Implementar cuando enable = true
+  config = mkIf cfg.enable {
+    hardware.nvidia = {
+      open = cfg.openDrivers;
+      package = cfg.package;
+      modesetting.enable = true;
+      nvidiaSettings = true;
+    };
+
+    hardware.graphics = {
+      enable = true;
+      enable32Bit = true;
+    };
+
+    services.xserver.videoDrivers = [ "nvidia" ];
+  };
+}
+#+end_src
+
+Uso en cada host:
+
+#+begin_src nix
+# hosts/aurin/configuration.nix
+{ config, pkgs, ... }:
+{
+  imports = [ ../../modules/nvidia.nix ];
+
+  hardware.nvidia-custom = {
+    enable = true;
+    openDrivers = true;  # RTX 5080 necesita drivers open
+    package = config.boot.kernelPackages.nvidiaPackages.beta;
+  };
+}
+
+# hosts/vespino/configuration.nix
+{ config, pkgs, ... }:
+{
+  imports = [ ../../modules/nvidia.nix ];
+
+  hardware.nvidia-custom = {
+    enable = true;
+    openDrivers = false;  # GPU antigua, drivers propietarios
+  };
+}
+#+end_src
+
+* Home Manager con Flakes
+
+** Integracion como Modulo NixOS
+
+La forma mas simple (ya mostrada arriba):
+
+#+begin_src nix
+# En flake.nix outputs
+home-manager.nixosModules.home-manager
+{
+  home-manager.useGlobalPkgs = true;
+  home-manager.useUserPackages = true;
+  home-manager.users.passh = import ./home/passh.nix;
+}
+#+end_src
+
+** Estructura de Home Manager
+
+#+begin_src nix
+# home/passh.nix
+{ config, pkgs, pkgs-unstable, ... }:
+
+{
+  home.username = "passh";
+  home.homeDirectory = "/home/passh";
+  home.stateVersion = "24.11";
+
+  # Paquetes de usuario
+  home.packages = with pkgs; [
+    firefox
+    pkgs-unstable.vscode
+  ];
+
+  # Programas con configuracion
+  programs = {
+    git = {
+      enable = true;
+      userName = "Pascual Munoz Galian";
+      userEmail = "pmunozg@ces.vocento.com";
+    };
+
+    fish.enable = true;
+
+    direnv = {
+      enable = true;
+      nix-direnv.enable = true;
+    };
+  };
+
+  # Archivos gestionados por Home Manager
+  home.file = {
+    ".config/alacritty/alacritty.yml".source = ../configs/alacritty.yml;
+  };
+}
+#+end_src
+
+* Migracion: De Tradicional a Flakes
+
+** Paso 1: Habilitar Flakes (ya hecho)
+
+En tu =configuration.nix= actual ya tienes:
+
+#+begin_src nix
+nix.settings.experimental-features = [ "nix-command" "flakes" ];
+#+end_src
+
+** Paso 2: Crear Estructura
+
+#+begin_src bash
+cd ~/dotfiles
+
+# Crear directorios
+mkdir -p hosts/aurin hosts/vespino modules home docs
+
+# Mover configuraciones existentes
+cp nixos-aurin/etc/nixos/configuration.nix hosts/aurin/
+cp nixos-aurin/etc/nixos/hardware-configuration.nix hosts/aurin/
+cp -r nixos-aurin/etc/nixos/modules/* modules/
+
+cp nixos-vespino/etc/nixos/configuration.nix hosts/vespino/
+cp nixos-vespino/etc/nixos/hardware-configuration.nix hosts/vespino/
+cp nixos-vespino/etc/nixos/minecraft.nix modules/
+#+end_src
+
+** Paso 3: Crear flake.nix
+
+(Ver ejemplo completo en la seccion anterior)
+
+** Paso 4: Ajustar Imports
+
+Los imports en cada =configuration.nix= deben cambiar:
+
+#+begin_src nix
+# ANTES (tradicional)
+imports = [
+  ./hardware-configuration.nix
+  ./modules/nvidia-rtx5080.nix
+  <home-manager/nixos>
+];
+
+# DESPUES (flakes)
+imports = [
+  ./hardware-configuration.nix
+  ../../modules/nvidia-rtx5080.nix
+  # home-manager se importa en flake.nix
+];
+#+end_src
+
+** Paso 5: Eliminar Channels de nixpkgs
+
+Ya no necesitas los =fetchTarball= en cada config:
+
+#+begin_src nix
+# ANTES (dentro de configuration.nix)
+let
+  unstable = import (fetchTarball "...") { ... };
+in { ... }
+
+# DESPUES
+# Esto se maneja en flake.nix con inputs
+# Y se pasa via specialArgs como pkgs-unstable
+#+end_src
+
+** Paso 6: Probar
+
+#+begin_src bash
+cd ~/dotfiles
+
+# Verificar sintaxis
+nix flake check
+
+# Construir sin activar
+sudo nixos-rebuild build --flake .#aurin
+
+# Test (activa pero no hace default en boot)
+sudo nixos-rebuild test --flake .#aurin
+
+# Si todo OK, switch
+sudo nixos-rebuild switch --flake .#aurin
+#+end_src
+
+** Paso 7: Actualizar Stow
+
+Con flakes, el workflow de stow cambia. Ya no necesitas:
+#+begin_src bash
+sudo stow -v -t / nixos-aurin
+#+end_src
+
+Porque la configuracion vive directamente en =~/dotfiles= y usas =--flake .#aurin=.
+
+* Comandos Post-Migracion
+
+** Actualizar Sistema
+
+#+begin_src bash
+cd ~/dotfiles
+
+# Ver que inputs se pueden actualizar
+nix flake update --dry-run
+
+# Actualizar todo
+nix flake update
+
+# O actualizar solo nixpkgs
+nix flake lock --update-input nixpkgs
+
+# Rebuild con nuevas versiones
+sudo nixos-rebuild switch --flake .#aurin
+
+# Si algo falla
+sudo nixos-rebuild switch --rollback
+#+end_src
+
+** Ver Diferencias Antes de Actualizar
+
+#+begin_src bash
+# Construir nueva generacion sin activar
+sudo nixos-rebuild build --flake .#aurin
+
+# Ver que paquetes cambiaron
+nix store diff-closures /run/current-system ./result
+#+end_src
+
+* Patrones Avanzados
+
+** Overlays
+
+Los overlays permiten modificar o agregar paquetes:
+
+#+begin_src nix
+# overlays/default.nix
+final: prev: {
+  # Modificar un paquete existente
+  alacritty = prev.alacritty.overrideAttrs (old: {
+    # customizaciones
+  });
+
+  # Agregar un paquete nuevo
+  mi-script = prev.writeShellScriptBin "mi-script" ''
+    echo "Hola desde mi script"
+  '';
+}
+#+end_src
+
+En flake.nix:
+
+#+begin_src nix
+nixpkgs.overlays = [ (import ./overlays) ];
+#+end_src
+
+** Secretos con agenix/sops-nix
+
+Para manejar secretos (passwords, API keys) en flakes:
+
+#+begin_src nix
+inputs.agenix.url = "github:ryantm/agenix";
+
+# En modulos
+age.secrets.mi-password = {
+  file = ../secrets/mi-password.age;
+  owner = "passh";
+};
+#+end_src
+
+** Flake Templates
+
+Puedes crear templates reutilizables:
+
+#+begin_src bash
+# Inicializar proyecto desde template
+nix flake init -t github:usuario/mis-templates#nodejs
+#+end_src
+
+* Errores Comunes y Soluciones
+
+** "error: experimental Nix feature 'flakes' is disabled"
+
+Ya tienes esto configurado, pero por si acaso:
+
+#+begin_src nix
+nix.settings.experimental-features = [ "nix-command" "flakes" ];
+#+end_src
+
+O temporalmente:
+
+#+begin_src bash
+nix --experimental-features 'nix-command flakes' flake check
+#+end_src
+
+** "error: path '...' is not in the Nix store"
+
+El archivo no esta siendo trackeado por git. Flakes REQUIERE que los archivos esten en git:
+
+#+begin_src bash
+git add flake.nix flake.lock
+git add hosts/ modules/
+#+end_src
+
+** "error: cannot find flake 'flake:...' in the flake registries"
+
+Especifica la URL completa:
+
+#+begin_src bash
+# En lugar de
+nixpkgs
+
+# Usa
+github:NixOS/nixpkgs/nixos-24.11
+#+end_src
+
+** flake.lock muy viejo
+
+#+begin_src bash
+# Actualizar todo
+nix flake update
+
+# Commit el nuevo lock
+git add flake.lock
+git commit -m "Update flake.lock"
+#+end_src
+
+* Resumen: Beneficios de Migrar
+
+1. *Reproducibilidad Total*
+   - Mismo =flake.lock= = mismo sistema, siempre
+
+2. *Modulos Compartidos*
+   - Escribe una vez, usa en aurin y vespino
+
+3. *Actualizaciones Controladas*
+   - Tu decides cuando actualizar (=nix flake update=)
+   - Ves exactamente que cambia
+
+4. *Rollback Facil*
+   - Git revert del =flake.lock= + rebuild
+
+5. *Colaboracion*
+   - "Clona mi repo y ejecuta =nixos-rebuild switch --flake .#aurin="
+   - Funciona igual para todos
+
+6. *Integracion Home Manager*
+   - Un solo comando actualiza sistema Y usuario
+
+* Siguiente Paso
+
+Cuando estes listo, te ayudo a:
+
+1. Crear el =flake.nix= para tu setup especifico
+2. Migrar los modulos de aurin al nuevo formato
+3. Extraer los modulos compartidos (VPN, virtualizacion, etc.)
+4. Configurar Home Manager integrado
+
+La migracion sera incremental y segura - siempre podras volver a la configuracion tradicional si algo falla.
+
+*Recuerda:* Aurin es SAGRADO. Probaremos todo en vespino primero, o usaremos =nixos-rebuild test= extensivamente antes de =switch=.
