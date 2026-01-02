@@ -407,6 +407,7 @@
     alacritty
     byobu
     tmux
+    zellij  # Modern terminal multiplexer (Rust)
 
     # System monitoring
     iotop

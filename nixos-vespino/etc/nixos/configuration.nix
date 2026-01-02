@@ -446,6 +446,7 @@ in {
     unstable.alacritty
     home-manager
     byobu
+    zellij  # Modern terminal multiplexer (Rust)
     wget
     git
     curl
