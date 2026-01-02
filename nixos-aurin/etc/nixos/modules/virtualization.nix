@@ -68,7 +68,7 @@
     libvirtd = {
       enable = true;
       qemu = {
-        ovmf.enable = true;
+        # ovmf.enable = true;  # REMOVIDO: OVMF ahora disponible por defecto
         runAsRoot = true;
       };
       onBoot = "ignore";
@@ -98,7 +98,7 @@
     spice-protocol
 
     # Windows VMs
-    win-virtio
+    virtio-win  # Antes: win-virtio (renombrado)
     swtpm
 
     # Networking

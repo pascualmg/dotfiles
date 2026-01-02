@@ -302,7 +302,7 @@
     # Ollama AI
     ollama = {
       enable = true;
-      acceleration = "cuda";
+      package = pkgs.ollama-cuda;  # Antes: acceleration = "cuda" (deprecado)
       environmentVariables = {
         CUDA_VISIBLE_DEVICES = "0";
         CUDA_LAUNCH_BLOCKING = "0";
@@ -345,8 +345,10 @@
     };
 
     # Open WebUI
+    # DISABLED: Bug en nixpkgs-unstable (ctranslate2 build failure)
+    # Habilitar cuando se arregle en upstream
     open-webui = {
-      enable = true;
+      enable = false;  # Temporarily disabled
       port = 3000;
       host = "0.0.0.0";
       environment = {
@@ -424,7 +426,7 @@
 
     # Benchmarking
     sysbench
-    unixbench
+    # unixbench  # Disabled: build failure in nixpkgs-unstable
 
     # CPU management
     cpufrequtils

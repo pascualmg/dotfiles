@@ -71,7 +71,6 @@ in {
       nvidiaSettings = true;
       forceFullCompositionPipeline = true;
     };
-    pulseaudio.enable = false;  # Usamos PipeWire
   };
 
   # ===== ENVIRONMENT VARIABLES =====
@@ -98,6 +97,10 @@ in {
       "vfio_pci"
       "vfio_virqfd"
       "uvcvideo"
+
+      # WiFi Atheros
+      "ath9k"     # Atheros 802.11n (older cards)
+      "ath10k"    # Atheros 802.11ac (newer cards)
     ];
 
     kernelParams = [ "intel_iommu=on" "amd_iommu=on" "iommu=pt" ];
@@ -249,7 +252,7 @@ in {
     libvirtd = {
       enable = true;
       qemu = {
-        ovmf.enable = true;
+        # ovmf.enable = true;  # REMOVED: OVMF now available by default
         runAsRoot = true;
       };
       onBoot = "ignore";
@@ -283,7 +286,7 @@ in {
   };
 
   # ===== FONTS =====
-  fonts.packages = with pkgs; [ nerdfonts powerline-fonts ];
+  fonts.packages = with pkgs; [ powerline-fonts ];  # Fixed: nerdfonts removed (deprecated)
 
   # ===== USER =====
   users.users.passh = {
@@ -343,8 +346,7 @@ in {
     # Ollama AI
     ollama = {
       enable = true;
-      package = unstable.ollama;
-      acceleration = "cuda";
+      package = unstable.ollama-cuda;  # Fixed: acceleration = "cuda" deprecated
       environmentVariables = {
         CUDA_VISIBLE_DEVICES = "0";
         CUDA_LAUNCH_BLOCKING = "0";
@@ -361,8 +363,10 @@ in {
     };
 
     # Open WebUI
+    # DISABLED: Bug en nixpkgs-unstable (ctranslate2 build failure)
+    # Habilitar cuando se arregle en upstream
     open-webui = {
-      enable = true;
+      enable = false;  # Temporarily disabled
       package = unstable.open-webui;
       port = 3000;
       host = "0.0.0.0";
@@ -454,7 +458,7 @@ in {
     nvidia-vaapi-driver
     nvtopPackages.full
     vulkan-tools
-    glxinfo
+    mesa-demos  # Fixed: glxinfo renamed
 
     # X11
     xorg.setxkbmap
@@ -493,7 +497,7 @@ in {
     OVMF
     spice-gtk
     spice-protocol
-    win-virtio
+    virtio-win  # Fixed: win-virtio renamed
     swtpm
     bridge-utils
     dnsmasq
@@ -505,9 +509,11 @@ in {
     rtkit.enable = true;
     polkit.enable = true;
     sudo.wheelNeedsPassword = true;
-    pki.certificateFiles = [
-      /home/passh/src/vocento/abc/container.frontal-docker/configure/ssl/rootcav2.vocento.in.pem
-    ];
+    # PKI certificate (conditional - only if file exists)
+    pki.certificateFiles =
+      if builtins.pathExists /home/passh/src/vocento/abc/container.frontal-docker/configure/ssl/rootcav2.vocento.in.pem
+      then [ /home/passh/src/vocento/abc/container.frontal-docker/configure/ssl/rootcav2.vocento.in.pem ]
+      else [];
   };
 
   # ===== NIX SETTINGS =====

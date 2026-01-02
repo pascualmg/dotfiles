@@ -24,7 +24,7 @@
     enable32Bit = true; # Necesario para Steam y aplicaciones 32-bit
     extraPackages = with pkgs; [
       nvidia-vaapi-driver # Aceleracion de video
-      vaapiVdpau
+      libva-vdpau-driver  # Antes: vaapiVdpau (renombrado)
       libvdpau-va-gl
       vulkan-loader
     ];

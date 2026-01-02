@@ -5,3 +5,11 @@ wallpapers/
 
 # Aider cache
 .aider.tags.cache.v4/
+
+# Fish shell temporaries
+fish/.config/fish/fish_variables
+fish/.config/fish/conf.d/fish_frozen_*
+
+# Nix build results
+result
+result-*
