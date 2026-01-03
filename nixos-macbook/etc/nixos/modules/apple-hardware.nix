@@ -375,20 +375,39 @@ in
   # ===========================================================================
 
   environment.variables = {
-    # GTK HiDPI
+    # GTK HiDPI (2x scaling)
     GDK_SCALE = "2";
     GDK_DPI_SCALE = "0.5";
 
     # Qt HiDPI
     QT_AUTO_SCREEN_SCALE_FACTOR = "1";
     QT_ENABLE_HIGHDPI_SCALING = "1";
+    QT_SCALE_FACTOR = "2";
 
     # Cursor
     XCURSOR_SIZE = "48";
+    XCURSOR_THEME = "Adwaita";
+
+    # Java apps HiDPI
+    _JAVA_OPTIONS = "-Dsun.java2d.uiScale=2";
 
     # Intel VAAPI
     LIBVA_DRIVER_NAME = "iHD";
   };
+
+  # Xresources para Xft (fonts en X11)
+  environment.etc."X11/Xresources".text = ''
+    ! HiDPI para MacBook Pro Retina 2560x1600 (227 DPI)
+    Xft.dpi: 192
+    Xft.autohint: 0
+    Xft.lcdfilter: lcddefault
+    Xft.hintstyle: hintfull
+    Xft.hinting: 1
+    Xft.antialias: 1
+    Xft.rgba: rgb
+    Xcursor.size: 48
+    Xcursor.theme: Adwaita
+  '';
 
   # ===========================================================================
   # FONTS: Optimizacion Retina
