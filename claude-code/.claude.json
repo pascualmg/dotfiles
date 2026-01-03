@@ -1,5 +1,5 @@
 {
-  "numStartups": 253,
+  "numStartups": 260,
   "installMethod": "native",
   "autoUpdates": false,
   "editorMode": "vim",
@@ -12,9 +12,9 @@
     "enter-to-steer-in-relatime": 249,
     "todo-list": 249,
     "# for memory": 251,
-    "install-github-app": 250,
-    "permissions": 250,
-    "drag-and-drop-images": 250,
+    "install-github-app": 260,
+    "permissions": 260,
+    "drag-and-drop-images": 260,
     "double-esc": 73,
     "continue": 251,
     "custom-commands": 249,
@@ -23,26 +23,27 @@
     "custom-agents": 249,
     "image-paste": 251,
     "ide-upsell-external-terminal": 251,
-    "git-worktrees": 250,
+    "git-worktrees": 260,
     "plan-mode-for-complex-tasks": 201,
-    "terminal-setup": 250,
+    "terminal-setup": 260,
     "double-esc-code-restore": 251,
     "tab-toggle-thinking": 201,
     "ultrathink-keyword": 252,
-    "stickers-command": 239,
-    "default-permission-mode-config": 250,
+    "stickers-command": 259,
+    "default-permission-mode-config": 260,
     "frontend-design-plugin": 211,
-    "rename-conversation": 240,
+    "rename-conversation": 255,
     "config-thinking-mode": 252,
     "colorterm-truecolor": 225,
     "shift-enter-setup": 253,
     "install-slack-app": 253,
     "btw-side-question": 253,
     "web-app": 253,
-    "mobile-app": 253
+    "mobile-app": 253,
+    "guest-passes": 259
   },
   "memoryUsageCount": 6,
-  "promptQueueUseCount": 651,
+  "promptQueueUseCount": 660,
   "showExpandedTodos": true,
   "autoConnectIde": true,
   "cachedStatsigGates": {
@@ -85,12 +86,13 @@
     "tengu_sumi": false,
     "tengu_ant_attribution_header_new": true,
     "tengu_react_vulnerability_warning": true,
-    "tengu_accept_with_feedback": false
+    "tengu_accept_with_feedback": false,
+    "tengu_tool_result_persistence": false
   },
   "hasSeenStashHint": true,
   "autoUpdaterStatus": "migrated",
   "firstStartTime": "2025-06-26T10:31:32.973Z",
-  "userID": "abf639da8f10094f486fec2f5f9e768ce60e9af00c77a2180b974106933fd75a",
+  "userID": "e3793dd13c6122d1b4269ac6d07907a50f46a1b8c69a7285713996e697823d74",
   "statsigModel": {
     "firstParty": "claude-3-7-sonnet-20250219",
     "bedrock": "us.anthropic.claude-3-7-sonnet-20250219-v1:0",
@@ -129,19 +131,19 @@
       "projectOnboardingSeenCount": 5,
       "hasClaudeMdExternalIncludesApproved": false,
       "hasClaudeMdExternalIncludesWarningShown": false,
-      "lastTotalWebSearchRequests": 0,
+      "lastTotalWebSearchRequests": 6,
       "hasCompletedProjectOnboarding": true,
-      "lastCost": 40.13016355000001,
-      "lastAPIDuration": 10821443,
-      "lastToolDuration": 17721690,
-      "lastDuration": 126054710,
-      "lastLinesAdded": 9161,
-      "lastLinesRemoved": 1251,
-      "lastTotalInputTokens": 341903,
-      "lastTotalOutputTokens": 322147,
-      "lastTotalCacheCreationInputTokens": 5863539,
-      "lastTotalCacheReadInputTokens": 25610990,
-      "lastSessionId": "df8a5ece-1e9e-4d08-b953-86117a8ed22d",
+      "lastCost": 11.575657099999999,
+      "lastAPIDuration": 2241145,
+      "lastToolDuration": 2130725,
+      "lastDuration": 7952006,
+      "lastLinesAdded": 295,
+      "lastLinesRemoved": 100,
+      "lastTotalInputTokens": 128397,
+      "lastTotalOutputTokens": 62137,
+      "lastTotalCacheCreationInputTokens": 1126212,
+      "lastTotalCacheReadInputTokens": 7261555,
+      "lastSessionId": "3bb77430-f736-448e-978d-86647af9c36e",
       "reactVulnerabilityCache": {
         "detected": false,
         "package": null,
@@ -149,31 +151,23 @@
         "version": null,
         "packageManager": null
       },
-      "lastAPIDurationWithoutRetries": 10770102,
+      "lastAPIDurationWithoutRetries": 2240442,
       "lastModelUsage": {
         "claude-haiku-4-5-20251001": {
-          "inputTokens": 284534,
-          "outputTokens": 13883,
-          "cacheReadInputTokens": 101174,
-          "cacheCreationInputTokens": 94310,
+          "inputTokens": 111233,
+          "outputTokens": 13900,
+          "cacheReadInputTokens": 394521,
+          "cacheCreationInputTokens": 93723,
           "webSearchRequests": 0,
-          "costUSD": 0.4819538999999999
-        },
-        "claude-sonnet-4-5-20250929": {
-          "inputTokens": 9186,
-          "outputTokens": 166175,
-          "cacheReadInputTokens": 19038813,
-          "cacheCreationInputTokens": 4667976,
-          "webSearchRequests": 0,
-          "costUSD": 25.73673689999998
+          "costUSD": 0.3373388499999999
         },
         "claude-opus-4-5-20251101": {
-          "inputTokens": 48183,
-          "outputTokens": 142089,
-          "cacheReadInputTokens": 6471003,
-          "cacheCreationInputTokens": 1101253,
-          "webSearchRequests": 0,
-          "costUSD": 13.911472749999998
+          "inputTokens": 17164,
+          "outputTokens": 48237,
+          "cacheReadInputTokens": 6867034,
+          "cacheCreationInputTokens": 1032489,
+          "webSearchRequests": 6,
+          "costUSD": 11.238318249999995
         }
       }
     },
@@ -577,7 +571,7 @@
     "f201405d-3116-4ec0-950a-51d4ed4edd42": {
       "hasAccess": false,
       "hasAccessNotAsDefault": false,
-      "timestamp": 1767454064013
+      "timestamp": 1767480440334
     }
   },
   "hasOpusPlanDefault": false,
@@ -610,5 +604,17 @@
     "organizationRole": "admin",
     "workspaceRole": null,
     "organizationName": "pascual.munoz.galian@gmail.com's Organization"
-  }
+  },
+  "passesEligibilityCache": {
+    "f201405d-3116-4ec0-950a-51d4ed4edd42": {
+      "eligible": true,
+      "referral_code_details": {
+        "code": "bNAiczggQg",
+        "campaign": "claude_code_guest_pass",
+        "referral_link": "https://claude.ai/referral/bNAiczggQg"
+      },
+      "timestamp": 1767480438751
+    }
+  },
+  "passesUpsellSeenCount": 4
 }

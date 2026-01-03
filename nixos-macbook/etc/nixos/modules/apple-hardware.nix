@@ -323,8 +323,11 @@ in
   # nixos-hardware/common/pc/laptop habilita TLP por defecto
   # Aqui configuramos settings especificos Intel Skylake
 
+  # Deshabilitar power-profiles-daemon (conflicto con TLP, GNOME lo activa)
+  services.power-profiles-daemon.enable = false;
+
   services.tlp = {
-    enable = true;  # Explicito para evitar conflicto con power-profiles-daemon
+    enable = true;
     settings = {
       # CPU Intel Skylake
       CPU_SCALING_GOVERNOR_ON_AC = "performance";
@@ -375,37 +378,36 @@ in
   # ===========================================================================
 
   environment.variables = {
-    # GTK HiDPI (2x scaling)
-    GDK_SCALE = "2";
-    GDK_DPI_SCALE = "0.5";
+    # GTK - sin escalado de ventanas, solo DPI
+    GDK_SCALE = "1";
+    GDK_DPI_SCALE = "1";
 
-    # Qt HiDPI
+    # Qt HiDPI - automático
     QT_AUTO_SCREEN_SCALE_FACTOR = "1";
     QT_ENABLE_HIGHDPI_SCALING = "1";
-    QT_SCALE_FACTOR = "2";
 
-    # Cursor
-    XCURSOR_SIZE = "48";
+    # Cursor (32 es normal, 48 es grande)
+    XCURSOR_SIZE = "32";
     XCURSOR_THEME = "Adwaita";
 
-    # Java apps HiDPI
-    _JAVA_OPTIONS = "-Dsun.java2d.uiScale=2";
+    # Java apps
+    _JAVA_OPTIONS = "-Dsun.java2d.uiScale=1.5";
 
     # Intel VAAPI
     LIBVA_DRIVER_NAME = "iHD";
   };
 
   # Xresources para Xft (fonts en X11)
+  # DPI 144 = 1.5x del estándar 96 (típico para Retina 13")
   environment.etc."X11/Xresources".text = ''
-    ! HiDPI para MacBook Pro Retina 2560x1600 (227 DPI)
-    Xft.dpi: 192
+    Xft.dpi: 144
     Xft.autohint: 0
     Xft.lcdfilter: lcddefault
     Xft.hintstyle: hintfull
     Xft.hinting: 1
     Xft.antialias: 1
     Xft.rgba: rgb
-    Xcursor.size: 48
+    Xcursor.size: 32
     Xcursor.theme: Adwaita
   '';
 

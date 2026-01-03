@@ -79,7 +79,17 @@
       "Bash(echo:*)",
       "Bash(chmod:*)",
       "Bash(/home/passh/dotfiles/scripts/setup-claude-code.sh)",
-      "Bash(virt-manager:*)"
+      "Bash(virt-manager:*)",
+      "Bash(nix --extra-experimental-features 'nix-command flakes' flake check:*)",
+      "Bash(nix --extra-experimental-features 'nix-command flakes' flake show)",
+      "Bash(sudo -S bash -c 'nixos-rebuild switch --flake /home/passh/dotfiles#macbook')",
+      "Bash(lspci:*)",
+      "Bash(ip link:*)",
+      "Bash(nix-prefetch-url:*)",
+      "Bash(xdpyinfo:*)",
+      "Bash(lsusb:*)",
+      "WebFetch(domain:theapplewiki.com)",
+      "Bash(ssh-keygen:*)"
     ],
     "deny": [],
     "ask": []

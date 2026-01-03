@@ -127,7 +127,7 @@
       enable = true;
 
       # Desktop (elegir uno)
-      # desktopManager.gnome.enable = true;
+      desktopManager.gnome.enable = true;
       windowManager.xmonad = {
         enable = true;
         enableContribAndExtras = true;
