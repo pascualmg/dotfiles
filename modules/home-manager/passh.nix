@@ -31,9 +31,8 @@
   programs.zsh.enable = false;
   programs.emacs.enable = false;
 
-  # Permitir unfree
-  nixpkgs.config.allowUnfree = true;
-  nixpkgs.config.permittedInsecurePackages = [ "qbittorrent-4.6.4" ];
+  # NOTA: nixpkgs.config no se usa aquí cuando useGlobalPkgs=true
+  # allowUnfree y permittedInsecurePackages se configuran a nivel del flake/sistema
 
   home = {
     stateVersion = "24.05";
@@ -308,10 +307,11 @@
   programs.ssh = {
     enable = true;
     # Deshabilitar config por defecto para evitar deprecation warnings
-    addKeysToAgent = "yes";
+    enableDefaultConfig = false;
     matchBlocks = {
       "*" = {
         # Config general para todos los hosts
+        addKeysToAgent = "yes";
       };
     };
   };
