@@ -1,11 +1,20 @@
 #+TITLE: NixOS MacBook Pro 13,2 (2016)
 #+AUTHOR: passh
-#+DATE: 2026-01-02
+#+DATE: 2026-01-03
 #+STARTUP: overview
 
 * Resumen
 
 Configuracion NixOS para MacBook Pro 13,2 (Late 2016, 13" con Touch Bar).
+
+*IMPORTANTE*: NixOS 24.05 NO arranca en este hardware. Usar NixOS 24.04.
+
+** Versiones Disponibles
+
+| Version | Estado | Archivo |
+|---------+--------+---------|
+| 24.04   | *RECOMENDADA* | =configuration-24.04.nix= |
+| 24.11   | NO PROBADA | =configuration.nix= (original) |
 
 ** Hardware soportado
 
@@ -17,23 +26,29 @@ Configuracion NixOS para MacBook Pro 13,2 (Late 2016, 13" con Touch Bar).
 | Teclado         | Apple SPI Keyboard              | applespi                  |
 | Trackpad        | Force Touch (SPI)               | applespi + libinput       |
 | Touch Bar       | OLED T1 chip                    | tiny-dfr                  |
-| WiFi            | Broadcom BCM43602               | broadcom_sta (wl)         |
+| WiFi            | Broadcom BCM43602               | broadcom_sta (wl) *       |
 | Bluetooth       | Broadcom (integrado)            | bluez                     |
 | Audio           | Intel HDA + Apple amps          | snd-hda-intel (model=mbp13) |
 | Camara          | FaceTime HD                     | facetimehd (nixos-hardware) |
 | Thunderbolt     | 4x USB-C TB3                    | thunderbolt + bolt        |
-| Storage         | SSD externo 4TB via TB3         | nvme/ahci + fstrim        |
+| Storage         | USB 128GB / SSD TB3 4TB         | usb_storage / nvme + fstrim |
+
+*WiFi*: Detecta redes pero tiene problemas de conexion. Usar USB WiFi/Ethernet como fallback.
 
 ** Estructura de archivos
 
 #+BEGIN_SRC text
 nixos-macbook/
-├── README.org                         # Este archivo
+├── README.org                              # Este archivo
+├── INSTALL-24.04.md                        # Guia de instalacion detallada
 └── etc/nixos/
-    ├── configuration.nix              # Config principal
-    ├── hardware-configuration.nix     # Template (reemplazar en instalacion)
+    ├── configuration.nix                   # Config original (24.11)
+    ├── configuration-24.04.nix             # Config para NixOS 24.04 (USAR ESTA)
+    ├── hardware-configuration.nix          # Template original
+    ├── hardware-configuration-template.nix # Template para USB 128GB
     └── modules/
-        └── apple-hardware.nix         # Drivers Apple + HiDPI + Touch Bar
+        ├── apple-hardware.nix              # Modulo original (24.11)
+        └── apple-hardware-24.04.nix        # Modulo para NixOS 24.04 (USAR ESTE)
 #+END_SRC
 
 ** Dependencias
@@ -41,179 +56,58 @@ nixos-macbook/
 - *nixos-hardware*: Perfiles =apple-macbook-pro= y =common-pc-ssd=
 - *nixpkgs.config.allowUnfree = true*: Para firmware Broadcom WiFi
 
-* Instalacion Paso a Paso
+* Instalacion Rapida (NixOS 24.04)
 
-** 1. Preparar USB de instalacion NixOS
+Ver [[file:INSTALL-24.04.md][INSTALL-24.04.md]] para guia completa paso a paso.
 
-#+BEGIN_SRC bash
-# Descargar ISO NixOS (minimal o graphical)
-wget https://channels.nixos.org/nixos-24.11/latest-nixos-minimal-x86_64-linux.iso
+** Resumen de pasos
 
-# Escribir a USB (CUIDADO: /dev/sdX es tu USB)
-sudo dd if=latest-nixos-minimal-x86_64-linux.iso of=/dev/sdX bs=4M status=progress
-sync
+1. Boot USB NixOS 24.04 (24.05 NO funciona)
+2. Conectar USB WiFi/Ethernet (Broadcom interno no conecta en Live)
+3. Particionar USB 128GB (EFI + root + swap)
+4. =nixos-generate-config --root /mnt=
+5. Copiar =configuration-24.04.nix= como =configuration.nix=
+6. Copiar =apple-hardware-24.04.nix= como =modules/apple-hardware.nix=
+7. =nixos-install=
+8. Reboot y verificar con =macbook-diag=
+
+* Problema WiFi Broadcom BCM43602
+
+** Sintomas
+
+- En Live USB: Detecta redes pero NO conecta
+- El driver =wl= (broadcom_sta) carga correctamente
+- =nmcli device wifi list= muestra redes
+- =nmcli device wifi connect= falla silenciosamente
+
+** Configuracion actual
+
+#+BEGIN_SRC nix
+boot = {
+  extraModulePackages = [ config.boot.kernelPackages.broadcom_sta ];
+  blacklistedKernelModules = [
+    "b43" "b43legacy" "bcma" "brcmsmac" "brcmfmac" "ssb"
+  ];
+};
 #+END_SRC
 
-** 2. Boot desde USB
+** Workarounds
 
-1. Conectar USB al MacBook (necesitas adaptador USB-C)
-2. Apagar MacBook completamente
-3. Encender manteniendo *Option/Alt* presionado
-4. Seleccionar "EFI Boot" (el USB)
-5. En GRUB, seleccionar "NixOS Installer"
+1. *USB WiFi con drivers libres* (Ralink, Atheros, Intel)
+2. *USB Ethernet adapter*
+3. *USB Tethering desde movil*
 
-*NOTA*: El teclado interno NO funcionara en el instalador (drivers SPI no estan).
-Necesitas teclado USB externo para la instalacion.
-
-** 3. Conectar a Internet (USB tethering recomendado)
-
-El WiFi Broadcom requiere drivers propietarios que no estan en el ISO.
-
-Opciones:
-- *USB Tethering* desde movil (recomendado)
-- *Adaptador Ethernet USB-C*
-- *USB WiFi* con drivers libres
+** Debug
 
 #+BEGIN_SRC bash
-# Verificar conexion
-ip a
-ping -c 3 google.com
-#+END_SRC
+# Script incluido en la config
+wifi-debug
 
-** 4. Particionar SSD externo TB3
-
-#+BEGIN_SRC bash
-# Listar discos - el SSD TB3 sera /dev/nvme0n1 o /dev/sda
-lsblk
-
-# Asumiendo /dev/nvme0n1 (ajustar si es diferente)
-DISK=/dev/nvme0n1
-
-# Crear tabla GPT
-parted $DISK -- mklabel gpt
-
-# Particion EFI (512MB)
-parted $DISK -- mkpart ESP fat32 1MiB 512MiB
-parted $DISK -- set 1 esp on
-
-# Particion root (resto menos 32GB para swap)
-parted $DISK -- mkpart primary ext4 512MiB -32GiB
-
-# Particion swap (32GB para hibernate)
-parted $DISK -- mkpart primary linux-swap -32GiB 100%
-
-# Formatear
-mkfs.fat -F32 -n BOOT ${DISK}p1
-mkfs.ext4 -L nixos ${DISK}p2
-mkswap -L swap ${DISK}p3
-
-# Verificar
-lsblk -f
-#+END_SRC
-
-** 5. Montar particiones
-
-#+BEGIN_SRC bash
-# Montar root
-mount /dev/disk/by-label/nixos /mnt
-
-# Crear y montar boot
-mkdir -p /mnt/boot
-mount /dev/disk/by-label/BOOT /mnt/boot
-
-# Activar swap
-swapon /dev/disk/by-label/swap
-#+END_SRC
-
-** 6. Generar configuracion base
-
-#+BEGIN_SRC bash
-# Generar hardware-configuration.nix automatico
-nixos-generate-config --root /mnt
-
-# Ver lo generado
-cat /mnt/etc/nixos/hardware-configuration.nix
-#+END_SRC
-
-** 7. Clonar dotfiles y copiar configuracion
-
-#+BEGIN_SRC bash
-# Instalar git temporalmente
-nix-shell -p git
-
-# Clonar dotfiles
-git clone https://github.com/TU_USUARIO/dotfiles.git /mnt/home/passh/dotfiles
-
-# O si no tienes repo, descargar directamente los archivos necesarios
-
-# Copiar configuration.nix
-cp /mnt/home/passh/dotfiles/nixos-macbook/etc/nixos/configuration.nix /mnt/etc/nixos/
-
-# Copiar modulos
-mkdir -p /mnt/etc/nixos/modules
-cp /mnt/home/passh/dotfiles/nixos-macbook/etc/nixos/modules/*.nix /mnt/etc/nixos/modules/
-
-# IMPORTANTE: NO copiar hardware-configuration.nix
-# Usar el generado por nixos-generate-config
-#+END_SRC
-
-** 8. Revisar configuracion
-
-#+BEGIN_SRC bash
-# Editar configuration.nix si es necesario
-vim /mnt/etc/nixos/configuration.nix
-
-# Verificar UUIDs en hardware-configuration.nix
-cat /mnt/etc/nixos/hardware-configuration.nix
-#+END_SRC
-
-** 9. Instalar NixOS
-
-#+BEGIN_SRC bash
-# Instalar (puede tardar 15-30 minutos)
-nixos-install
-
-# Cuando pregunte por password de root, establecer uno temporal
-# Luego podras usar sudo con tu usuario passh
-
-# Reiniciar
-reboot
-#+END_SRC
-
-** 10. Primer boot - Configurar usuario
-
-#+BEGIN_SRC bash
-# Login como root
-
-# Establecer password para passh
-passwd passh
-
-# Logout y login como passh
-#+END_SRC
-
-** 11. Post-instalacion
-
-#+BEGIN_SRC bash
-# Verificar hardware
-macbook-diag
-
-# Verificar Touch Bar
-touchbar-status
-
-# Verificar WiFi (ahora deberia funcionar con broadcom_sta)
-nmcli device wifi list
-nmcli device wifi connect "TU_SSID" password "TU_PASSWORD"
-
-# Configurar dotfiles con stow
-cd ~/dotfiles
-stow -v fish
-stow -v xmonad
-stow -v xmobar
-stow -v alacritty
-stow -v home-manager
-
-# Aplicar home-manager
-home-manager switch
+# Manual
+lsmod | grep wl                    # Verificar driver
+lsmod | grep -E "b43|bcma|brcm"    # Debe estar vacio
+nmcli device wifi list             # Ver redes
+journalctl -u NetworkManager       # Ver logs
 #+END_SRC
 
 * Diagnostico
@@ -225,132 +119,91 @@ home-manager switch
 | =macbook-info=    | Info general del sistema                 |
 | =macbook-diag=    | Diagnostico completo de hardware         |
 | =touchbar-status= | Estado del Touch Bar y tiny-dfr          |
+| =wifi-debug=      | Debug WiFi Broadcom                      |
 | =brightnessctl=   | Control brillo pantalla                  |
 | =powertop=        | Analisis consumo energia                 |
 
-** Verificar drivers SPI (teclado/trackpad)
+** Checklist de verificacion
 
 #+BEGIN_SRC bash
-# Deben estar cargados:
+# 1. Kernel modules SPI (teclado/trackpad)
 lsmod | grep -E "applespi|spi_pxa|intel_lpss"
+# Esperado: applespi, spi_pxa2xx_platform, intel_lpss_pci
 
-# Esperado:
-# applespi               ...
-# spi_pxa2xx_platform    ...
-# intel_lpss_pci         ...
-#+END_SRC
+# 2. WiFi driver
+lsmod | grep "^wl"
+# Esperado: wl
 
-** Verificar WiFi Broadcom
+# 3. Touch Bar
+systemctl is-active tiny-dfr
+# Esperado: active
 
-#+BEGIN_SRC bash
-# Driver wl debe estar cargado
-lsmod | grep wl
+# 4. Audio
+pactl info | grep "Server Name"
+# Esperado: PipeWire
 
-# Interface debe existir
-ip link | grep wlp
+# 5. Graphics
+lsmod | grep i915
+# Esperado: i915
 
-# Conectar a WiFi
-nmcli device wifi connect "SSID" password "PASSWORD"
-#+END_SRC
-
-** Verificar Touch Bar
-
-#+BEGIN_SRC bash
-# Servicio tiny-dfr
-systemctl status tiny-dfr
-
-# Reiniciar si hay problemas
-sudo systemctl restart tiny-dfr
-
-# Ver logs
-journalctl -u tiny-dfr -f
-#+END_SRC
-
-** Verificar Audio
-
-#+BEGIN_SRC bash
-# Dispositivos detectados
-aplay -l
-
-# PipeWire funcionando
-pactl info
-
-# Control volumen
-pulsemixer
-pavucontrol
+# 6. HiDPI
+echo $GDK_SCALE
+# Esperado: 2
 #+END_SRC
 
 * Troubleshooting
 
-** Teclado no funciona en instalador
+** Teclado no funciona
 
-*Causa*: Drivers SPI no estan en el ISO de instalacion.
+*En Live USB 24.04*: Deberia funcionar (ya verificado).
 
-*Solucion*: Usar teclado USB externo para la instalacion.
-Despues del primer boot con la config, el teclado interno funcionara.
+*Despues de instalar*: Verificar modulos SPI:
 
-** WiFi no funciona en instalador
+#+BEGIN_SRC bash
+sudo modprobe intel_lpss_pci
+sudo modprobe spi_pxa2xx_platform
+sudo modprobe applespi
+#+END_SRC
 
-*Causa*: Broadcom requiere driver propietario =broadcom_sta=.
+** WiFi detecta pero no conecta
 
-*Solucion*: Usar USB tethering desde movil o adaptador Ethernet.
-Despues del primer boot, WiFi funcionara.
+Ver seccion "Problema WiFi Broadcom BCM43602" arriba.
 
-** Touch Bar muestra linea o no responde
+** Touch Bar no muestra F1-F12
 
-*Causa*: tiny-dfr no esta corriendo.
-
-*Solucion*:
 #+BEGIN_SRC bash
 sudo systemctl start tiny-dfr
 sudo systemctl enable tiny-dfr
 #+END_SRC
 
-** Pantalla muy pequena (no HiDPI)
+** Pantalla muy pequena (sin HiDPI)
 
-*Causa*: Variables HiDPI no aplicadas.
-
-*Solucion*: Verificar en environment.variables:
-#+BEGIN_SRC nix
-GDK_SCALE = "2";
-GDK_DPI_SCALE = "0.5";
+Verificar variables:
+#+BEGIN_SRC bash
+echo $GDK_SCALE      # Debe ser 2
+echo $GDK_DPI_SCALE  # Debe ser 0.5
 #+END_SRC
 
-Reiniciar sesion X despues de cambios.
+Si faltan, cerrar sesion y volver a entrar.
 
 ** Audio sin sonido
 
-*Causa*: Sink incorrecto o muted.
-
-*Solucion*:
 #+BEGIN_SRC bash
-# Ver sinks disponibles
-pactl list short sinks
-
-# Verificar no muted
 pactl set-sink-mute @DEFAULT_SINK@ 0
-
-# Subir volumen
 pactl set-sink-volume @DEFAULT_SINK@ 80%
 #+END_SRC
 
-** Bateria se descarga rapido
-
-*Causa*: TLP no configurado correctamente.
-
-*Solucion*:
-#+BEGIN_SRC bash
-# Verificar TLP activo
-systemctl status tlp
-
-# Analizar consumo
-sudo powertop
-
-# Ver estado bateria
-acpi -b
-#+END_SRC
-
 * Notas Tecnicas
+
+** Por que NixOS 24.04 y no 24.05
+
+NixOS 24.05 no arranca en MacBook Pro 13,2. El instalador Live se queda colgado.
+Posibles causas:
+- Cambios en drivers Intel graphics
+- Cambios en systemd-boot
+- Incompatibilidad firmware
+
+24.04 funciona correctamente con teclado y trackpad en Live USB.
 
 ** Por que nixos-hardware apple-macbook-pro
 
@@ -367,37 +220,26 @@ NO existe perfil =13-2= especifico, por eso =modules/apple-hardware.nix= complem
 - WiFi Broadcom (broadcom_sta)
 - HiDPI 227 DPI
 
-** SSD externo via Thunderbolt 3
+** Kernel
 
-Configuracion optimizada en =hardware-configuration.nix=:
+Para NixOS 24.04 usamos =linuxPackages_6_6= (LTS) en lugar de =linuxPackages_latest=
+para mayor estabilidad.
 
-#+BEGIN_SRC nix
-fileSystems."/" = {
-  options = [
-    "noatime"    # Reduce writes
-    "discard"    # TRIM continuo
-    "commit=60"  # Sync cada 60s
-  ];
-};
-#+END_SRC
+** Storage USB vs TB3 SSD
 
-Ademas, =nixos-hardware/common/pc/ssd= habilita =fstrim.timer= semanal.
+| Storage | Opciones mount | commit |
+|---------+----------------+--------|
+| USB 128GB | noatime, discard | 120s (reduce writes) |
+| TB3 SSD 4TB | noatime, discard | 60s (mas seguro) |
 
-** Kernel Latest
+* Migracion a Flakes (Futuro)
 
-Se usa =pkgs.linuxPackages_latest= porque:
-- Drivers SPI (applespi) mejoran en kernels recientes
-- Intel graphics mejor soportados
-- Touch Bar drivers mas estables
-
-* Actualizacion a Flakes (Futuro)
-
-Cuando se migre a flakes, modificar =flake.nix=:
+Cuando se migre a flakes, usar:
 
 #+BEGIN_SRC nix
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";  # O version estable
     nixos-hardware.url = "github:NixOS/nixos-hardware";
   };
 
@@ -408,13 +250,12 @@ Cuando se migre a flakes, modificar =flake.nix=:
         nixos-hardware.nixosModules.apple-macbook-pro
         nixos-hardware.nixosModules.common-pc-ssd
         ./configuration.nix
+        ./modules/apple-hardware.nix
       ];
     };
   };
 }
 #+END_SRC
-
-Y eliminar las lineas =fetchTarball= en =configuration.nix=.
 
 * Referencias
 
@@ -422,9 +263,10 @@ Y eliminar las lineas =fetchTarball= en =configuration.nix=.
 - [[https://wiki.archlinux.org/title/Mac][ArchWiki: Mac]]
 - [[https://github.com/roadrunner2/macbook12-spi-driver][macbook12-spi-driver (applespi)]]
 - [[https://github.com/kekrby/tiny-dfr][tiny-dfr (Touch Bar)]]
+- [[https://wiki.archlinux.org/title/Broadcom_wireless][ArchWiki: Broadcom wireless]]
 - [[https://nixos.org/manual/nixos/stable/][NixOS Manual]]
 
 ---
 
-*Ultima actualizacion*: 2026-01-02
-*Sistema*: NixOS 24.11 en MacBook Pro 13,2
+*Ultima actualizacion*: 2026-01-03
+*Sistema*: NixOS 24.04 en MacBook Pro 13,2

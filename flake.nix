@@ -249,17 +249,33 @@
         # ---------------------------------------------------------------------
         # MACBOOK - Laptop Apple MacBook Pro 13,2 (2016)
         # ---------------------------------------------------------------------
-        # COMMENTED OUT: Configuracion generada pero no instalada todavia
-        # Hardware: Intel Skylake, Touch Bar, SSD externo Thunderbolt
-        # Rol: Uso movil, desarrollo ligero
+        # Hardware: MacBook Pro 13" 2016 con Touch Bar
+        # - CPU: Intel Core i5/i7 Skylake
+        # - Display: Retina 2560x1600 (227 DPI)
+        # - GPU: Intel Iris Graphics 550
+        # - WiFi: Broadcom BCM43602
+        # - Touch Bar: OLED con T1 chip
         #
-        # Descomentar cuando se instale NixOS en el MacBook
+        # Instalacion: USB 128GB (testing)
+        # Desktop: XMonad (compartido con aurin)
         #
-        # macbook = mkNixosConfig {
-        #   hostname = "macbook";
-        #   configPath = ./nixos-macbook/etc/nixos/configuration.nix;
-        #   enableHomeManager = true;  # macbook puede empezar puro
-        # };
+        # PURE FLAKE desde dia 1:
+        #   - Home Manager integrado
+        #   - nixos-hardware para Apple
+        #   - NO requiere --impure
+        #
+        # Uso:
+        #   sudo nixos-rebuild switch --flake ~/dotfiles#macbook
+        # ---------------------------------------------------------------------
+        macbook = mkNixosConfig {
+          hostname = "macbook";
+          configPath = ./nixos-macbook/etc/nixos/configuration-pure.nix;
+          enableHomeManager = true;
+          # nixos-hardware para MacBook Pro
+          extraModules = [
+            nixos-hardware.nixosModules.apple-macbook-pro-13-2
+          ];
+        };
       };
 
       # -----------------------------------------------------------------------

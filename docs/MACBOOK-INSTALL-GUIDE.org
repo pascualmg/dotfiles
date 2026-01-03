@@ -1,0 +1,648 @@
+#+TITLE: Guía de Instalación NixOS - MacBook Pro 13,2 (2016)
+#+AUTHOR: passh
+#+DATE: 2026-01-03
+#+OPTIONS: toc:2 num:nil
+
+* Introducción
+
+Esta guía cubre la instalación de NixOS en un MacBook Pro 13" 2016 con Touch Bar usando:
+
+- *Flakes* desde día 1 (configuración pura, sin channels)
+- *nixos-hardware* para soporte Apple
+- *XMonad* como window manager (compartido con aurin)
+- *Home Manager* integrado en el flake
+- Instalación en *USB 128GB* (para testing)
+
+** Hardware MacBook Pro 13,2
+
+| Componente  | Especificación                      |
+|-------------+-------------------------------------|
+| Modelo      | MacBook Pro 13,2 (2016 Touch Bar)   |
+| CPU         | Intel Core i5/i7 Skylake            |
+| Display     | Retina 2560x1600 @ 227 DPI          |
+| GPU         | Intel Iris Graphics 550             |
+| WiFi        | Broadcom BCM43602 (requiere driver) |
+| Touch Bar   | OLED con T1 chip                    |
+| Input       | Apple SPI Keyboard + Trackpad       |
+| Ports       | 4x Thunderbolt 3 (USB-C)            |
+
+** Estado del Soporte Hardware
+
+| Componente       | Estado | Driver/Config              |
+|------------------+--------+----------------------------|
+| CPU              | ✓      | nixos-hardware             |
+| Intel Graphics   | ✓      | modesetting + i915         |
+| WiFi Broadcom    | ✓      | broadcom_sta (propietario) |
+| Keyboard/Trackpad| ✓      | applespi                   |
+| Touch Bar        | ✓      | tiny-dfr daemon            |
+| Thunderbolt 3    | ✓      | bolt + kernel module       |
+| Audio            | ✓      | PipeWire + Intel HDA       |
+| Bluetooth        | ✓      | Broadcom firmware          |
+| Webcam           | ✓      | facetimehd (nixos-hardware)|
+| Battery          | ✓      | ACPI + TLP                 |
+| Sensors          | ✓      | mbpfan + thermald          |
+
+* FASE 1: Preparación Pre-Instalación
+
+** 1.1 Crear USB de Instalación NixOS
+
+#+begin_src bash
+# En aurin u otro Linux
+wget https://channels.nixos.org/nixos-24.05/latest-nixos-minimal-x86_64-linux.iso
+
+# Verificar checksum
+sha256sum latest-nixos-minimal-x86_64-linux.iso
+# Comparar con https://nixos.org/download.html
+
+# Escribir a USB (ej: /dev/sdb)
+sudo dd if=latest-nixos-minimal-x86_64-linux.iso of=/dev/sdb bs=4M status=progress && sync
+#+end_src
+
+*IMPORTANTE*: Usar NixOS 24.05, NO 24.11 (no arranca en este MacBook).
+
+** 1.2 Preparar USB 128GB para Instalación
+
+El USB de instalación (/dev/sdb) es diferente del USB destino (/dev/sdc).
+
+1. *Conectar USB 128GB* al MacBook
+2. *Identificar el dispositivo*: ~lsblk~ o ~fdisk -l~
+3. *Particionar más adelante* (en el instalador)
+
+** 1.3 Descargar Dotfiles
+
+#+begin_src bash
+# En aurin (antes de ir al MacBook)
+cd ~/dotfiles
+git pull origin master
+
+# Copiar dotfiles a USB o preparar git clone en MacBook
+# Opción 1: USB
+cp -r ~/dotfiles /media/usb/
+
+# Opción 2: Push a GitHub (si tienes repo privado)
+git push origin master
+#+end_src
+
+* FASE 2: Boot e Instalación Base
+
+** 2.1 Boot desde USB Instalador
+
+1. *Apagar* MacBook
+2. *Conectar* USB instalador (NixOS minimal)
+3. *Encender* y mantener *Option (⌥)* presionado
+4. *Seleccionar* "EFI Boot" o "USB"
+5. *Esperar* boot del instalador
+
+** 2.2 Conectar WiFi (Broadcom)
+
+#+begin_src bash
+# El driver broadcom puede no funcionar en live USB
+# SOLUCIÓN: Conectar via USB-C a Ethernet (si tienes adaptador)
+# O usar iPhone USB tethering
+
+# Si tienes adaptador Ethernet:
+# Debería detectarse automáticamente
+
+# Si usas iPhone tethering:
+# 1. Conectar iPhone via USB-C
+# 2. Activar "Compartir Internet" en iPhone
+# 3. Debería aparecer como usb0
+
+# Verificar conexión
+ip link
+ping -c 3 nixos.org
+#+end_src
+
+** 2.3 Particionar USB 128GB
+
+Suponiendo que el USB destino es ~/dev/sdc~:
+
+#+begin_src bash
+# Listar discos
+lsblk
+
+# Particionar con parted
+parted /dev/sdc
+
+# Dentro de parted:
+(parted) mklabel gpt
+(parted) mkpart ESP fat32 1MiB 512MiB
+(parted) set 1 esp on
+(parted) mkpart primary 512MiB 100%
+(parted) quit
+
+# Formatear particiones
+mkfs.fat -F 32 -n BOOT /dev/sdc1
+mkfs.ext4 -L nixos /dev/sdc2
+
+# Montar
+mount /dev/sdc2 /mnt
+mkdir -p /mnt/boot
+mount /dev/sdc1 /mnt/boot
+#+end_src
+
+** 2.4 Generar Configuración Hardware
+
+#+begin_src bash
+nixos-generate-config --root /mnt
+
+# Esto crea:
+# /mnt/etc/nixos/configuration.nix
+# /mnt/etc/nixos/hardware-configuration.nix
+#+end_src
+
+** 2.5 Clonar Dotfiles en el Instalador
+
+#+begin_src bash
+# Si tienes Internet via Ethernet/tethering
+nix-shell -p git
+git clone https://github.com/pascualmg/dotfiles.git /tmp/dotfiles
+
+# O copiar desde USB si los trajiste
+cp -r /media/usb/dotfiles /tmp/dotfiles
+#+end_src
+
+** 2.6 Copiar Configuración MacBook
+
+#+begin_src bash
+# Copiar todo el directorio macbook
+cp -r /tmp/dotfiles/nixos-macbook/etc/nixos/* /mnt/etc/nixos/
+
+# Estructura resultante en /mnt/etc/nixos/:
+# - configuration-pure.nix  (del repo)
+# - hardware-configuration.nix  (generado)
+# - modules/
+#   - apple-hardware.nix  (del repo)
+#+end_src
+
+** 2.7 Editar hardware-configuration.nix
+
+#+begin_src bash
+nano /mnt/etc/nixos/hardware-configuration.nix
+
+# Verificar que tenga las particiones correctas:
+# - /dev/sdc2 -> /
+# - /dev/sdc1 -> /boot
+#+end_src
+
+** 2.8 Instalar NixOS
+
+#+begin_src bash
+# IMPORTANTE: NO usar --impure, esta config es PURA
+nixos-install --flake /tmp/dotfiles#macbook
+
+# Te pedirá password para root
+# Configurar password del root
+
+# Esperar... puede tardar 30-60 minutos (descarga + compilación)
+#+end_src
+
+** 2.9 Reiniciar
+
+#+begin_src bash
+reboot
+
+# Quitar USB instalador
+# Bootear desde USB 128GB
+#+end_src
+
+* FASE 3: Configuración Post-Instalación
+
+** 3.1 Primer Boot
+
+1. Boot desde USB 128GB
+2. Login como *passh* (password configurado en instalación)
+3. Verificar que XMonad arranca
+
+** 3.2 Conectar WiFi con NetworkManager
+
+#+begin_src bash
+# Listar redes
+nmcli device wifi list
+
+# Conectar
+nmcli device wifi connect "SSID" password "PASSWORD"
+
+# Verificar
+ping -c 3 google.com
+#+end_src
+
+** 3.3 Clonar Dotfiles Localmente
+
+#+begin_src bash
+cd ~
+git clone https://github.com/pascualmg/dotfiles.git
+
+# O copiar desde USB si usaste esa opción
+cp -r /media/usb/dotfiles ~/dotfiles
+#+end_src
+
+** 3.4 Aplicar Home Manager con Stow
+
+#+begin_src bash
+cd ~/dotfiles
+
+# Aplicar dotfiles de usuario
+stow -v home-manager
+stow -v fish
+stow -v xmonad
+stow -v xmobar
+stow -v picom
+stow -v alacritty
+stow -v composer
+stow -v claude-code
+
+# Activar home-manager (ya está en el flake)
+# Debería estar activo automáticamente
+# Verificar:
+which firefox  # Debería estar instalado por home-manager
+#+end_src
+
+** 3.5 Verificar Hardware
+
+#+begin_src bash
+# Script de diagnóstico (incluido en apple-hardware.nix)
+macbook-diag
+
+# Debería mostrar [OK] en:
+# - SPI keyboard/trackpad
+# - Touch Bar (tiny-dfr)
+# - WiFi (wl driver)
+# - Audio (PipeWire)
+# - Thunderbolt
+# - Sensors
+
+# Info del sistema
+macbook-info
+
+# Estado Touch Bar
+touchbar-status
+#+end_src
+
+** 3.6 Verificar XMonad
+
+#+begin_src bash
+# Verificar que XMonad funciona
+# Mod+Shift+Enter debería abrir Alacritty
+# Mod+P debería abrir dmenu
+
+# Si hay problemas, ver logs:
+journalctl -xe | grep -i xmonad
+#+end_src
+
+** 3.7 Configurar HiDPI (si es necesario)
+
+La configuración ya tiene:
+- DPI 227 en X11 (configuration-pure.nix)
+- GDK_SCALE=2 para GTK
+- Variables de entorno en apple-hardware.nix
+
+Si los textos se ven pequeños:
+
+#+begin_src bash
+# Editar ~/.config/xmonad/xmonad.hs
+# Ajustar tamaño de fuentes en xmobar
+
+# Recompilar XMonad
+xmonad --recompile
+xmonad --restart
+#+end_src
+
+** 3.8 Probar Aplicaciones Principales
+
+#+begin_src bash
+# Firefox
+firefox
+
+# Terminal
+alacritty
+
+# Editor
+emacs  # O el que uses
+
+# File manager
+thunar
+#+end_src
+
+* FASE 4: Optimizaciones y Troubleshooting
+
+** 4.1 Touch Bar No Funciona
+
+#+begin_src bash
+# Verificar módulos kernel
+lsmod | grep apple
+
+# Si no aparece apple-ibridge:
+sudo modprobe apple-ibridge
+sudo modprobe apple-ib-tb
+
+# Reiniciar servicio
+sudo systemctl restart tiny-dfr
+
+# Ver logs
+journalctl -u tiny-dfr -f
+#+end_src
+
+** 4.2 WiFi No Conecta
+
+#+begin_src bash
+# Verificar driver
+lsmod | grep wl
+
+# Si no aparece:
+sudo modprobe wl
+
+# Verificar conflictos
+lsmod | grep -E "b43|brcm"
+# No debería aparecer nada
+
+# Si aparece, blacklistear manualmente:
+sudo rmmod b43
+sudo rmmod brcmfmac
+sudo modprobe wl
+
+# Reiniciar NetworkManager
+sudo systemctl restart NetworkManager
+#+end_src
+
+** 4.3 Teclado/Trackpad No Funciona
+
+#+begin_src bash
+# Verificar módulos SPI
+lsmod | grep -E "applespi|spi_pxa"
+
+# Cargar manualmente si falta
+sudo modprobe intel_lpss_pci
+sudo modprobe spi_pxa2xx_platform
+sudo modprobe applespi
+
+# Reiniciar
+sudo reboot
+#+end_src
+
+** 4.4 Audio No Funciona
+
+#+begin_src bash
+# Verificar PipeWire
+systemctl --user status pipewire
+systemctl --user status pipewire-pulse
+
+# Reiniciar audio
+systemctl --user restart pipewire
+systemctl --user restart pipewire-pulse
+
+# Verificar dispositivos
+pactl list sinks short
+
+# Test audio
+speaker-test -c 2 -t wav
+#+end_src
+
+** 4.5 Pantalla Negra al Boot
+
+Si ves pantalla negra después de GRUB:
+
+#+begin_src bash
+# En GRUB, presionar 'e' para editar
+# Añadir al final de la línea linux:
+nomodeset
+
+# Boot con esas opciones
+# Una vez dentro, editar configuration-pure.nix:
+boot.kernelParams = [ "nomodeset" ];
+
+# Rebuild
+sudo nixos-rebuild switch --flake ~/dotfiles#macbook
+#+end_src
+
+** 4.6 Optimizar Batería
+
+#+begin_src bash
+# Ver estadísticas
+sudo powertop
+
+# TLP ya está habilitado, verificar:
+sudo tlp-stat -s
+
+# Ver consumo actual
+cat /sys/class/power_supply/BAT0/power_now  # En µW
+#+end_src
+
+* FASE 5: Actualizaciones y Mantenimiento
+
+** 5.1 Actualizar Sistema
+
+#+begin_src bash
+cd ~/dotfiles
+
+# Actualizar flake inputs
+nix flake update
+
+# Ver qué cambiaría
+sudo nixos-rebuild dry-build --flake .#macbook
+
+# Aplicar
+sudo nixos-rebuild switch --flake .#macbook
+#+end_src
+
+** 5.2 Actualizar Solo nixpkgs
+
+#+begin_src bash
+nix flake lock --update-input nixpkgs
+sudo nixos-rebuild switch --flake ~/dotfiles#macbook
+#+end_src
+
+** 5.3 Rollback a Generación Anterior
+
+#+begin_src bash
+# Listar generaciones
+sudo nix-env --list-generations --profile /nix/var/nix/profiles/system
+
+# Rollback
+sudo nixos-rebuild switch --rollback
+
+# O en boot, seleccionar generación anterior en GRUB
+#+end_src
+
+** 5.4 Limpiar Garbage
+
+#+begin_src bash
+# Ver espacio usado
+nix-store --gc --print-dead
+
+# Limpiar
+sudo nix-collect-garbage -d
+
+# Optimizar store
+sudo nix-store --optimise
+#+end_src
+
+* FASE 6: Configuraciones Adicionales
+
+** 6.1 Compartir Configuración con Aurin
+
+Los módulos ya están compartidos en =~/dotfiles/modules/=:
+
+- =desktop/xmonad.nix= - XMonad compartido
+- =common/packages.nix= - Paquetes del sistema
+- =common/services.nix= - Servicios comunes
+- =common/users.nix= - Usuario passh
+
+Cambios en estos módulos afectan ambas máquinas.
+
+** 6.2 Personalizar XMonad para MacBook
+
+Si quieres diferencias específicas del MacBook:
+
+#+begin_src bash
+# Editar ~/.config/xmonad/xmonad.hs
+# Detectar hostname:
+
+import System.Posix.Env (getEnv)
+
+main = do
+  hostname <- getEnv "HOSTNAME"
+  let isMacbook = hostname == Just "macbook"
+
+  -- Configuración específica
+  let myTerminal = if isMacbook
+                   then "alacritty --font-size 14"  -- Más grande por HiDPI
+                   else "alacritty"
+#+end_src
+
+** 6.3 Sincronizar Cambios con Git
+
+#+begin_src bash
+cd ~/dotfiles
+
+# Hacer cambios en macbook
+# Comitear
+git add -A
+git commit -m "macbook: ajustes HiDPI"
+
+# Push
+git push origin master
+
+# En aurin, pull
+git pull origin master
+sudo nixos-rebuild switch --flake ~/dotfiles#aurin-pure
+#+end_src
+
+* Anexo A: Comandos Útiles MacBook
+
+#+begin_src bash
+# Info del sistema
+macbook-info
+
+# Diagnóstico hardware
+macbook-diag
+
+# Estado Touch Bar
+touchbar-status
+
+# Backlight
+brightnessctl set 50%
+light -A 10  # +10%
+light -U 10  # -10%
+
+# Audio
+pulsemixer  # TUI mixer
+pavucontrol  # GUI
+
+# WiFi
+nmcli device wifi list
+nmcli device wifi connect SSID password PASS
+
+# Bluetooth
+bluetoothctl
+> power on
+> scan on
+> pair XX:XX:XX:XX:XX:XX
+> connect XX:XX:XX:XX:XX:XX
+
+# Thunderbolt
+boltctl list
+boltctl authorize DEVICE_UUID
+
+# Intel GPU
+intel_gpu_top
+intel_gpu_frequency
+
+# Sensors
+sensors
+watch -n 1 sensors
+
+# Battery
+upower -i /org/freedesktop/UPower/devices/battery_BAT0
+
+# Power consumption
+sudo powertop
+#+end_src
+
+* Anexo B: Estructura Dotfiles MacBook
+
+#+begin_src
+~/dotfiles/
+├── flake.nix                    # Define macbook config
+├── nixos-macbook/
+│   └── etc/nixos/
+│       ├── configuration-pure.nix    # Config principal
+│       ├── hardware-configuration.nix  # Generado
+│       └── modules/
+│           └── apple-hardware.nix    # Hardware específico
+├── modules/
+│   ├── common/
+│   │   ├── packages.nix     # Compartido aurin+macbook
+│   │   ├── services.nix
+│   │   └── users.nix
+│   ├── desktop/
+│   │   ├── xmonad.nix       # Compartido aurin+macbook
+│   │   ├── gnome.nix        # Futuro
+│   │   └── hyprland.nix     # Futuro
+│   └── home-manager/
+│       └── passh.nix        # Home Manager compartido
+└── docs/
+    └── MACBOOK-INSTALL-GUIDE.org  # Esta guía
+#+end_src
+
+* Anexo C: Diferencias Aurin vs MacBook
+
+| Aspecto       | Aurin                     | MacBook                  |
+|---------------+---------------------------+--------------------------|
+| CPU           | Dual Xeon E5-2699v3       | Intel Core i5/i7 Skylake |
+| GPU           | NVIDIA RTX 5080           | Intel Iris 550           |
+| Display       | 3440x1440 @ 100Hz         | 2560x1600 @ 60Hz         |
+| Compositor    | Picom (glx)               | Picom (xrender)          |
+| Hardware      | Standard PC               | nixos-hardware Apple     |
+| WiFi          | Standard                  | Broadcom propietario     |
+| Extras        | Sunshine, VMs, Docker     | Touch Bar, TLP, thermald |
+| Flake Mode    | aurin-pure (experimental) | macbook (puro desde día 1)|
+
+* Anexo D: Referencias
+
+- [[https://nixos.org/manual/nixos/stable/][NixOS Manual]]
+- [[https://github.com/NixOS/nixos-hardware][nixos-hardware Repository]]
+- [[https://wiki.archlinux.org/title/MacBookPro13,x][Arch Wiki: MacBook Pro 13,x]]
+- [[https://github.com/kekrby/tiny-dfr][tiny-dfr (Touch Bar)]]
+- [[https://github.com/roadrunner2/macbook12-spi-driver][macbook SPI driver]]
+- [[file:HOME-MANAGER-INTEGRATION.org][Guía Home Manager (Fase 3)]]
+- [[file:../README.org][README principal dotfiles]]
+
+* Notas Finales
+
+- Esta instalación es *PURA* desde día 1 (sin channels)
+- Usa *nixos-hardware* para máximo soporte Apple
+- Comparte módulos con *aurin* (XMonad, packages, services)
+- El USB 128GB es para *testing*, luego se puede instalar en SSD interno
+- *NixOS 24.05* funciona, 24.11 NO (boot issues)
+
+*Cualquier problema*, consultar logs:
+
+#+begin_src bash
+journalctl -xeb  # Boot actual
+journalctl -u tiny-dfr
+journalctl -u NetworkManager
+dmesg | grep -i error
+#+end_src
+
+*¡Buena suerte con la instalación!*
