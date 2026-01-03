@@ -78,7 +78,8 @@
       "Bash(hostnamectl:*)",
       "Bash(echo:*)",
       "Bash(chmod:*)",
-      "Bash(/home/passh/dotfiles/scripts/setup-claude-code.sh)"
+      "Bash(/home/passh/dotfiles/scripts/setup-claude-code.sh)",
+      "Bash(virt-manager:*)"
     ],
     "deny": [],
     "ask": []

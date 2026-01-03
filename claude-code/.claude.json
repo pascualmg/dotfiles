@@ -34,10 +34,15 @@
     "frontend-design-plugin": 211,
     "rename-conversation": 240,
     "config-thinking-mode": 252,
-    "colorterm-truecolor": 225
+    "colorterm-truecolor": 225,
+    "shift-enter-setup": 253,
+    "install-slack-app": 253,
+    "btw-side-question": 253,
+    "web-app": 253,
+    "mobile-app": 253
   },
   "memoryUsageCount": 6,
-  "promptQueueUseCount": 647,
+  "promptQueueUseCount": 651,
   "showExpandedTodos": true,
   "autoConnectIde": true,
   "cachedStatsigGates": {
@@ -595,6 +600,7 @@
   },
   "officialMarketplaceAutoInstallAttempted": true,
   "officialMarketplaceAutoInstalled": true,
+  "thinkingMigrationComplete": true,
   "oauthAccount": {
     "accountUuid": "dff90c07-01db-4ee6-b15b-6afecef086d3",
     "emailAddress": "pascual.munoz.galian@gmail.com",
@@ -604,6 +610,5 @@
     "organizationRole": "admin",
     "workspaceRole": null,
     "organizationName": "pascual.munoz.galian@gmail.com's Organization"
-  },
-  "thinkingMigrationComplete": true
+  }
 }
