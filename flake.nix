@@ -249,17 +249,21 @@
         # ---------------------------------------------------------------------
         # MACBOOK - Laptop Apple MacBook Pro 13,2 (2016)
         # ---------------------------------------------------------------------
-        # COMMENTED OUT: Configuracion generada pero no instalada todavia
         # Hardware: Intel Skylake, Touch Bar, SSD externo Thunderbolt
         # Rol: Uso movil, desarrollo ligero
         #
-        # Descomentar cuando se instale NixOS en el MacBook
-        #
-        # macbook = mkNixosConfig {
-        #   hostname = "macbook";
-        #   configPath = ./nixos-macbook/etc/nixos/configuration.nix;
-        #   enableHomeManager = true;  # macbook puede empezar puro
-        # };
+        # Uso:
+        #   sudo nixos-rebuild switch --flake ~/dotfiles#macbook
+        # ---------------------------------------------------------------------
+        macbook = mkNixosConfig {
+          hostname = "macbook";
+          configPath = ./nixos-macbook/etc/nixos/configuration.nix;
+          enableHomeManager = true;
+          extraModules = [
+            nixos-hardware.nixosModules.apple-macbook-pro
+            nixos-hardware.nixosModules.common-pc-ssd
+          ];
+        };
       };
 
       # -----------------------------------------------------------------------
