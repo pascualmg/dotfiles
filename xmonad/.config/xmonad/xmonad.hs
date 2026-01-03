@@ -27,7 +27,7 @@ import XMonad.Util.Types (Direction2D(..))
 
 -- Configuración del comando dmenu
 myDmenuCommand :: String
-myDmenuCommand = "(flatpak list --app --columns=application | sed 's/^/flatpak run /' && find ~/.nix-profile/bin -type f -executable -printf \"%f\\n\" && dmenu_path) | sort -u | grep -v '^$' | dmenu -i | ${SHELL:-\"/bin/sh\"} &"
+myDmenuCommand = "dmenu_run -i"
 
 -- Definición de scratchpads
 myScratchPads :: [NamedScratchpad]
