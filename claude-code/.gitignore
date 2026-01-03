@@ -1,0 +1,25 @@
+# =============================================================================
+# Claude Code - .gitignore
+# =============================================================================
+# Configuración de qué archivos NO subir a git
+#
+# DECISIÓN: Se suben archivos .local.* para continuar conversaciones entre
+# máquinas (aurin → vespino → macbook)
+# =============================================================================
+
+# TOKENS Y CREDENCIALES (NUNCA SUBIR)
+# Si .claude.json contiene tokens OAuth, API keys, etc., descomentaresto:
+# .claude.json
+
+# CACHE Y TEMPORALES (NO SUBIR)
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OPCIONAL: Descomentar si NO quieres sincronizar conversaciones locales
+# .claude/CLAUDE.local.md
+# .claude/settings.local.json
+
+# NOTA: Por defecto, TODOS los archivos .claude/* SE SUBEN a git
+# para poder continuar conversaciones en diferentes máquinas

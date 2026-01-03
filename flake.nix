@@ -51,11 +51,11 @@
 #
 # Esto requiere --impure porque Nix puro no puede resolver paths como <...>.
 #
-# PLAN DE MIGRACION (futuro):
-#   1. Eliminar <home-manager/nixos> de cada configuration.nix
-#   2. Eliminar fetchTarball de nixos-hardware en macbook
-#   3. Quitar los imports via channels de las configs
-#   4. Entonces se puede usar sin --impure
+# PLAN DE MIGRACION (en progreso):
+#   Fase 1: Crear modules/home-manager/ con config pura [COMPLETADO]
+#   Fase 2: Integrar home-manager en flake [ESTE ARCHIVO]
+#   Fase 3: Eliminar <home-manager/nixos> de configuration.nix [PENDIENTE]
+#   Fase 4: Entonces se puede usar sin --impure
 #
 # Por ahora, --impure funciona perfectamente y es seguro.
 # =============================================================================
@@ -73,8 +73,7 @@
 
     # Home Manager - gestion de configuracion de usuario
     # Sigue la misma version de nixpkgs
-    # NOTA: Por ahora las configs lo importan via channels, no via este input
-    # Cuando se migre completamente, se usara este input
+    # AHORA: Se usa activamente via home-manager.nixosModules.home-manager
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -94,9 +93,31 @@
       # Sistema comun para todas las maquinas
       system = "x86_64-linux";
 
+      # pkgs con unfree habilitado (para home-manager)
+      pkgs = import nixpkgs {
+        inherit system;
+        config.allowUnfree = true;
+      };
+
+      # -------------------------------------------------------------------------
       # Funcion helper para crear configuraciones NixOS
+      # -------------------------------------------------------------------------
       # Reduce repeticion y asegura consistencia
-      mkNixosConfig = { hostname, configPath, extraModules ? [] }:
+      #
+      # Parametros:
+      #   hostname: nombre de la maquina
+      #   configPath: path al configuration.nix
+      #   extraModules: modulos adicionales (opcional)
+      #   enableHomeManager: si incluir home-manager del flake (default: false)
+      #                      Poner en true cuando se elimine <home-manager/nixos>
+      #                      del configuration.nix correspondiente
+      # -------------------------------------------------------------------------
+      mkNixosConfig = {
+        hostname,
+        configPath,
+        extraModules ? [],
+        enableHomeManager ? false
+      }:
         nixpkgs.lib.nixosSystem {
           inherit system;
 
@@ -104,7 +125,7 @@
           # Esto permite que los modulos accedan a inputs si lo necesitan
           specialArgs = {
             inherit inputs;
-            # Pasar home-manager y nixos-hardware para uso futuro en modulos
+            # Pasar home-manager y nixos-hardware para uso en modulos
             inherit home-manager nixos-hardware;
           };
 
@@ -129,7 +150,27 @@
               # Asegurar que nix tiene flakes habilitados
               nix.settings.experimental-features = [ "nix-command" "flakes" ];
             }
-          ] ++ extraModules;
+          ]
+          # Home Manager del flake (cuando se active)
+          ++ (if enableHomeManager then [
+            home-manager.nixosModules.home-manager
+            {
+              home-manager = {
+                # Usar pkgs del sistema (no traer otro nixpkgs)
+                useGlobalPkgs = true;
+                # Instalar paquetes en /etc/profiles en lugar de ~/.nix-profile
+                useUserPackages = true;
+                # Pasar inputs a home-manager modules
+                extraSpecialArgs = { inherit inputs; };
+                # Configuracion del usuario passh
+                users.passh = import ./modules/home-manager;
+                # Permitir paquetes unfree en home-manager
+                # (backupFileExtension evita conflictos con archivos existentes)
+                backupFileExtension = "backup";
+              };
+            }
+          ] else [])
+          ++ extraModules;
         };
     in
     {
@@ -150,11 +191,37 @@
         # Uso:
         #   sudo nixos-rebuild test --flake ~/dotfiles#aurin --impure
         #   sudo nixos-rebuild switch --flake ~/dotfiles#aurin --impure
+        #
+        # ESTADO HOME-MANAGER:
+        #   enableHomeManager = false (por ahora)
+        #   configuration.nix todavia usa <home-manager/nixos>
+        #   Cambiar a true cuando se elimine el import del channel
         # ---------------------------------------------------------------------
         aurin = mkNixosConfig {
           hostname = "aurin";
           configPath = ./nixos-aurin/etc/nixos/configuration.nix;
-          # No extraModules - home-manager viene via channels en config
+          enableHomeManager = false;  # TODO: cambiar a true en Fase 3
+        };
+
+        # ---------------------------------------------------------------------
+        # AURIN-PURE - Version experimental sin channels
+        # ---------------------------------------------------------------------
+        # EXPERIMENTAL: Esta configuracion usa home-manager del flake
+        # en lugar del channel. Usar para testing antes de migrar aurin.
+        #
+        # FASE 3: Configuracion lista con:
+        #   - configuration-pure.nix (sin <home-manager/nixos>)
+        #   - Home Manager integrado via flake
+        #   - NO requiere --impure
+        #
+        # Uso:
+        #   sudo nixos-rebuild test --flake ~/dotfiles#aurin-pure
+        #   (sin --impure!)
+        # ---------------------------------------------------------------------
+        aurin-pure = mkNixosConfig {
+          hostname = "aurin";
+          configPath = ./nixos-aurin/etc/nixos/configuration-pure.nix;
+          enableHomeManager = true;
         };
 
         # ---------------------------------------------------------------------
@@ -168,11 +235,15 @@
         # Uso:
         #   sudo nixos-rebuild test --flake ~/dotfiles#vespino --impure
         #   sudo nixos-rebuild switch --flake ~/dotfiles#vespino --impure
+        #
+        # ESTADO HOME-MANAGER:
+        #   enableHomeManager = false (por ahora)
+        #   configuration.nix todavia usa <home-manager/nixos>
         # ---------------------------------------------------------------------
         vespino = mkNixosConfig {
           hostname = "vespino";
           configPath = ./nixos-vespino/etc/nixos/configuration.nix;
-          # No extraModules - home-manager viene via channels en config
+          enableHomeManager = false;  # TODO: cambiar a true en Fase 3
         };
 
         # ---------------------------------------------------------------------
@@ -187,7 +258,29 @@
         # macbook = mkNixosConfig {
         #   hostname = "macbook";
         #   configPath = ./nixos-macbook/etc/nixos/configuration.nix;
+        #   enableHomeManager = true;  # macbook puede empezar puro
         # };
+      };
+
+      # -----------------------------------------------------------------------
+      # HOME MANAGER STANDALONE (opcional)
+      # -----------------------------------------------------------------------
+      # Permite usar home-manager independiente del sistema NixOS
+      # Util para: testing, maquinas no-NixOS, o preferencia personal
+      #
+      # Uso:
+      #   nix run ~/dotfiles#homeConfigurations.passh.activationPackage
+      #   # o si tienes home-manager instalado:
+      #   home-manager switch --flake ~/dotfiles#passh
+      # -----------------------------------------------------------------------
+      homeConfigurations = {
+        passh = home-manager.lib.homeManagerConfiguration {
+          inherit pkgs;
+          extraSpecialArgs = { inherit inputs; };
+          modules = [
+            ./modules/home-manager
+          ];
+        };
       };
 
       # -----------------------------------------------------------------------
@@ -196,8 +289,8 @@
 
       # Shell de desarrollo con herramientas NixOS
       # Uso: nix develop (o: nix develop ~/dotfiles)
-      devShells.${system}.default = nixpkgs.legacyPackages.${system}.mkShell {
-        buildInputs = with nixpkgs.legacyPackages.${system}; [
+      devShells.${system}.default = pkgs.mkShell {
+        buildInputs = with pkgs; [
           # LSP para Nix (elegir uno)
           nil        # Mas ligero, basico
           nixd       # Mas features, usa evaluacion real
@@ -224,9 +317,12 @@
           echo "  nix flake check --impure - Verificar sintaxis"
           echo "  nix flake update         - Actualizar lock"
           echo ""
-          echo "Rebuild (requiere --impure por ahora):"
+          echo "Rebuild NixOS (requiere --impure por ahora):"
           echo "  sudo nixos-rebuild test --flake .#aurin --impure"
           echo "  sudo nixos-rebuild switch --flake .#vespino --impure"
+          echo ""
+          echo "Home Manager standalone:"
+          echo "  home-manager switch --flake .#passh"
           echo ""
           echo "Metodo tradicional (sigue funcionando):"
           echo "  sudo stow -t / nixos-aurin && sudo nixos-rebuild switch"

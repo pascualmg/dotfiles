@@ -41,11 +41,8 @@
       windowManager.xmonad = {
         enable = true;
         enableContribAndExtras = true;
-        config = pkgs.writeText "xmonad.hs"
-          (if builtins.pathExists "/home/passh/.config/xmonad/xmonad.hs" then
-            builtins.readFile "/home/passh/.config/xmonad/xmonad.hs"
-          else
-            "-- XMonad config placeholder");
+        # Config file managed externally via stow: ~/.config/xmonad/xmonad.hs
+        # (No usar builtins.readFile - es impuro y falla en flakes puros)
       };
 
       desktopManager.xfce.enable = true;

@@ -1,0 +1,1325 @@
+#+TITLE: Integracion de Home Manager en el Flake
+#+AUTHOR: NixOS Guru
+#+DATE: 2026-01-02
+#+STARTUP: overview
+#+OPTIONS: toc:3
+
+* Introduccion: Que es Home Manager y Por Que Integrarlo
+
+** Que es Home Manager?
+
+Home Manager es una herramienta que permite gestionar la configuracion de tu
+entorno de usuario de forma declarativa usando Nix. Mientras que NixOS gestiona
+el *sistema* (kernel, servicios, configuracion global), Home Manager gestiona
+tu *entorno personal*:
+
+#+begin_example
++--------------------------------------------------+
+|                    NixOS                         |
+|  (configuration.nix)                             |
+|  - Kernel, boot, servicios                       |
+|  - Usuarios del sistema                          |
+|  - Paquetes globales                             |
+|  - Hardware (nvidia, audio)                      |
++--------------------------------------------------+
+         |
+         v
++--------------------------------------------------+
+|               Home Manager                       |
+|  (home.nix)                                      |
+|  - Paquetes de usuario                           |
+|  - Dotfiles (.config/*, .bashrc, etc)            |
+|  - Servicios de usuario (dunst, picom)           |
+|  - Programas con config (git, ssh, fish)         |
++--------------------------------------------------+
+#+end_example
+
+** Por Que Usar Home Manager?
+
+*** Sin Home Manager (Caos Manual)
+#+begin_src bash
+# Instalas paquetes manualmente
+nix-env -iA nixpkgs.firefox nixpkgs.emacs ...
+
+# Copias dotfiles manualmente
+cp ~/.dotfiles/.bashrc ~/.bashrc
+cp ~/.dotfiles/.gitconfig ~/.gitconfig
+
+# No hay reproducibilidad - cada maquina es diferente
+# Si reinstalar, hay que acordarse de todo
+#+end_src
+
+*** Con Home Manager (Declarativo)
+#+begin_src nix
+# home.nix - TODO declarado
+{
+  home.packages = [ pkgs.firefox pkgs.emacs ];
+
+  programs.git = {
+    enable = true;
+    userName = "Tu Nombre";
+    userEmail = "tu@email.com";
+  };
+
+  home.file.".bashrc".text = ''
+    # Tu bashrc aqui
+  '';
+}
+#+end_src
+
+Un solo comando reconstruye TODO tu entorno: =home-manager switch=
+
+** Por Que Integrarlo en el Flake?
+
+Actualmente tenemos 3 formas de gestionar paquetes/configuracion:
+
+| Metodo | Archivo | Problema |
+|--------+---------+----------|
+| NixOS system | configuration.nix | Ok, pero mezcla sistema con usuario |
+| Home Manager standalone | home.nix | Usa fetchTarball (impuro) |
+| Flake inputs | flake.nix | Solo define, no usa home-manager |
+
+*Objetivo:* Unificar todo en el flake para:
+1. *Un solo comando* reconstruye sistema Y usuario
+2. *Reproducibilidad total* - no mas fetchTarball
+3. *Versiones pinneadas* - flake.lock garantiza builds identicos
+4. *Compartir configuracion* entre maquinas facilmente
+
+* El Estado Actual: Tres Fuentes Separadas
+
+** Diagrama del Problema
+
+#+begin_example
+                    ESTADO ACTUAL (Fragmentado)
+
+    +----------------+     +------------------+     +----------------+
+    | configuration  |     | home-manager/    |     | flake.nix      |
+    | .nix           |     | home.nix         |     |                |
+    +----------------+     +------------------+     +----------------+
+           |                       |                       |
+           v                       v                       v
+    +----------------+     +------------------+     +----------------+
+    | <home-manager/ |     | fetchTarball     |     | home-manager   |
+    | nixos>         |     | unstable/master  |     | input          |
+    | (channel)      |     | (impuro)         |     | (no usado!)    |
+    +----------------+     +------------------+     +----------------+
+           |                       |                       |
+           +----------+------------+                       |
+                      |                                    |
+                      v                                    |
+              +---------------+                            |
+              | Sistema +     |                            |
+              | Usuario       |  <-- NO conectado con --> -+
+              | Funcionando   |      el flake!
+              +---------------+
+#+end_example
+
+** Archivo 1: configuration.nix (NixOS)
+
+#+begin_src nix
+# /home/passh/dotfiles/nixos-aurin/etc/nixos/configuration.nix
+{ config, pkgs, ... }:
+{
+  imports = [
+    ./hardware-configuration.nix
+    ./modules/nvidia-rtx5080.nix
+    # ...
+
+    # PROBLEMA: Importa home-manager via CHANNEL
+    <home-manager/nixos>  # <-- Esto requiere --impure
+  ];
+
+  # Home-manager se configura AQUI, mezclado con config sistema
+  home-manager.users.passh = { pkgs, ... }: {
+    # ... configuracion usuario
+  };
+}
+#+end_src
+
+*Problemas:*
+- =<home-manager/nixos>= es un channel (no reproducible)
+- Mezcla configuracion de sistema con usuario
+- Requiere =--impure= para funcionar con flakes
+
+** Archivo 2: home.nix (Standalone)
+
+#+begin_src nix
+# /home/passh/dotfiles/home-manager/.config/home-manager/home.nix
+{ config, pkgs, lib, ... }:
+
+let
+  # PROBLEMA: fetchTarball = impuro, no reproducible
+  unstable = import (fetchTarball
+    "https://github.com/nixos/nixpkgs/archive/nixos-unstable.tar.gz") {
+      inherit (pkgs) system;
+    };
+  master = import
+    (fetchTarball "https://github.com/nixos/nixpkgs/archive/master.tar.gz") {
+      inherit (pkgs) system;
+    };
+in {
+  home.packages = [
+    unstable.neovim      # Version "la que haya hoy"
+    master.firefox       # Version "la que haya hoy"
+  ];
+}
+#+end_src
+
+*Problemas:*
+- =fetchTarball= descarga "lo que haya ahora" - no reproducible
+- Independiente del flake - dos fuentes de verdad
+- Hay que ejecutar =home-manager switch= aparte de =nixos-rebuild=
+
+** Archivo 3: flake.nix (El Desperdiciado)
+
+#+begin_src nix
+# /home/passh/dotfiles/flake.nix
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+
+    # TENEMOS home-manager como input...
+    home-manager = {
+      url = "github:nix-community/home-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+  };
+
+  outputs = { self, nixpkgs, home-manager, ... }:
+  {
+    nixosConfigurations.aurin = nixpkgs.lib.nixosSystem {
+      modules = [
+        ./nixos-aurin/etc/nixos/configuration.nix
+        # PERO NO USAMOS home-manager del flake!
+        # configuration.nix lo importa via channel :(
+      ];
+    };
+  };
+}
+#+end_src
+
+*Problema:*
+- Tenemos home-manager como input (bien!)
+- Pero configuration.nix lo ignora y usa channel en su lugar
+- El input esta "desperdiciado"
+
+* La Solucion: Integracion Completa
+
+** Diagrama del Objetivo
+
+#+begin_example
+                    ESTADO OBJETIVO (Unificado)
+
+                      +------------------+
+                      |    flake.nix     |
+                      |                  |
+                      | inputs:          |
+                      |   nixpkgs        |
+                      |   home-manager --+---> Pinneado en flake.lock
+                      +------------------+
+                              |
+              +---------------+---------------+
+              |                               |
+              v                               v
+    +------------------+            +------------------+
+    | nixosModules     |            | homeConfigurations|
+    | (sistema)        |            | (usuario)         |
+    +------------------+            +------------------+
+              |                               |
+              v                               v
+    +------------------+            +------------------+
+    | configuration.nix|            | modules/home-    |
+    | (sin <channels>) |            | manager/passh.nix|
+    +------------------+            +------------------+
+              |                               |
+              +---------------+---------------+
+                              |
+                              v
+                    +------------------+
+                    | UN SOLO COMANDO: |
+                    | nixos-rebuild    |
+                    | --flake .#aurin  |
+                    | (sistema+usuario)|
+                    +------------------+
+#+end_example
+
+** Beneficios de la Integracion
+
+| Aspecto | Antes | Despues |
+|---------+-------+---------|
+| Comandos | nixos-rebuild + home-manager switch | Solo nixos-rebuild |
+| Reproducibilidad | "Mas o menos" | Garantizada (flake.lock) |
+| Versiones | Depende del dia | Pinneadas |
+| Actualizacion | Manual, separada | nix flake update |
+| Compartir config | Copiar archivos | Git clone + rebuild |
+
+* Comparativa: fetchTarball vs Flake Inputs
+
+** fetchTarball (Impuro)
+
+#+begin_src nix
+# Cada vez que evaluas, descarga "lo que haya ahora"
+let
+  unstable = import (fetchTarball
+    "https://github.com/nixos/nixpkgs/archive/nixos-unstable.tar.gz") {};
+in { ... }
+#+end_src
+
+*Comportamiento:*
+#+begin_example
+                    HOY                        MANANA
+                     |                           |
+                     v                           v
+    fetchTarball --> commit abc123   fetchTarball --> commit def456
+                     |                           |
+                     v                           v
+    firefox 120.0              =/=     firefox 121.0
+
+    MISMO CODIGO, DIFERENTE RESULTADO!
+#+end_example
+
+*Problemas:*
+1. Hoy funciona, manana puede no funcionar
+2. Tu maquina y la mia tendran diferentes paquetes
+3. No hay forma de "volver" a una version anterior
+4. =nix flake check= falla sin =--impure=
+
+** Flake Inputs (Puro)
+
+#+begin_src nix
+# flake.nix
+{
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+}
+#+end_src
+
+#+begin_src json
+// flake.lock (generado automaticamente)
+{
+  "nodes": {
+    "nixpkgs": {
+      "locked": {
+        "rev": "abc123...",  // COMMIT EXACTO
+        "narHash": "sha256-xxx..."
+      }
+    }
+  }
+}
+#+end_src
+
+*Comportamiento:*
+#+begin_example
+                    HOY                        MANANA
+                     |                           |
+                     v                           v
+    flake.lock --> commit abc123   flake.lock --> commit abc123
+                     |                 (MISMO!)     |
+                     v                           v
+    firefox 120.0               ==     firefox 120.0
+
+    MISMO CODIGO, MISMO RESULTADO!
+#+end_example
+
+*Beneficios:*
+1. Reproducible siempre
+2. Actualizar cuando TU quieras: =nix flake update=
+3. Rollback facil: =git checkout HEAD~1 -- flake.lock=
+4. Compartible: "Clona mi repo y rebuild"
+
+* Por Que passh.nix Separado (No Modificar home.nix)
+
+** El Principio de Seguridad
+
+#+begin_quote
+"Nunca modifiques algo que funciona hasta tener el reemplazo listo y probado"
+#+end_quote
+
+** Estructura Actual
+
+#+begin_example
+/home/passh/dotfiles/
+|
++-- home-manager/
+|   +-- .config/home-manager/
+|       +-- home.nix           <-- ORIGINAL (funciona con home-manager switch)
+|
++-- modules/
+    +-- home-manager/
+        +-- default.nix        <-- NUEVO (entry point)
+        +-- passh.nix          <-- NUEVO (copia limpia para flake)
+#+end_example
+
+** Por Que Esta Separacion?
+
+*** Razon 1: Coexistencia Durante Migracion
+
+#+begin_example
+AHORA (Fase 1-2):
+- home.nix sigue funcionando con: home-manager switch
+- passh.nix se prepara para el flake
+- Puedes usar CUALQUIERA de los dos
+
+FUTURO (Fase 3+):
+- El flake usa passh.nix
+- home.nix se puede archivar o eliminar
+#+end_example
+
+*** Razon 2: Diferentes Requisitos
+
+| Aspecto | home.nix (original) | passh.nix (nuevo) |
+|---------+---------------------+-------------------|
+| fetchTarball | Si (unstable/master) | No (usa pkgs del flake) |
+| Ejecutar con | home-manager switch | nixos-rebuild --flake |
+| pkgs viene de | Channel local | Flake input |
+| Reproducible | No | Si |
+
+*** Razon 3: Rollback Facil
+
+Si algo falla con el flake:
+#+begin_src bash
+# Volver al metodo antiguo inmediatamente
+home-manager switch  # Usa home.nix original
+#+end_src
+
+No hay que deshacer cambios - el original nunca se toco.
+
+* Estructura de los Archivos Nuevos
+
+** /home/passh/dotfiles/modules/home-manager/default.nix
+
+Este archivo es el *entry point* - el flake importara este archivo.
+
+#+begin_src nix
+# modules/home-manager/default.nix
+{ config, pkgs, lib, ... }:
+
+{
+  # Importa la configuracion del usuario
+  imports = [
+    ./passh.nix
+  ];
+
+  # En el futuro, aqui podrias agregar:
+  # - Modulos compartidos entre usuarios
+  # - Opciones configurables
+  # - Imports condicionales por maquina
+}
+#+end_src
+
+*Proposito:*
+- Punto de entrada unico
+- Permite agregar mas modulos en el futuro
+- Separa "que importar" de "configuracion concreta"
+
+** /home/passh/dotfiles/modules/home-manager/passh.nix
+
+Este es el *contenido* - la configuracion real del usuario passh.
+
+#+begin_src nix
+# modules/home-manager/passh.nix
+{ config, pkgs, lib, ... }:
+
+{
+  programs.home-manager.enable = true;
+
+  home = {
+    username = "passh";
+    homeDirectory = "/home/passh";
+    stateVersion = "24.05";
+
+    # NOTA: pkgs viene del flake, ya es unstable
+    # No necesitamos fetchTarball!
+    packages = with pkgs; [
+      firefox       # Era: master.firefox
+      neovim        # Era: unstable.neovim
+      emacs         # Era: unstable.emacs
+      # ... todos los paquetes
+    ];
+  };
+
+  programs.git = {
+    enable = true;
+    userName = "Pascual Munoz Galian";
+    userEmail = "pmunozg@ces.vocento.com";
+  };
+
+  # ... resto de configuracion
+}
+#+end_src
+
+*Diferencias clave con home.nix original:*
+
+| Aspecto | home.nix (original) | passh.nix (nuevo) |
+|---------+---------------------+-------------------|
+| Linea 1 | let unstable = fetchTarball... | (nada - no necesario) |
+| Paquetes | unstable.firefox | pkgs.firefox |
+| Paquetes | master.btop | pkgs.btop |
+| pkgs | Viene del channel | Viene del flake |
+
+* El Plan Completo: Las 3 Fases
+
+** Fase 1: Preparacion Sin Riesgo (COMPLETADA)
+
+#+begin_example
+OBJETIVO: Crear estructura sin romper nada
+RIESGO: Ninguno - archivos nuevos, no se toca nada existente
+ROLLBACK: Simplemente borrar los archivos nuevos
+#+end_example
+
+*Lo que hicimos:*
+1. Crear directorio =modules/home-manager/=
+2. Crear =default.nix= (entry point)
+3. Crear =passh.nix= (copia limpia sin fetchTarball)
+4. Verificar sintaxis de ambos archivos
+
+*Estado actual:*
+#+begin_example
+/home/passh/dotfiles/
++-- flake.nix                        (sin cambios - funciona)
++-- home-manager/.config/.../home.nix (sin cambios - funciona)
++-- nixos-aurin/.../configuration.nix (sin cambios - funciona)
++-- modules/home-manager/
+    +-- default.nix                  [NUEVO]
+    +-- passh.nix                    [NUEVO]
+#+end_example
+
+** Fase 2: Integracion en el Flake
+
+#+begin_example
+OBJETIVO: Modificar flake.nix para usar home-manager puro
+RIESGO: Bajo - el flake ya funciona, solo agregamos modulos
+ROLLBACK: git checkout flake.nix
+#+end_example
+
+*Pasos:*
+1. Modificar =flake.nix= para incluir home-manager module
+2. Crear configuracion que importe =modules/home-manager=
+3. Testear con =nixos-rebuild test --flake .#aurin=
+4. NO hacer switch todavia
+
+*Cambio en flake.nix:*
+#+begin_src nix
+# ANTES (actual)
+modules = [
+  configPath
+  { ... }  # nix settings
+];
+
+# DESPUES (fase 2)
+modules = [
+  configPath
+  { ... }
+
+  # Home Manager integrado
+  home-manager.nixosModules.home-manager
+  {
+    home-manager.useGlobalPkgs = true;
+    home-manager.useUserPackages = true;
+    home-manager.users.passh = import ./modules/home-manager;
+  }
+];
+#+end_src
+
+** Fase 3: Eliminar Dependencias Impuras
+
+#+begin_example
+OBJETIVO: Quitar <home-manager/nixos> de configuration.nix
+RIESGO: Medio - cambia como se carga home-manager
+ROLLBACK: nixos-rebuild switch --rollback
+#+end_example
+
+*Pasos:*
+1. Comentar/eliminar =<home-manager/nixos>= de configuration.nix
+2. Eliminar configuracion home-manager inline de configuration.nix
+3. Testear exhaustivamente
+4. Switch si todo OK
+5. Ya no necesitamos =--impure=!
+
+*Antes:*
+#+begin_src nix
+# configuration.nix
+imports = [
+  <home-manager/nixos>  # ELIMINAR ESTO
+];
+
+home-manager.users.passh = { ... };  # MOVER A modules/home-manager
+#+end_src
+
+*Despues:*
+#+begin_src nix
+# configuration.nix
+imports = [
+  ./hardware-configuration.nix
+  ./modules/nvidia-rtx5080.nix
+  # ... (sin home-manager - viene del flake)
+];
+
+# Sin home-manager.users aqui
+#+end_src
+
+** Diagrama de Fases
+
+#+begin_example
+FASE 1 (Hecho)                 FASE 2                    FASE 3
+--------------                 -------                   -------
+
+[flake.nix]                [flake.nix]               [flake.nix]
+    |                          |                          |
+    v                          v                          v
+[config.nix]    +         [config.nix]    +          [config.nix]
+    |           |              |           |              |
+    v           |              v           |              v
+[<hm/nixos>]    |         [<hm/nixos>]    |          (eliminado)
+                |              +           |
+[passh.nix] ----+         [hm module] ----+          [hm module]
+ (preparado,               (agregado,                  (unico
+  no usado)                 paralelo)                  activo)
+
+Riesgo: 0               Riesgo: Bajo              Riesgo: Medio
+#+end_example
+
+* Respuestas a las Preguntas Socraticas
+
+** Pregunta 1: Por que passh.nix separado?
+
+#+begin_quote
+"Por que creamos passh.nix como una copia separada en lugar de modificar
+el home.nix existente?"
+#+end_quote
+
+*Respuesta:*
+
+1. *Seguridad*: El home.nix original sigue funcionando. Si algo falla con
+   el flake, puedes volver al metodo anterior inmediatamente.
+
+2. *Coexistencia*: Durante la migracion, ambos metodos funcionan en paralelo.
+   Puedes comparar resultados antes de comprometerte.
+
+3. *Limpieza*: passh.nix esta "limpio" - sin fetchTarball ni hacks impuros.
+   El home.nix original tiene "deuda tecnica" que no queremos arrastrar.
+
+4. *Reversibilidad*: Si decides que la migracion no vale la pena, simplemente
+   borras los archivos nuevos. Nada cambiado, nada roto.
+
+** Pregunta 2: Diferencia principal entre home.nix y passh.nix?
+
+#+begin_quote
+"Cual es la diferencia principal entre el home.nix original (que usa
+fetchTarball) y el nuevo passh.nix?"
+#+end_quote
+
+*Respuesta:*
+
+La diferencia fundamental es *de donde vienen los paquetes*:
+
+#+begin_src nix
+# home.nix (ORIGINAL)
+let
+  # IMPURO: "descarga lo que haya ahora"
+  unstable = import (fetchTarball "...nixos-unstable...") {};
+  master = import (fetchTarball "...master...") {};
+in {
+  home.packages = [
+    unstable.firefox  # Version: ??? (la que haya)
+    master.btop       # Version: ??? (la que haya)
+  ];
+}
+#+end_src
+
+#+begin_src nix
+# passh.nix (NUEVO)
+{ pkgs, ... }:  # pkgs viene del FLAKE (pinneado en flake.lock)
+{
+  home.packages = [
+    pkgs.firefox  # Version: la del flake.lock (reproducible)
+    pkgs.btop     # Version: la del flake.lock (reproducible)
+  ];
+}
+#+end_src
+
+*Consecuencia:*
+- home.nix: Hoy obtienes Firefox 120, manana 121, la semana que viene 122...
+- passh.nix: Siempre obtienes la version pinneada en flake.lock hasta que
+  ejecutes =nix flake update=
+
+** Pregunta 3: Que pasa cuando integremos en el flake?
+
+#+begin_quote
+"Que pasara cuando integremos esto en el flake? El flake proveera pkgs
+directamente, por que ya no necesitaremos unstable/master?"
+#+end_quote
+
+*Respuesta:*
+
+El flake ya usa =nixpkgs-unstable= como su fuente principal:
+
+#+begin_src nix
+# flake.nix (actual)
+inputs = {
+  nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  # ^^ Ya es unstable!
+};
+#+end_src
+
+Entonces:
+1. =pkgs= que recibe passh.nix YA viene de unstable
+2. No necesitas =unstable.firefox= - =pkgs.firefox= ya ES unstable
+3. La diferencia es que ahora esta PINNEADO en flake.lock
+
+Si necesitas paquetes de "master" (bleeding edge), el flake puede agregar
+un segundo input:
+
+#+begin_src nix
+inputs = {
+  nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  nixpkgs-master.url = "github:NixOS/nixpkgs/master";
+};
+#+end_src
+
+Y pasarlo via specialArgs:
+
+#+begin_src nix
+specialArgs = {
+  pkgs-master = import nixpkgs-master { ... };
+};
+
+# En passh.nix:
+{ pkgs, pkgs-master, ... }:
+{
+  home.packages = [
+    pkgs.firefox         # unstable (pinneado)
+    pkgs-master.algo     # master (pinneado)
+  ];
+}
+#+end_src
+
+* Ventajas y Desventajas de Cada Enfoque
+
+** Enfoque Actual (Channels + fetchTarball)
+
+*** Ventajas
+- Familiar si vienes de NixOS tradicional
+- Funciona sin entender flakes
+- No requiere flake.lock
+
+*** Desventajas
+- No reproducible (builds diferentes cada dia)
+- Requiere =--impure= con flakes
+- Actualizaciones "invisibles" (no sabes que cambio)
+- Dificil de compartir ("funciona en mi maquina")
+- Dos comandos separados (nixos-rebuild + home-manager switch)
+
+** Enfoque Nuevo (Todo en Flake)
+
+*** Ventajas
+- Reproducibilidad total (flake.lock)
+- Un solo comando (nixos-rebuild --flake)
+- Actualizaciones explicitas (nix flake update)
+- Facil de compartir (git clone + rebuild)
+- Sin =--impure= (nix puro)
+- Historial de versiones en git
+
+*** Desventajas
+- Curva de aprendizaje (entender flakes)
+- Mas archivos que gestionar (flake.nix, flake.lock)
+- flake.lock debe estar en git
+
+** Tabla Comparativa
+
+| Criterio | Channels | Flakes |
+|----------+----------+--------|
+| Reproducibilidad | Baja | Alta |
+| Complejidad inicial | Baja | Media |
+| Mantenimiento | Alto (sorpresas) | Bajo (predecible) |
+| Actualizaciones | Automaticas/invisibles | Manuales/explicitas |
+| Compartir | Dificil | Facil |
+| Rollback | Complicado | Facil (git) |
+| Documentacion | Mucha (legacy) | Creciendo |
+
+* Como Hacer Rollback Si Algo Falla
+
+** Durante Fase 1 (Preparacion)
+
+No hay riesgo - solo creamos archivos nuevos.
+
+#+begin_src bash
+# Si quieres deshacer:
+rm -rf /home/passh/dotfiles/modules/home-manager/
+#+end_src
+
+** Durante Fase 2 (Integracion)
+
+#+begin_src bash
+# Si el test falla:
+# (nixos-rebuild test no hace cambios permanentes)
+# Simplemente no hagas switch
+
+# Si ya hiciste switch y algo falla:
+sudo nixos-rebuild switch --rollback
+
+# O restaurar flake.nix original:
+cd /home/passh/dotfiles
+git checkout HEAD -- flake.nix
+sudo nixos-rebuild switch --flake .#aurin --impure
+#+end_src
+
+** Durante Fase 3 (Eliminacion Impuros)
+
+#+begin_src bash
+# Si quitar <home-manager/nixos> rompe algo:
+sudo nixos-rebuild switch --rollback
+
+# Restaurar configuration.nix:
+cd /home/passh/dotfiles
+git checkout HEAD -- nixos-aurin/etc/nixos/configuration.nix
+sudo stow -v -R -t / nixos-aurin
+sudo nixos-rebuild switch --flake .#aurin --impure
+#+end_src
+
+** Rollback desde GRUB (Emergencia)
+
+Si el sistema no arranca:
+1. Reiniciar y entrar al menu GRUB
+2. Seleccionar "NixOS - All configurations"
+3. Elegir una generacion anterior que funcionaba
+4. El sistema arranca con esa generacion
+5. Una vez dentro, hacer rollback permanente:
+   #+begin_src bash
+   sudo nixos-rebuild switch --rollback
+   #+end_src
+
+** Volver al Metodo Tradicional Completamente
+
+Si decides que los flakes no son para ti:
+
+#+begin_src bash
+cd /home/passh/dotfiles
+
+# 1. Restaurar configuration.nix con home-manager via channel
+git checkout <commit-antes-migracion> -- nixos-aurin/
+
+# 2. Re-stow
+sudo stow -v -R -t / nixos-aurin
+
+# 3. Rebuild tradicional (sin --flake)
+sudo nixos-rebuild switch
+
+# 4. Home manager standalone
+home-manager switch
+#+end_src
+
+* Referencias y Recursos
+
+** Documentacion Oficial
+- NixOS Manual: https://nixos.org/manual/nixos/stable/
+- Home Manager Manual: https://nix-community.github.io/home-manager/
+- Nix Flakes: https://nixos.wiki/wiki/Flakes
+
+** Documentacion Local (en este repo)
+- [[file:FLAKES-GUIDE.org][FLAKES-GUIDE.org]] - Tutorial completo de flakes
+- [[file:MIGRATION-PLAN.org][MIGRATION-PLAN.org]] - Plan general de migracion
+- [[file:IDEAL-STRUCTURE.org][IDEAL-STRUCTURE.org]] - Estructura objetivo
+
+** Archivos Relevantes
+| Archivo | Proposito |
+|---------+----------|
+| /home/passh/dotfiles/flake.nix | Flake principal |
+| /home/passh/dotfiles/flake.lock | Versiones pinneadas |
+| /home/passh/dotfiles/modules/home-manager/default.nix | Entry point HM |
+| /home/passh/dotfiles/modules/home-manager/passh.nix | Config usuario |
+| /home/passh/dotfiles/home-manager/.config/home-manager/home.nix | Original (legacy) |
+| /home/passh/dotfiles/nixos-aurin/etc/nixos/configuration.nix | Config NixOS aurin |
+
+* Resumen Ejecutivo
+
+#+begin_example
++------------------------------------------------------------------+
+|                    QUE ESTAMOS HACIENDO                          |
++------------------------------------------------------------------+
+|                                                                  |
+| ANTES: 3 fuentes separadas (channels, fetchTarball, flake)       |
+|        2 comandos (nixos-rebuild + home-manager switch)          |
+|        No reproducible                                           |
+|                                                                  |
+| DESPUES: 1 fuente (flake)                                        |
+|          1 comando (nixos-rebuild --flake)                       |
+|          Reproducible (flake.lock)                               |
+|                                                                  |
++------------------------------------------------------------------+
+|                    COMO LO HACEMOS                               |
++------------------------------------------------------------------+
+|                                                                  |
+| Fase 1: Crear archivos nuevos (SIN tocar los existentes)         |
+|         - modules/home-manager/default.nix                       |
+|         - modules/home-manager/passh.nix                         |
+|         Riesgo: NINGUNO                                          |
+|                                                                  |
+| Fase 2: Integrar en flake.nix (en paralelo con lo existente)     |
+|         - Agregar home-manager module                            |
+|         - Testear extensivamente                                 |
+|         Riesgo: BAJO                                             |
+|                                                                  |
+| Fase 3: Eliminar dependencias impuras                            |
+|         - Quitar <home-manager/nixos> de configuration.nix       |
+|         - Ya no necesitar --impure                               |
+|         Riesgo: MEDIO (pero con rollback facil)                  |
+|                                                                  |
++------------------------------------------------------------------+
+|                    SI ALGO FALLA                                 |
++------------------------------------------------------------------+
+|                                                                  |
+| - nixos-rebuild switch --rollback                                |
+| - git checkout para restaurar archivos                           |
+| - GRUB permite arrancar generaciones anteriores                  |
+| - El metodo tradicional SIEMPRE funciona como backup             |
+|                                                                  |
++------------------------------------------------------------------+
+#+end_example
+
+* Fase 3 Ejecutada: Migracion a Flakes Puros (2026-01-03)
+
+** Resumen de la Ejecucion
+
+#+begin_example
+FECHA: 2026-01-03
+OBJETIVO: Eliminar dependencia de <home-manager/nixos> y --impure flag
+RESULTADO: EXITOSO
+SISTEMA: Aurin (NixOS 25.05, RTX 5080, Dual Xeon)
+#+end_example
+
+*Estado Final:*
+- ✅ Build exitoso SIN =--impure= flag
+- ✅ Home-manager integrado via flake inputs
+- ✅ Todos los paquetes construidos correctamente
+- ✅ Sistema activado sin errores
+- ✅ XMonad funcionando via stow (config externa)
+
+** Cambios Realizados
+
+*** 1. Creacion de configuration-pure.nix
+
+Se creo una version "pura" de configuration.nix para aurin:
+
+#+begin_src nix
+# nixos-aurin/etc/nixos/configuration-pure.nix
+# DIFERENCIA CLAVE: Sin <home-manager/nixos>
+
+imports = [
+  ./hardware-configuration.nix
+  ./modules/nvidia-rtx5080.nix
+  ./modules/xmonad.nix
+  # ... otros modulos
+  # REMOVIDO: <home-manager/nixos>
+];
+
+# REMOVIDO: home-manager.users.passh inline config
+# Ahora viene del flake via modules/home-manager/passh.nix
+#+end_src
+
+*** 2. Integracion en flake.nix
+
+Se descomento la configuracion =aurin-pure= en flake.nix:
+
+#+begin_src nix
+nixosConfigurations = {
+  # Configuracion legacy (con --impure)
+  aurin = mkNixosConfig {
+    hostname = "aurin";
+    configPath = ./nixos-aurin/etc/nixos/configuration.nix;
+    enableHomeManager = true;
+  };
+
+  # Configuracion nueva (pura)
+  aurin-pure = mkNixosConfig {
+    hostname = "aurin";
+    configPath = ./nixos-aurin/etc/nixos/configuration-pure.nix;
+    enableHomeManager = true;
+  };
+};
+#+end_src
+
+*** 3. Correccion del Activation Script de Stow
+
+*Problema encontrado:* El script de activation intentaba hacer =stow */= lo
+que incluia directorios de sistema (=nixos-aurin/etc=) causando error.
+
+*Solucion:*
+
+#+begin_src nix
+# modules/home-manager/passh.nix
+
+# ANTES:
+activation = {
+  linkDotfiles = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
+    ${pkgs.stow}/bin/stow -v -R -t ${config.home.homeDirectory} */
+  '';
+};
+
+# DESPUES:
+activation = {
+  linkDotfiles = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
+    # Solo linkear configs de usuario, no modulos de sistema ni nixos-*
+    ${pkgs.stow}/bin/stow -v -R -t ${config.home.homeDirectory} \
+      alacritty composer fish picom xmobar xmonad
+  '';
+};
+#+end_src
+
+** Errores Encontrados y Solucionados
+
+Durante el proceso de migr acion se encontraron multiples paquetes rotos en
+=nixpkgs-unstable=. Todos fueron comentados sistematicamente:
+
+*** Error 1: XMonad Compilation Failure
+
+*Sintoma:*
+#+begin_example
+The IO action `main' is not defined in module `Main'
+tmp.hs:1:1: error: [GHC-67120]
+#+end_example
+
+*Causa:* modules/xmonad.nix usaba =builtins.readFile= (impuro) para leer
+xmonad.hs, lo cual falla en pure flake mode.
+
+*Solucion:* Eliminar el campo =config= completamente. XMonad por defecto
+lee =~/.config/xmonad/xmonad.hs= (gestionado via stow).
+
+#+begin_src nix
+# modules/xmonad.nix
+windowManager.xmonad = {
+  enable = true;
+  enableContribAndExtras = true;
+  # Config file managed externally via stow: ~/.config/xmonad/xmonad.hs
+  # (No usar builtins.readFile - es impuro y falla en flakes puros)
+};
+#+end_src
+
+Ver seccion [[*XMonad: Configuracion Actual y Como Modificarla][XMonad: Configuracion Actual y Como Modificarla]] para detalles completos.
+
+*** Error 2-9: Paquetes Rotos en nixpkgs-unstable
+
+Todos los siguientes paquetes fueron comentados en =modules/home-manager/passh.nix=:
+
+| Paquete | Linea | Razon |
+|---------+-------+-------|
+| libsForQt5.breeze-gtk | 95 | Atributo no existe (usar kdePackages.breeze-gtk) |
+| pinentry | 218 | Deprecated (usar pinentry-gnome3) |
+| xfce.xfce4-clipman-plugin | 99 | Movido a top-level (xfce4-clipman-plugin) |
+| haskellPackages.apply-refact | 160 | Marcado como broken en nixpkgs |
+| haskellPackages.retrie | 165 | Marcado como broken en nixpkgs |
+| open-webui | 224 | Dependencia ctranslate2 falla al compilar |
+| trayer | 83 | panel.c:315 compilation error |
+| alttab | 101 | alttab.c:536 compilation error |
+| xmonad-with-packages | 81 | Conflicto con xmonad a nivel de sistema |
+
+*Ejemplo de comentario:*
+#+begin_src nix
+# alttab  # DISABLED: build failure in nixpkgs-unstable (getOffendingModifiersMask compilation error)
+#+end_src
+
+** Proceso de Debugging Iterativo
+
+El proceso siguio un patron iterativo:
+
+#+begin_example
+1. nixos-rebuild test --flake ~/dotfiles#aurin-pure
+2. Esperar a que falle
+3. Identificar paquete roto en logs
+4. Comentar paquete en passh.nix con razon detallada
+5. Repetir hasta build exitoso
+
+INTENTOS TOTALES: 12
+PAQUETES COMENTADOS: 9
+TIEMPO TOTAL: ~2 horas
+#+end_example
+
+** Build Final Exitoso
+
+#+begin_src bash
+$ sudo nixos-rebuild test --flake ~/dotfiles#aurin-pure
+# ... (sin --impure flag!)
+
+these 6 derivations will be built:
+  /nix/store/...-activation-script.drv
+  /nix/store/...-home-manager-generation.drv
+  /nix/store/...-unit-home-manager-passh.service.drv
+  /nix/store/...-system-units.drv
+  /nix/store/...-etc.drv
+  /nix/store/...-nixos-system-aurin-flake-dirty.drv
+
+activating the configuration...
+Done. The new configuration is /nix/store/...-nixos-system-aurin-flake-dirty
+#+end_src
+
+*Exit code: 0* ✅
+
+** XMonad: Configuracion Actual y Como Modificarla
+
+#+begin_quote
+*IMPORTANTE:* Esta seccion documenta como funciona XMonad en el sistema actual
+y como modificar su configuracion de forma segura. NO tocar sin leer esto.
+#+end_quote
+
+*** Como Funciona XMonad en Este Sistema
+
+XMonad tiene una configuracion de DOS NIVELES:
+
+1. *Nivel Sistema* (NixOS) - =modules/xmonad.nix=
+   - Habilita XMonad como window manager
+   - Instala paquetes necesarios (xmonad, xmonad-contrib)
+   - NO gestiona el archivo de configuracion xmonad.hs
+
+2. *Nivel Usuario* (Stow) - =xmonad/.config/xmonad/xmonad.hs=
+   - Configuracion real de XMonad (keybindings, layouts, etc.)
+   - Gestionado via GNU Stow
+   - XMonad lee este archivo automaticamente
+
+*** Estructura de Archivos
+
+#+begin_example
+/home/passh/dotfiles/
+├── nixos-aurin/etc/nixos/modules/
+│   └── xmonad.nix                    <-- Sistema: habilita XMonad
+│
+└── xmonad/.config/xmonad/
+    └── xmonad.hs                     <-- Usuario: config real (142 lineas)
+        (gestionado via stow)
+#+end_example
+
+*** Configuracion a Nivel de Sistema
+
+#+begin_src nix
+# modules/xmonad.nix (simplificado)
+services.xserver = {
+  windowManager.xmonad = {
+    enable = true;
+    enableContribAndExtras = true;
+    # Config file managed externally via stow: ~/.config/xmonad/xmonad.hs
+    # (No usar builtins.readFile - es impuro y falla en flakes puros)
+  };
+};
+#+end_src
+
+*NOTA CRITICA:* Versiones anteriores intentaban usar =builtins.readFile= para
+copiar xmonad.hs dentro del modulo. Esto es IMPURO y falla en pure flake mode.
+
+*** Configuracion a Nivel de Usuario
+
+El archivo real esta en =dotfiles/xmonad/.config/xmonad/xmonad.hs= (142 lineas).
+
+*Extracto de configuracion:*
+#+begin_src haskell
+-- Configuracion para RTX 5080 + 5120x1440@120Hz
+main :: IO ()
+main = xmonad $ docks $ def
+  { modMask = mod4Mask              -- Win key
+  , terminal = "alacritty"
+  , layoutHook = myLayout
+  , manageHook = manageDocks <+> myManageHook
+  , startupHook = myStartupHook     -- nitrogen, picom, emacs, etc
+  }
+  `additionalKeys` myKeys
+
+myStartupHook = do
+  spawn "nitrogen --restore"
+  spawn "picom --config ~/.config/picom/picom.conf"
+  spawn "emacs --daemon"
+  spawn "xfce4-clipman"
+  -- ...
+#+end_src
+
+*** Como Modificar la Configuracion de XMonad
+
+*Metodo 1: Edicion Directa (Recomendado)*
+
+#+begin_src bash
+# 1. Editar el archivo en dotfiles
+emacs ~/dotfiles/xmonad/.config/xmonad/xmonad.hs
+
+# 2. Aplicar cambios con stow (si no esta ya linkeado)
+cd ~/dotfiles
+stow -v -R xmonad
+
+# 3. Recompilar y recargar XMonad
+xmonad --recompile
+xmonad --restart
+
+# O con keybinding: Mod+Q (Win+Q)
+#+end_src
+
+*Metodo 2: Via Home-Manager (Futuro)*
+
+Si quisieras gestionar xmonad.hs via Nix (no recomendado actualmente):
+
+#+begin_src nix
+# modules/home-manager/passh.nix
+home.file.".config/xmonad/xmonad.hs".text = ''
+  -- Tu configuracion aqui
+'';
+#+end_src
+
+*Desventaja:* Cada cambio requiere =nixos-rebuild=. Con stow puedes editar
+y recargar XMonad instantaneamente.
+
+*** Por Que NO Usamos builtins.readFile
+
+*Problema encontrado durante migracion:*
+
+#+begin_src nix
+# ESTO FALLA EN PURE MODE:
+windowManager.xmonad = {
+  config = pkgs.writeText "xmonad.hs"
+    (if builtins.pathExists "/home/passh/.config/xmonad/xmonad.hs" then
+      builtins.readFile "/home/passh/.config/xmonad/xmonad.hs"
+    else
+      "-- Placeholder");
+};
+#+end_src
+
+*Razones:*
+1. =builtins.pathExists= es impuro (lectura del filesystem)
+2. =builtins.readFile= es impuro (lectura del filesystem)
+3. Flakes puros NO permiten operaciones impuras
+4. XMonad ya sabe leer =~/.config/xmonad/xmonad.hs= por defecto
+
+*Solucion Actual:* NO especificar =config= en el modulo. XMonad busca
+automaticamente en =~/.config/xmonad/xmonad.hs= (que existe via stow).
+
+*** Keybindings Importantes de XMonad
+
+Segun la configuracion actual:
+
+| Keybinding | Accion |
+|------------+--------|
+| Mod+Q | Recompilar y recargar XMonad |
+| Mod+Shift+Q | Salir de XMonad |
+| Mod+P | Launcher (dmenu) |
+| Mod+U | Scratchpad: terminal |
+| Mod+I | Scratchpad: emacs |
+| Mod+O | Scratchpad: jetbrains-toolbox |
+
+*Mod = Win key* (configurado como =mod4Mask=)
+
+*** Troubleshooting XMonad
+
+*XMonad no arranca:*
+#+begin_src bash
+# Ver logs
+journalctl -xe | grep -i xmonad
+
+# Verificar compilacion
+cd ~/.config/xmonad
+xmonad --recompile
+
+# Ver errores de compilacion
+cat ~/.xmonad/xmonad.errors
+#+end_src
+
+*Cambios no se aplican:*
+#+begin_src bash
+# Verificar que stow linkeo el archivo
+ls -la ~/.config/xmonad/xmonad.hs
+# Deberia ser un symlink a ~/dotfiles/xmonad/.config/xmonad/xmonad.hs
+
+# Re-stow si es necesario
+cd ~/dotfiles
+stow -v -R xmonad
+
+# Recompilar y recargar
+xmonad --recompile && xmonad --restart
+#+end_src
+
+** Paquetes Alternativos Instalados
+
+Algunos paquetes fueron reemplazados por versiones alternativas:
+
+| Paquete Original | Alternativa | Razon |
+|------------------+-------------+-------|
+| libsForQt5.breeze-gtk | kdePackages.breeze-gtk | Version Qt6 |
+| pinentry | pinentry-gnome3 | Variante especifica requerida |
+| xfce.xfce4-clipman-plugin | xfce4-clipman-plugin | Movido a top-level |
+
+** Comandos Utiles Post-Migracion
+
+*** Build y test
+#+begin_src bash
+# Test sin activar
+sudo nixos-rebuild test --flake ~/dotfiles#aurin-pure
+
+# Activar permanentemente
+sudo nixos-rebuild switch --flake ~/dotfiles#aurin-pure
+
+# Verificar flake
+nix flake check ~/dotfiles
+#+end_src
+
+*** Actualizar dependencias
+#+begin_src bash
+# Actualizar todos los inputs
+cd ~/dotfiles
+nix flake update
+
+# Actualizar solo home-manager
+nix flake lock --update-input home-manager
+
+# Ver cambios antes de aplicar
+nix flake lock --update-input nixpkgs
+git diff flake.lock
+#+end_src
+
+*** Rollback
+#+begin_src bash
+# Volver a generacion anterior
+sudo nixos-rebuild switch --rollback
+
+# Volver a configuracion con --impure (legacy)
+sudo nixos-rebuild switch --flake ~/dotfiles#aurin --impure
+#+end_src
+
+** Lecciones Aprendidas
+
+1. *nixpkgs-unstable no es tan estable:* Multiples paquetes rotos requirieron
+   comentar ~10 paquetes durante la migracion.
+
+2. *Impure builtins = problemas:* Cualquier uso de =builtins.pathExists=,
+   =builtins.readFile=, etc. falla en pure mode.
+
+3. *Stow > Nix para configs dinamicas:* XMonad config se beneficia de estar
+   en stow - permite editar y recargar sin rebuild del sistema.
+
+4. *Test iterativo es clave:* Cada rebuild tarda ~5-10 min, el proceso
+   iterativo de "rebuild -> fix -> rebuild" fue necesario pero lento.
+
+5. *Documentar errores:* Cada paquete comentado tiene razon detallada para
+   referencia futura.
+
+** Estado de Configuraciones
+
+| Configuracion | Requiere --impure | Estado | Uso |
+|---------------+-------------------+--------+-----|
+| aurin | Si | Legacy | Backup/fallback |
+| aurin-pure | No | Activo | Produccion |
+
+** Proximos Pasos Sugeridos
+
+1. *Probar switch permanente:*
+   #+begin_src bash
+   sudo nixos-rebuild switch --flake ~/dotfiles#aurin-pure
+   #+end_src
+
+2. *Limpiar paquetes comentados:* Investigar alternativas para los 9 paquetes
+   que se comentaron.
+
+3. *Migrar otras maquinas:* Aplicar mismo proceso a macbook y vespino.
+
+4. *Compartir configs comunes:* Extraer paquetes compartidos entre maquinas
+   a =modules/home-manager/common.nix=.
+
+5. *Configurar Claude Code en dotfiles:* Añadir =~/.claude/= al sistema de
+   stow para sincronizar configuracion entre maquinas.
+
+---
+/Fase 3 ejecutada: 2026-01-03/
+/Documento actualizado: 2026-01-03/
+/Autor: NixOS Guru + Claude Sonnet 4.5/
+/Sistema: Aurin (NixOS 25.05, RTX 5080, Dual Xeon)/
