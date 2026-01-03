@@ -391,16 +391,16 @@ in
     XCURSOR_THEME = "Adwaita";
 
     # Java apps
-    _JAVA_OPTIONS = "-Dsun.java2d.uiScale=1.5";
+    _JAVA_OPTIONS = "-Dsun.java2d.uiScale=1.75";
 
     # Intel VAAPI
     LIBVA_DRIVER_NAME = "iHD";
   };
 
   # Xresources para Xft (fonts en X11)
-  # DPI 144 = 1.5x del estándar 96 (típico para Retina 13")
+  # DPI 168 = 1.75x del estándar 96 (punto medio para Retina 13")
   environment.etc."X11/Xresources".text = ''
-    Xft.dpi: 144
+    Xft.dpi: 168
     Xft.autohint: 0
     Xft.lcdfilter: lcddefault
     Xft.hintstyle: hintfull

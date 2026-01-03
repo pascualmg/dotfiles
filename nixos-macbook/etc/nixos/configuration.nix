@@ -126,8 +126,7 @@
     xserver = {
       enable = true;
 
-      # Desktop (elegir uno)
-      desktopManager.gnome.enable = true;
+      # Window Manager
       windowManager.xmonad = {
         enable = true;
         enableContribAndExtras = true;
@@ -144,6 +143,9 @@
 
     # Display Manager (opcion movida de xserver)
     displayManager.gdm.enable = true;
+
+    # GNOME Desktop (nueva ubicación, fuera de xserver)
+    desktopManager.gnome.enable = true;
 
     # SSH
     openssh = {

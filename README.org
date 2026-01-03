@@ -474,9 +474,117 @@ direnv allow
 - [ ] Revisar y limpiar configs obsoletas (shell/, composer/)
 - [ ] Documentar scripts útiles en scripts/
 - [ ] Añadir config de alacritty al README
-- [ ] Migrar a Home Manager Flakes (opcional)
 - [ ] Backup automático dotfiles a GitHub/GitLab
-- [ ] Documentar xmobar config específica
+
+* Roadmap: Migración Stow → Home Manager
+
+** Contexto
+
+Con la adopción de NixOS Flakes para múltiples máquinas (aurin, macbook), GNU Stow
+se vuelve redundante. Home Manager integrado con el flake ofrece:
+
+- *Configs per-machine declarativas* (ej: xmobar con diferentes DPI/fonts)
+- *Un solo comando* =nixos-rebuild switch= aplica sistema + usuario
+- *Reproducibilidad total* - Todo versionado en el flake
+- *Rollback automático* - Generaciones anteriores disponibles
+
+** Estado Actual (Anti-pattern)
+
+En =modules/home-manager/passh.nix= línea ~253 hay un hack que usa stow dentro de home-manager:
+
+#+BEGIN_SRC nix
+activation.linkDotfiles = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
+  ${pkgs.stow}/bin/stow -v -R -t ${config.home.homeDirectory} \
+    alacritty composer fish picom xmobar xmonad claude-code
+'';
+#+END_SRC
+
+Esto debe eliminarse gradualmente migrando cada config a home-manager nativo.
+
+** Arquitectura Propuesta
+
+#+BEGIN_SRC text
+modules/home-manager/
+├── default.nix           # Entry point, recibe hostname
+├── common.nix            # Configs compartidas (paquetes base)
+├── programs/
+│   ├── xmobar.nix        # Xmobar con opciones parametrizables
+│   ├── xmonad.nix        # XMonad config
+│   ├── alacritty.nix     # Terminal
+│   └── fish.nix          # Shell (usa programs.fish nativo)
+└── machines/
+    ├── aurin.nix         # fontSize=14, dpi=96, nvidia, interfaces de red
+    └── macbook.nix       # fontSize=22, dpi=168, intel, HiDPI
+#+END_SRC
+
+** Pasar hostname al flake
+
+En =flake.nix=, función =mkNixosConfig=:
+
+#+BEGIN_SRC nix
+home-manager.extraSpecialArgs = {
+  inherit inputs;
+  hostname = hostname;  # Añadir esto
+};
+#+END_SRC
+
+** Patrón para configs per-machine
+
+#+BEGIN_SRC nix
+# modules/home-manager/programs/xmobar.nix
+{ config, lib, ... }:
+
+let cfg = config.custom.xmobar;
+in {
+  options.custom.xmobar = {
+    fontSize = lib.mkOption {
+      type = lib.types.int;
+      default = 14;
+    };
+    dpi = lib.mkOption {
+      type = lib.types.int;
+      default = 96;
+    };
+  };
+
+  config.home.file.".config/xmobar/xmobarrc".text = ''
+    Config { font = "xft:Monoid Nerd Font:size=${toString cfg.fontSize}"
+           , ...
+    }
+  '';
+}
+#+END_SRC
+
+Luego en cada máquina:
+
+#+BEGIN_SRC nix
+# machines/macbook.nix
+{ ... }: {
+  custom.xmobar.fontSize = 22;
+  custom.xmobar.dpi = 168;
+}
+
+# machines/aurin.nix
+{ ... }: {
+  custom.xmobar.fontSize = 14;
+  # dpi usa default 96
+}
+#+END_SRC
+
+** Orden de Migración Recomendado
+
+1. [ ] *xmobar* - Caso de uso inmediato (HiDPI macbook vs aurin)
+2. [ ] *xmonad* - Similar a xmobar, puede parametrizarse
+3. [ ] *alacritty* - Archivo estático, fácil de migrar con =home.file=
+4. [ ] *picom* - Archivo estático
+5. [ ] *fish* - Usar =programs.fish= nativo de home-manager
+6. [ ] Eliminar bloque =activation.linkDotfiles= de passh.nix
+7. [ ] Eliminar carpetas stow vacías
+
+** Referencias
+
+- [[https://nix-community.github.io/home-manager/][Home Manager Manual]]
+- [[https://nixos.wiki/wiki/Flakes][NixOS Flakes Wiki]]
 
 * Estructura Recomendada para Nuevas Configs
 
