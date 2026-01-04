@@ -44,6 +44,9 @@
     # Incluye: SPI drivers, Touch Bar, Broadcom WiFi, HiDPI, audio quirks
     ./modules/apple-hardware.nix
 
+    # Driver de audio CS8409 para MacBook (reemplaza el del kernel)
+    ./modules/snd-hda-macbookpro.nix
+
     # nixos-hardware profiles: Se importan via flake.nix extraModules
     # - nixos-hardware.nixosModules.apple-macbook-pro
     # - nixos-hardware.nixosModules.common-pc-ssd

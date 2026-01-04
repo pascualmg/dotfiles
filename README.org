@@ -469,12 +469,61 @@ echo "use nix" > .envrc
 direnv allow
 #+END_SRC
 
+* NixOS MacBook Pro 13,2 (2016)
+
+** Hardware Status
+
+| Componente         | Estado | Notas                                          |
+|--------------------+--------+------------------------------------------------|
+| Audio (CS8409)     | ✅ OK  | Driver snd-hda-macbookpro (davidjo)            |
+| WiFi (BCM43602)    | ❌ NO  | Driver wl abandonado 2019, usar USB dongle     |
+| Touch Bar (T1)     | ❌ NO  | Chip T1 en recovery mode, no bootable          |
+| Webcam FaceTime HD | ✅ OK  | Driver facetimehd                              |
+| Teclado/Trackpad   | ✅ OK  | Drivers applespi/appletb                       |
+| Pantalla HiDPI     | ✅ OK  | 168 DPI, scaling 2x en GNOME                   |
+| Batería            | ✅ OK  | ACPI estándar                                  |
+
+** Audio CS8409 - Solución
+
+El MacBook Pro 2016 usa un chip Cirrus Logic CS8409 como bridge HDA.
+El driver del kernel solo soporta Dell (subsystem IDs diferentes).
+
+*Solución implementada:*
+- Módulo custom =snd-hda-macbookpro= compilado desde [[https://github.com/davidjo/snd_hda_macbookpro][davidjo/snd_hda_macbookpro]]
+- Parchea el driver del kernel para añadir soporte Apple (GPIO init)
+- Config en =nixos-macbook/etc/nixos/modules/snd-hda-macbookpro.nix=
+
+*Verificar funcionamiento:*
+#+BEGIN_SRC bash
+# Diagnóstico completo
+audio-diag
+
+# GPIO debe mostrar enable=1 para IO[0-3]
+cat /proc/asound/card0/codec#0 | grep -A 10 "^GPIO:"
+
+# Test altavoces
+speaker-test -c 2 -t wav
+#+END_SRC
+
+** WiFi BCM43602 - Sin solución
+
+El chip Broadcom BCM43602 interno requiere el driver =wl= (broadcom-sta).
+Este driver fue abandonado en 2019 y es incompatible con kernels 6.x.
+
+*Alternativa:* USB WiFi dongle (ej: TP-Link con chip Realtek RTL8xxxu)
+
+** Touch Bar T1 - Sin solución
+
+El chip T1 (touchbar + Touch ID) está en "Recovery Mode" permanente.
+Requiere macOS para flashear firmware. Sin solución en Linux puro.
+
 * TODO Tareas Pendientes
 
 - [ ] Revisar y limpiar configs obsoletas (shell/, composer/)
 - [ ] Documentar scripts útiles en scripts/
 - [ ] Añadir config de alacritty al README
 - [ ] Backup automático dotfiles a GitHub/GitLab
+- [ ] Limpiar driver wl que no funciona de nixos-macbook config
 
 * Roadmap: Migración Stow → Home Manager
 
@@ -645,8 +694,8 @@ Esto crea: =~/.config/nueva-app/config.conf= → =~/dotfiles/nueva-app/.config/n
 
 ---
 
-*Última actualización:* 2025-11-22
-*Sistema:* Aurin (NixOS 25.05)
+*Última actualización:* 2026-01-04
+*Sistemas:* Aurin (NixOS 25.05), MacBook Pro 13,2 (NixOS Flakes)
 *Shell principal:* Fish
 *Window Manager:* XMonad
 *Terminal:* Alacritty

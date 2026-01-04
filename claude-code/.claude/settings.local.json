@@ -90,7 +90,13 @@
       "Bash(lsusb:*)",
       "WebFetch(domain:theapplewiki.com)",
       "Bash(ssh-keygen:*)",
-      "Bash(pgrep:*)"
+      "Bash(pgrep:*)",
+      "Bash(amixer:*)",
+      "Bash(modinfo:*)",
+      "Bash(xzcat:*)",
+      "Bash(nix-shell:*)",
+      "Bash(git stash:*)",
+      "Bash(git pull:*)"
     ],
     "deny": [],
     "ask": []

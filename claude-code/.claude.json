@@ -1,5 +1,5 @@
 {
-  "numStartups": 262,
+  "numStartups": 263,
   "installMethod": "native",
   "autoUpdates": false,
   "editorMode": "vim",
@@ -35,15 +35,15 @@
     "rename-conversation": 255,
     "config-thinking-mode": 262,
     "colorterm-truecolor": 225,
-    "shift-enter-setup": 253,
-    "install-slack-app": 253,
+    "shift-enter-setup": 263,
+    "install-slack-app": 263,
     "btw-side-question": 253,
     "web-app": 253,
     "mobile-app": 253,
     "guest-passes": 262
   },
   "memoryUsageCount": 6,
-  "promptQueueUseCount": 684,
+  "promptQueueUseCount": 671,
   "showExpandedTodos": true,
   "autoConnectIde": true,
   "cachedStatsigGates": {
@@ -571,7 +571,7 @@
     "f201405d-3116-4ec0-950a-51d4ed4edd42": {
       "hasAccess": false,
       "hasAccessNotAsDefault": false,
-      "timestamp": 1767480440334
+      "timestamp": 1767538216930
     }
   },
   "hasOpusPlanDefault": false,
@@ -613,7 +613,7 @@
         "campaign": "claude_code_guest_pass",
         "referral_link": "https://claude.ai/referral/bNAiczggQg"
       },
-      "timestamp": 1767484101092
+      "timestamp": 1767539315903
     }
   },
   "passesUpsellSeenCount": 4
