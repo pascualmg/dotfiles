@@ -9,19 +9,38 @@
 #
 # ESTRUCTURA:
 #   modules/home-manager/
-#   ├── default.nix    <- Este archivo (entry point)
-#   ├── passh.nix      <- Configuracion del usuario passh
-#   └── (futuros modulos por funcionalidad)
+#   |-- default.nix       <- Este archivo (entry point)
+#   |-- passh.nix         <- Configuracion base del usuario passh
+#   |-- programs/
+#   |   |-- xmobar.nix    <- Modulo xmobar parametrizable (dotfiles.xmobar)
+#   |   +-- (futuros: alacritty.nix, fish.nix, etc.)
+#   +-- machines/
+#       |-- aurin.nix     <- Config especifica aurin
+#       +-- macbook.nix   <- Config especifica macbook
 #
-# ESTADO: Preparacion - El flake no usa esto todavia
+# ESTADO: Activo - Usado por flake con enableHomeManager=true
 # =============================================================================
 
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, hostname ? "aurin", ... }:
 
+let
+  # Determinar que archivo de maquina cargar basado en hostname
+  machineConfig = ./machines/${hostname}.nix;
+  machineExists = builtins.pathExists machineConfig;
+in
 {
-  # Por ahora, simplemente exportamos el modulo de passh
-  # En el futuro, podemos agregar mas modulos y opciones aqui
   imports = [
+    # Config base del usuario
     ./passh.nix
-  ];
+
+    # Modulos de programas (definen opciones en namespace dotfiles.*)
+    ./programs/xmobar.nix
+
+    # Config especifica de maquina (setea las opciones)
+    # Solo importar si existe el archivo para esa maquina
+  ] ++ lib.optionals machineExists [ machineConfig ];
+
+  # Fallback: si no hay config de maquina, deshabilitar xmobar
+  # (evita errores en maquinas sin config especifica como vespino)
+  dotfiles.xmobar.enable = lib.mkDefault machineExists;
 }

@@ -43,7 +43,7 @@
     "guest-passes": 262
   },
   "memoryUsageCount": 6,
-  "promptQueueUseCount": 660,
+  "promptQueueUseCount": 668,
   "showExpandedTodos": true,
   "autoConnectIde": true,
   "cachedStatsigGates": {
@@ -613,7 +613,7 @@
         "campaign": "claude_code_guest_pass",
         "referral_link": "https://claude.ai/referral/bNAiczggQg"
       },
-      "timestamp": 1767480438751
+      "timestamp": 1767484101092
     }
   },
   "passesUpsellSeenCount": 4

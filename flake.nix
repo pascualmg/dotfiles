@@ -160,8 +160,11 @@
                 useGlobalPkgs = true;
                 # Instalar paquetes en /etc/profiles en lugar de ~/.nix-profile
                 useUserPackages = true;
-                # Pasar inputs a home-manager modules
-                extraSpecialArgs = { inherit inputs; };
+                # Pasar inputs Y hostname a home-manager modules
+                extraSpecialArgs = {
+                  inherit inputs;
+                  hostname = hostname;  # NUEVO: permite configs por maquina
+                };
                 # Configuracion del usuario passh
                 users.passh = import ./modules/home-manager;
                 # Permitir paquetes unfree en home-manager
@@ -280,7 +283,10 @@
       homeConfigurations = {
         passh = home-manager.lib.homeManagerConfiguration {
           inherit pkgs;
-          extraSpecialArgs = { inherit inputs; };
+          extraSpecialArgs = {
+            inherit inputs;
+            hostname = "aurin";  # Default para standalone
+          };
           modules = [
             ./modules/home-manager
           ];

@@ -573,12 +573,15 @@ Luego en cada máquina:
 
 ** Orden de Migración Recomendado
 
-1. [ ] *xmobar* - Caso de uso inmediato (HiDPI macbook vs aurin)
+1. [X] *xmobar* - ✅ COMPLETADO (2025-01-04)
+   - Módulo parametrizable en =modules/home-manager/programs/xmobar.nix=
+   - Configs per-machine en =modules/home-manager/machines/{aurin,macbook}.nix=
+   - Opciones: fontSize, gpuType, networkInterface, wifiInterface, showBattery, showTrayer, alsaMixer
 2. [ ] *xmonad* - Similar a xmobar, puede parametrizarse
 3. [ ] *alacritty* - Archivo estático, fácil de migrar con =home.file=
 4. [ ] *picom* - Archivo estático
 5. [ ] *fish* - Usar =programs.fish= nativo de home-manager
-6. [ ] Eliminar bloque =activation.linkDotfiles= de passh.nix
+6. [ ] Eliminar bloque =activation.linkDotfiles= de passh.nix (quitar configs migradas)
 7. [ ] Eliminar carpetas stow vacías
 
 ** Referencias

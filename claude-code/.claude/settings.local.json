@@ -89,7 +89,8 @@
       "Bash(xdpyinfo:*)",
       "Bash(lsusb:*)",
       "WebFetch(domain:theapplewiki.com)",
-      "Bash(ssh-keygen:*)"
+      "Bash(ssh-keygen:*)",
+      "Bash(pgrep:*)"
     ],
     "deny": [],
     "ask": []
