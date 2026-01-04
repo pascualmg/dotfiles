@@ -1,5 +1,5 @@
 {
-  "numStartups": 263,
+  "numStartups": 266,
   "installMethod": "native",
   "autoUpdates": false,
   "editorMode": "vim",
@@ -17,10 +17,10 @@
     "drag-and-drop-images": 260,
     "double-esc": 73,
     "continue": 262,
-    "custom-commands": 249,
+    "custom-commands": 264,
     "shift-tab": 262,
     "status-line": 248,
-    "custom-agents": 249,
+    "custom-agents": 264,
     "image-paste": 251,
     "ide-upsell-external-terminal": 251,
     "git-worktrees": 260,
@@ -40,10 +40,10 @@
     "btw-side-question": 253,
     "web-app": 253,
     "mobile-app": 253,
-    "guest-passes": 262
+    "guest-passes": 265
   },
   "memoryUsageCount": 6,
-  "promptQueueUseCount": 671,
+  "promptQueueUseCount": 673,
   "showExpandedTodos": true,
   "autoConnectIde": true,
   "cachedStatsigGates": {
@@ -133,16 +133,16 @@
       "hasClaudeMdExternalIncludesWarningShown": false,
       "lastTotalWebSearchRequests": 6,
       "hasCompletedProjectOnboarding": true,
-      "lastCost": 11.575657099999999,
-      "lastAPIDuration": 2241145,
-      "lastToolDuration": 2130725,
-      "lastDuration": 7952006,
-      "lastLinesAdded": 295,
-      "lastLinesRemoved": 100,
-      "lastTotalInputTokens": 128397,
-      "lastTotalOutputTokens": 62137,
-      "lastTotalCacheCreationInputTokens": 1126212,
-      "lastTotalCacheReadInputTokens": 7261555,
+      "lastCost": 19.8441906,
+      "lastAPIDuration": 3306196,
+      "lastToolDuration": 3198614,
+      "lastDuration": 10271822,
+      "lastLinesAdded": 805,
+      "lastLinesRemoved": 239,
+      "lastTotalInputTokens": 268667,
+      "lastTotalOutputTokens": 99397,
+      "lastTotalCacheCreationInputTokens": 1747150,
+      "lastTotalCacheReadInputTokens": 14038197,
       "lastSessionId": "3bb77430-f736-448e-978d-86647af9c36e",
       "reactVulnerabilityCache": {
         "detected": false,
@@ -151,23 +151,23 @@
         "version": null,
         "packageManager": null
       },
-      "lastAPIDurationWithoutRetries": 2240442,
+      "lastAPIDurationWithoutRetries": 3295780,
       "lastModelUsage": {
         "claude-haiku-4-5-20251001": {
-          "inputTokens": 111233,
-          "outputTokens": 13900,
+          "inputTokens": 250123,
+          "outputTokens": 17797,
           "cacheReadInputTokens": 394521,
           "cacheCreationInputTokens": 93723,
           "webSearchRequests": 0,
-          "costUSD": 0.3373388499999999
+          "costUSD": 0.49571384999999984
         },
         "claude-opus-4-5-20251101": {
-          "inputTokens": 17164,
-          "outputTokens": 48237,
-          "cacheReadInputTokens": 6867034,
-          "cacheCreationInputTokens": 1032489,
+          "inputTokens": 18544,
+          "outputTokens": 81600,
+          "cacheReadInputTokens": 13643676,
+          "cacheCreationInputTokens": 1653427,
           "webSearchRequests": 6,
-          "costUSD": 11.238318249999995
+          "costUSD": 19.348476749999996
         }
       }
     },
@@ -571,7 +571,7 @@
     "f201405d-3116-4ec0-950a-51d4ed4edd42": {
       "hasAccess": false,
       "hasAccessNotAsDefault": false,
-      "timestamp": 1767538216930
+      "timestamp": 1767542456047
     }
   },
   "hasOpusPlanDefault": false,
@@ -616,5 +616,6 @@
       "timestamp": 1767539315903
     }
   },
-  "passesUpsellSeenCount": 4
+  "passesUpsellSeenCount": 4,
+  "bypassPermissionsModeAccepted": true
 }

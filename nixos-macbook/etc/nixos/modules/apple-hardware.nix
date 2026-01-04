@@ -152,17 +152,19 @@ in
 
     # Modulos extra del kernel compilados out-of-tree
     extraModulePackages = [
-      # WiFi Broadcom BCM43602 - driver propietario
-      # NOTA: Requiere nixpkgs.config.allowUnfree = true
-      config.boot.kernelPackages.broadcom_sta
-
       # Touch Bar T1 drivers
       apple-t1-touchbar-driver
+
+      # WiFi BCM43602: Driver wl (broadcom_sta) NO FUNCIONA en kernel 6.x
+      # Compila pero falla en runtime: "wl driver failed with code 1"
+      # El driver propietario es incompatible con APIs modernas del kernel.
+      # Solucion: Usar USB WiFi dongle (ej: TP-Link con RTL8xxxu)
     ];
 
-    # Blacklist drivers Broadcom open-source (conflicto con wl)
+    # Blacklist drivers Broadcom open-source que interfieren con USB dongle
     blacklistedKernelModules = [
-      "b43" "b43legacy" "bcma" "brcmsmac" "brcmfmac" "ssb"
+      "b43" "b43legacy" "bcma" "brcmsmac" "ssb"
+      # NOTA: NO blacklistear brcmfmac - algunos dongles USB lo usan
     ];
 
     # Audio Intel HDA con quirks MacBook Pro

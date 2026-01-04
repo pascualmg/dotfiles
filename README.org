@@ -508,14 +508,35 @@ speaker-test -c 2 -t wav
 ** WiFi BCM43602 - Sin solución
 
 El chip Broadcom BCM43602 interno requiere el driver =wl= (broadcom-sta).
-Este driver fue abandonado en 2019 y es incompatible con kernels 6.x.
 
-*Alternativa:* USB WiFi dongle (ej: TP-Link con chip Realtek RTL8xxxu)
+*Estado del driver:*
+- El módulo *compila* correctamente (mantenido por RPMFusion/Debian)
+- Pero *falla en runtime* con kernel 6.x: =wl driver failed with code 1=
+- Error: =NULL ndev->ieee80211ptr, unable to deref wl=
+- Causa: APIs internas del kernel incompatibles con el driver propietario
+
+*Conclusión:* El driver está muerto a nivel funcional, no solo de mantenimiento.
+No hay solución posible sin que Broadcom libere código o alguien haga ingeniería inversa.
+
+*Alternativa funcional:* USB WiFi dongle con chip Realtek (RTL8xxxu)
+- Ejemplo: TP-Link TL-WN725N o similar
+- Funciona out-of-the-box con driver =rtl8xxxu= del kernel
 
 ** Touch Bar T1 - Sin solución
 
-El chip T1 (touchbar + Touch ID) está en "Recovery Mode" permanente.
-Requiere macOS para flashear firmware. Sin solución en Linux puro.
+El chip T1 (Touch Bar + Touch ID) está en "Recovery Mode" permanente.
+
+*Problema:*
+- El T1 aparece como =05ac:1281= (DFU/Recovery) en lugar de =05ac:8600= (iBridge)
+- El firmware está corrupto o nunca fue inicializado
+- Los drivers Linux (apple-ibridge, tiny-dfr) requieren el T1 en modo normal
+
+*Única solución:*
+- Conectar a un Mac con macOS
+- Usar Apple Configurator 2 para restaurar el firmware del T1
+- Sin acceso a macOS = sin Touch Bar
+
+*Workaround:* =caps:escape= en xkb.options para tener Escape en Caps Lock
 
 * TODO Tareas Pendientes
 
@@ -523,7 +544,6 @@ Requiere macOS para flashear firmware. Sin solución en Linux puro.
 - [ ] Documentar scripts útiles en scripts/
 - [ ] Añadir config de alacritty al README
 - [ ] Backup automático dotfiles a GitHub/GitLab
-- [ ] Limpiar driver wl que no funciona de nixos-macbook config
 
 * Roadmap: Migración Stow → Home Manager
 

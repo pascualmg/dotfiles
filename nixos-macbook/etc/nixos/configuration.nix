@@ -55,14 +55,11 @@
   ];
 
   # ===== UNFREE =====
-  # CRITICO: Necesario para firmware Broadcom WiFi
+  # Necesario para algunos drivers y firmware
   nixpkgs.config.allowUnfree = true;
 
-  # Broadcom WiFi driver marcado como inseguro (CVEs conocidos)
-  # Necesario para BCM43602 en MacBook Pro 13,2
-  nixpkgs.config.permittedInsecurePackages = [
-    "broadcom-sta-6.30.223.271-59-6.18.2"
-  ];
+  # WiFi BCM43602: Driver wl (broadcom_sta) NO FUNCIONA en kernel 6.x
+  # Compila pero falla en runtime. Usar USB WiFi dongle en su lugar.
 
   # ===== CONSOLE =====
   console = {
