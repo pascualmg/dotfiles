@@ -22,6 +22,12 @@ in
       default = 14;
       description = "Font size for Alacritty terminal";
     };
+
+    theme = lib.mkOption {
+      type = lib.types.enum [ "dark" "light" ];
+      default = "dark";
+      description = "Spacemacs color theme (dark or light)";
+    };
   };
 
   config = {
@@ -104,9 +110,42 @@ in
           save_to_clipboard = true;
         };
 
-        # Colors - Spacemacs Light theme inline
-        # (El import de archivo externo no funcionaba, lo ponemos directo)
-        colors = {
+        # Colors - Spacemacs themes (dark or light)
+        colors = if cfg.theme == "dark" then {
+          # Spacemacs Dark theme
+          primary = {
+            background = "#292b2e";
+            foreground = "#b2b2b2";
+          };
+
+          cursor = {
+            text = "#292b2e";
+            cursor = "#b2b2b2";
+          };
+
+          normal = {
+            black = "#292b2e";
+            red = "#f2241f";
+            green = "#67b11d";
+            yellow = "#b1951d";
+            blue = "#4f97d7";
+            magenta = "#a31db1";
+            cyan = "#2d9574";
+            white = "#b2b2b2";
+          };
+
+          bright = {
+            black = "#686868";
+            red = "#f2241f";
+            green = "#67b11d";
+            yellow = "#b1951d";
+            blue = "#4f97d7";
+            magenta = "#a31db1";
+            cyan = "#2d9574";
+            white = "#f8f8f8";
+          };
+        } else {
+          # Spacemacs Light theme
           primary = {
             background = "#fbf8ef";
             foreground = "#655370";

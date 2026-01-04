@@ -31,5 +31,6 @@
   # Alacritty configurado para macbook HiDPI
   dotfiles.alacritty = {
     fontSize = 18;              # 168 DPI HiDPI - fuente mas grande
+    theme = "dark";             # Spacemacs Dark
   };
 }

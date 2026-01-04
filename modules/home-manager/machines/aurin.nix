@@ -27,5 +27,6 @@
   # Alacritty configurado para aurin
   dotfiles.alacritty = {
     fontSize = 14;              # 96 DPI - tamano normal
+    theme = "dark";             # Spacemacs Dark (default)
   };
 }
