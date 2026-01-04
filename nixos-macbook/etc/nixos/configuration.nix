@@ -165,9 +165,9 @@
     keyd = {
       enable = true;
       keyboards = {
-        # Configuración para Apple SPI Keyboard
+        # Configuración para Apple SPI Keyboard (Spanish ISO)
         apple = {
-          ids = [ "*" ];  # Todos los teclados (Apple SPI tiene 0000:0000)
+          ids = [ "0000:0000" ];  # Apple SPI Keyboard específico
           settings = {
             main = {
               # La tecla Fn del Mac (KEY_FN = scancode 464)
