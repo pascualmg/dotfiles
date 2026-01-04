@@ -573,16 +573,41 @@ Luego en cada máquina:
 
 ** Orden de Migración Recomendado
 
-1. [X] *xmobar* - ✅ COMPLETADO (2025-01-04)
+1. [X] *xmobar* - ✅ COMPLETADO (2026-01-04)
    - Módulo parametrizable en =modules/home-manager/programs/xmobar.nix=
    - Configs per-machine en =modules/home-manager/machines/{aurin,macbook}.nix=
    - Opciones: fontSize, gpuType, networkInterface, wifiInterface, showBattery, showTrayer, alsaMixer
-2. [ ] *xmonad* - Similar a xmobar, puede parametrizarse
-3. [ ] *alacritty* - Archivo estático, fácil de migrar con =home.file=
-4. [ ] *picom* - Archivo estático
-5. [ ] *fish* - Usar =programs.fish= nativo de home-manager
-6. [ ] Eliminar bloque =activation.linkDotfiles= de passh.nix (quitar configs migradas)
-7. [ ] Eliminar carpetas stow vacías
+
+2. [X] *alacritty* - ✅ COMPLETADO (2026-01-04)
+   - Módulo en =modules/home-manager/programs/alacritty.nix=
+   - Usa =programs.alacritty= nativo de home-manager
+   - Opciones: fontSize (14 aurin, 18 macbook), theme (dark/light)
+   - Tema Spacemacs inline
+
+3. [X] *picom* - ✅ COMPLETADO (2026-01-04)
+   - Módulo en =modules/home-manager/programs/picom.nix=
+   - Opción: backend (egl para NVIDIA, xrender para Intel)
+   - Config completa inline (shadows, blur, animations)
+
+4. [X] *fish* - ✅ COMPLETADO (2026-01-04)
+   - Módulo en =modules/home-manager/programs/fish.nix=
+   - Usa =programs.fish= nativo de home-manager
+   - Aliases: git shortcuts, eza/ls, nixos helpers
+   - Abbreviations: docker, nix
+
+5. [ ] *xmonad* - Pendiente (config Haskell compleja)
+   - Actualmente gestionado via stow
+   - Requiere análisis de cómo parametrizar Haskell
+
+6. [ ] *composer* - Pendiente (bajo riesgo, simple)
+   - PHP tool, config estático
+   - Baja prioridad
+
+7. [X] Reducir bloque =activation.linkDotfiles= - ✅ PARCIALMENTE
+   - Solo quedan: xmonad, composer, claude-code
+   - Documentado estado en passh.nix líneas 255-276
+
+8. [ ] Eliminar carpetas stow vacías (cuando todo migre)
 
 ** Referencias
 

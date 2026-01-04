@@ -252,13 +252,25 @@
     };
 
     # Activaciones
-    # NOTA: xmobar REMOVIDO de stow - ahora gestionado por home-manager
+    # ==========================================================================
+    # STOW ACTIVATION (LEGACY - EN PROCESO DE ELIMINACIÓN)
+    # ==========================================================================
+    # ESTADO MIGRACIÓN STOW → HOME-MANAGER:
+    #   ✅ xmobar   - Migrado (modules/home-manager/programs/xmobar.nix)
+    #   ✅ alacritty - Migrado (modules/home-manager/programs/alacritty.nix)
+    #   ✅ picom    - Migrado (modules/home-manager/programs/picom.nix)
+    #   ✅ fish     - Migrado (modules/home-manager/programs/fish.nix)
+    #   ⏳ xmonad   - Pendiente (config Haskell compleja)
+    #   ⏳ composer - Pendiente (bajo riesgo, simple)
+    #   ✅ claude-code - Se mantiene en stow (local, no compartir entre máquinas)
+    #
+    # PLAN: Cuando xmonad y composer migren, eliminar este bloque completamente.
+    # ==========================================================================
     activation = {
       linkDotfiles = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
-        echo "Linkeando dotfiles con stow..."
+        echo "Linkeando dotfiles residuales con stow..."
         cd ${config.home.homeDirectory}/dotfiles
-        # Solo linkear configs de usuario, no módulos de sistema ni nixos-*
-        # NOTA: xmobar, alacritty, picom y fish removidos - ahora gestionados por home-manager
+        # Solo quedan: xmonad (Haskell), composer (PHP), claude-code (local)
         ${pkgs.stow}/bin/stow -v -R -t ${config.home.homeDirectory} \
           composer xmonad claude-code
       '';
