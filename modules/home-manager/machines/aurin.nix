@@ -29,4 +29,9 @@
     fontSize = 14;              # 96 DPI - tamano normal
     theme = "dark";             # Spacemacs Dark (default)
   };
+
+  # Picom configurado para aurin
+  dotfiles.picom = {
+    backend = "egl";            # RTX 5080 - egl optimizado
+  };
 }

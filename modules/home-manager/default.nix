@@ -36,6 +36,7 @@ in
     # Modulos de programas (definen opciones en namespace dotfiles.*)
     ./programs/xmobar.nix
     ./programs/alacritty.nix
+    ./programs/picom.nix
 
     # Config especifica de maquina (setea las opciones)
     # Solo importar si existe el archivo para esa maquina

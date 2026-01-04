@@ -33,4 +33,9 @@
     fontSize = 18;              # 168 DPI HiDPI - fuente mas grande
     theme = "dark";             # Spacemacs Dark
   };
+
+  # Picom configurado para macbook
+  dotfiles.picom = {
+    backend = "xrender";        # Intel integrated - xrender mas compatible
+  };
 }
