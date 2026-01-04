@@ -1,13 +1,14 @@
 {
-  "numStartups": 266,
+  "numStartups": 268,
   "installMethod": "native",
   "autoUpdates": false,
   "editorMode": "vim",
   "hasSeenTasksHint": true,
+  "hasUsedStash": true,
   "tipsHistory": {
     "new-user-warmup": 1,
     "memory-command": 154,
-    "theme-command": 248,
+    "theme-command": 268,
     "prompt-queue": 32,
     "enter-to-steer-in-relatime": 249,
     "todo-list": 249,
@@ -37,13 +38,13 @@
     "colorterm-truecolor": 225,
     "shift-enter-setup": 263,
     "install-slack-app": 263,
-    "btw-side-question": 253,
-    "web-app": 253,
-    "mobile-app": 253,
-    "guest-passes": 265
+    "btw-side-question": 268,
+    "web-app": 268,
+    "mobile-app": 268,
+    "guest-passes": 268
   },
   "memoryUsageCount": 6,
-  "promptQueueUseCount": 673,
+  "promptQueueUseCount": 676,
   "showExpandedTodos": true,
   "autoConnectIde": true,
   "cachedStatsigGates": {
@@ -571,7 +572,7 @@
     "f201405d-3116-4ec0-950a-51d4ed4edd42": {
       "hasAccess": false,
       "hasAccessNotAsDefault": false,
-      "timestamp": 1767542456047
+      "timestamp": 1767559903629
     }
   },
   "hasOpusPlanDefault": false,
@@ -613,7 +614,7 @@
         "campaign": "claude_code_guest_pass",
         "referral_link": "https://claude.ai/referral/bNAiczggQg"
       },
-      "timestamp": 1767539315903
+      "timestamp": 1767559902504
     }
   },
   "passesUpsellSeenCount": 4,

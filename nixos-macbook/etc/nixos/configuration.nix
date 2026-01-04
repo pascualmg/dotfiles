@@ -132,9 +132,9 @@
         enableContribAndExtras = true;
       };
 
-      # Keyboard layout
+      # Keyboard layout - Spanish ISO (teclado físico del MacBook)
       xkb = {
-        layout = "us,es";
+        layout = "es";
         variant = "";
         # Caps Lock → Escape (workaround Touch Bar sin funcionar)
         options = "caps:escape";
@@ -158,6 +158,59 @@
 
     # Bluetooth manager (GUI para XMonad)
     blueman.enable = true;
+
+    # keyd: Remapeador de teclas a nivel kernel (funciona en X11 y Wayland)
+    # Permite usar Fn + fila numérica como F-keys (workaround Touch Bar)
+    keyd = {
+      enable = true;
+      keyboards = {
+        # Configuración para Apple SPI Keyboard
+        apple = {
+          ids = [ "*" ];  # Todos los teclados (Apple SPI tiene 0000:0000)
+          settings = {
+            main = {
+              # La tecla Fn del Mac (KEY_FN = scancode 464)
+              # Se convierte en modificador que activa la capa "fnlayer"
+              "fn" = "layer(fnlayer)";
+
+              # Fix swap de teclas en teclado Apple Spanish ISO
+              # La tecla junto al 1 (grave) y la tecla entre Shift-Z (102nd) están intercambiadas
+              # grave produce <> pero debería producir ºª
+              # 102nd produce ºª pero debería producir <>
+              "grave" = "102nd";
+              "102nd" = "grave";
+            };
+            # Capa activada al mantener Fn pulsado
+            "fnlayer" = {
+              # Fn + º (tecla junto al 1 en teclado español ISO) = Escape
+              # En keyd esta tecla se llama "grave" (posición física, no carácter)
+              "grave" = "esc";
+              # También la tecla <> (entre Shift izq y Z en ISO) por si acaso
+              "102nd" = "esc";
+              # Fn + números = F-keys
+              "1" = "f1";
+              "2" = "f2";
+              "3" = "f3";
+              "4" = "f4";
+              "5" = "f5";
+              "6" = "f6";
+              "7" = "f7";
+              "8" = "f8";
+              "9" = "f9";
+              "0" = "f10";
+              "-" = "f11";
+              "=" = "f12";
+              # Fn + teclas de navegación
+              "backspace" = "delete";
+              "left" = "home";
+              "right" = "end";
+              "up" = "pageup";
+              "down" = "pagedown";
+            };
+          };
+        };
+      };
+    };
 
     # Printing (opcional)
     # printing.enable = true;

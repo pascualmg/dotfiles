@@ -477,11 +477,12 @@ direnv allow
 |--------------------+--------+------------------------------------------------|
 | Audio (CS8409)     | ✅ OK  | Driver snd-hda-macbookpro (davidjo)            |
 | WiFi (BCM43602)    | ❌ NO  | Driver wl abandonado 2019, usar USB dongle     |
-| Touch Bar (T1)     | ❌ NO  | Chip T1 en recovery mode, no bootable          |
+| Touch Bar (T1)     | ❌ NO  | Chip T1 en recovery mode, workaround con keyd  |
 | Webcam FaceTime HD | ✅ OK  | Driver facetimehd                              |
-| Teclado/Trackpad   | ✅ OK  | Drivers applespi/appletb                       |
+| Teclado/Trackpad   | ✅ OK  | Drivers applespi + keyd (fix ISO swap)         |
 | Pantalla HiDPI     | ✅ OK  | 168 DPI, scaling 2x en GNOME                   |
 | Batería            | ✅ OK  | ACPI estándar                                  |
+| F-keys (Fn+número) | ✅ OK  | keyd: Fn+1=F1, Fn+º=Esc, etc.                  |
 
 ** Audio CS8409 - Solución
 
@@ -536,7 +537,26 @@ El chip T1 (Touch Bar + Touch ID) está en "Recovery Mode" permanente.
 - Usar Apple Configurator 2 para restaurar el firmware del T1
 - Sin acceso a macOS = sin Touch Bar
 
-*Workaround:* =caps:escape= en xkb.options para tener Escape en Caps Lock
+*Workaround con keyd:*
+- =Fn + º= (tecla junto al 1) = Escape
+- =Fn + 1-0= = F1-F10
+- =Fn + -= = F11, =Fn + == = F12
+- =Fn + Backspace= = Delete
+- =Fn + Flechas= = Home/End/PageUp/PageDown
+
+Configurado en =services.keyd= en configuration.nix.
+
+** Teclado Spanish ISO - Fix teclas swapeadas
+
+El teclado Apple SPI tiene las teclas =º ª= y =< >= intercambiadas respecto al layout físico.
+
+*Solución:* keyd remapea las teclas a nivel kernel:
+#+BEGIN_SRC nix
+"grave" = "102nd";  # Swap tecla junto al 1
+"102nd" = "grave";  # Swap tecla entre Shift y Z
+#+END_SRC
+
+Esto funciona tanto en X11 (XMonad) como en Wayland (GNOME) porque keyd opera a nivel evdev.
 
 * TODO Tareas Pendientes
 
