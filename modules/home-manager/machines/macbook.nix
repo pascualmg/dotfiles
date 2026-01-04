@@ -38,4 +38,20 @@
   dotfiles.picom = {
     backend = "xrender";        # Intel integrated - xrender mas compatible
   };
+
+  # GNOME dconf settings
+  dconf.settings = {
+    # Deshabilitar lock screen (problemas con butterfly keyboard)
+    "org/gnome/desktop/screensaver" = {
+      lock-enabled = false;
+      idle-activation-enabled = false;
+    };
+    "org/gnome/desktop/session" = {
+      idle-delay = lib.hm.gvariant.mkUint32 0;  # No idle timeout
+    };
+    # Deshabilitar auto-lock cuando suspende
+    "org/gnome/desktop/lockdown" = {
+      disable-lock-screen = true;
+    };
+  };
 }

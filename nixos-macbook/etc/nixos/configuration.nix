@@ -147,6 +147,7 @@
     # GNOME Desktop (nueva ubicación, fuera de xserver)
     desktopManager.gnome.enable = true;
 
+
     # SSH
     openssh = {
       enable = true;
