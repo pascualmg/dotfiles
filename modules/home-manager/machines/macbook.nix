@@ -27,4 +27,9 @@
     showTrayer = false;         # No hay trayer-padding-icon instalado
     alsaMixer = "PCM";          # MacBook usa PCM en lugar de Master
   };
+
+  # Alacritty configurado para macbook HiDPI
+  dotfiles.alacritty = {
+    fontSize = 18;              # 168 DPI HiDPI - fuente mas grande
+  };
 }

@@ -258,9 +258,9 @@
         echo "Linkeando dotfiles con stow..."
         cd ${config.home.homeDirectory}/dotfiles
         # Solo linkear configs de usuario, no módulos de sistema ni nixos-*
-        # NOTA: xmobar removido - ahora gestionado por home-manager
+        # NOTA: xmobar y alacritty removidos - ahora gestionados por home-manager
         ${pkgs.stow}/bin/stow -v -R -t ${config.home.homeDirectory} \
-          alacritty composer fish picom xmonad claude-code
+          composer fish picom xmonad claude-code
       '';
 
       createDirectories = lib.hm.dag.entryAfter [ "linkDotfiles" ] ''

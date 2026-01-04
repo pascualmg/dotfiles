@@ -23,4 +23,9 @@
     showBattery = false;        # Desktop, no bateria
     showNvmeMonitor = true;     # Tiene NVMe
   };
+
+  # Alacritty configurado para aurin
+  dotfiles.alacritty = {
+    fontSize = 14;              # 96 DPI - tamano normal
+  };
 }
