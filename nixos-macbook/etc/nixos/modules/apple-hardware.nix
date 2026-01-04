@@ -12,7 +12,7 @@
 #   Este modulo agrega lo ESPECIFICO del MacBook Pro 13,2 que NO esta en
 #   nixos-hardware (ya que no existe perfil 13-2):
 #     - SPI Keyboard/Trackpad (applespi driver)
-#     - Touch Bar (tiny-dfr daemon)
+#     - Touch Bar (T1 chip drivers + tiny-dfr daemon)
 #     - WiFi Broadcom BCM43602 (broadcom_sta driver)
 #     - HiDPI para Retina 227 DPI
 #     - Audio quirks Intel HDA + Apple
@@ -22,7 +22,7 @@
 #   - Display: 13.3" Retina 2560x1600 (227 DPI)
 #   - GPU: Intel Iris Graphics 550 (GT3e)
 #   - Input: Apple SPI keyboard + Force Touch trackpad
-#   - Touch Bar: OLED con T1 chip
+#   - Touch Bar: OLED con T1 chip (NO T2)
 #   - WiFi: Broadcom BCM43602 (requiere driver propietario)
 #   - Ports: 4x Thunderbolt 3 (USB-C)
 #
@@ -30,14 +30,79 @@
 #   - apple-macbook-pro: mbpfan, facetimehd, cpu/intel, pc/laptop
 #   - common-pc-ssd: fstrim automatico
 #
+# Touch Bar (T1 chip):
+#   - Usa drivers de: https://github.com/parport0/mbp-t1-touchbar-driver
+#   - Modulos: apple-ibridge, apple-ib-tb, apple-ib-als
+#   - Daemon: tiny-dfr para mostrar F1-F12 y Escape
+#
 # Comandos diagnostico:
 #   - macbook-diag: Diagnostico completo hardware
 #   - macbook-info: Informacion del sistema
 #   - touchbar-status: Estado Touch Bar
+#   - touchbar-rebind: Forzar rebind USB del iBridge
 # =============================================================================
 
 { config, pkgs, lib, ... }:
 
+let
+  # ===========================================================================
+  # T1 TOUCH BAR KERNEL MODULES
+  # ===========================================================================
+  # Driver out-of-tree para el chip T1 de MacBook Pro 2016-2017
+  # Repositorio: https://github.com/parport0/mbp-t1-touchbar-driver
+  #
+  # Compila tres modulos:
+  #   - apple-ibridge: Controlador principal iBridge (T1 chip)
+  #   - apple-ib-tb: Touch Bar display
+  #   - apple-ib-als: Ambient Light Sensor
+  #
+  # NOTA: Este driver es para T1 (2016-2017), NO para T2 (2018+)
+  # ===========================================================================
+
+  apple-t1-touchbar-driver = config.boot.kernelPackages.callPackage
+    ({ stdenv, lib, fetchFromGitHub, kernel }:
+      stdenv.mkDerivation rec {
+        pname = "apple-t1-touchbar-driver";
+        version = "6.8.0-unstable-2024-03-24";
+
+        src = fetchFromGitHub {
+          owner = "parport0";
+          repo = "mbp-t1-touchbar-driver";
+          rev = "6d62f38c6b2c27da1becd311ad7b15826e58ed41";
+          sha256 = "sha256-3YjShwyUBsqTRK/c3f4AVZJswlwpr3DoeDZEBZ3RkdQ=";
+        };
+
+        nativeBuildInputs = kernel.moduleBuildDependencies;
+
+        makeFlags = [
+          "KDIR=${kernel.dev}/lib/modules/${kernel.modDirVersion}/build"
+        ];
+
+        installPhase = ''
+          runHook preInstall
+
+          # Instalar modulos en la ruta estandar de NixOS
+          install -D -m 644 apple-ibridge.ko \
+            $out/lib/modules/${kernel.modDirVersion}/extra/apple-ibridge.ko
+          install -D -m 644 apple-ib-tb.ko \
+            $out/lib/modules/${kernel.modDirVersion}/extra/apple-ib-tb.ko
+          install -D -m 644 apple-ib-als.ko \
+            $out/lib/modules/${kernel.modDirVersion}/extra/apple-ib-als.ko
+
+          runHook postInstall
+        '';
+
+        meta = with lib; {
+          description = "Apple T1 Touch Bar driver for MacBook Pro 2016-2017";
+          homepage = "https://github.com/parport0/mbp-t1-touchbar-driver";
+          license = licenses.gpl2Only;
+          platforms = platforms.linux;
+          maintainers = [ ];
+        };
+      }
+    ) { };
+
+in
 {
   # ===========================================================================
   # KERNEL: Modulos especificos MacBook Pro 13,2
@@ -58,9 +123,11 @@
       "spi_pxa2xx_platform"   # Plataforma SPI
       "applespi"              # Driver Apple SPI (teclado + trackpad)
 
-      # Touch Bar via iBridge
-      "apple-ibridge"         # Controlador iBridge
-      "apple-ib-tb"           # Touch Bar
+      # Touch Bar via iBridge T1
+      # Estos modulos vienen del paquete apple-t1-touchbar-driver
+      "apple-ibridge"         # Controlador iBridge (T1 chip)
+      "apple-ib-tb"           # Touch Bar display
+      "apple-ib-als"          # Ambient Light Sensor (opcional pero util)
 
       # Thunderbolt 3
       "thunderbolt"
@@ -83,10 +150,14 @@
       "i915.fastboot=1"           # Reduce flickering at boot
     ];
 
-    # WiFi Broadcom BCM43602 - driver propietario
-    # NOTA: Requiere nixpkgs.config.allowUnfree = true
+    # Modulos extra del kernel compilados out-of-tree
     extraModulePackages = [
+      # WiFi Broadcom BCM43602 - driver propietario
+      # NOTA: Requiere nixpkgs.config.allowUnfree = true
       config.boot.kernelPackages.broadcom_sta
+
+      # Touch Bar T1 drivers
+      apple-t1-touchbar-driver
     ];
 
     # Blacklist drivers Broadcom open-source (conflicto con wl)
@@ -108,10 +179,10 @@
   # nixos-hardware/common/cpu/intel ya habilita: microcode, intel GPU
   # Aqui agregamos lo que falta para 13,2
 
-  hardware = {
-    # Thunderbolt 3 device authorization
-    bolt.enable = true;
+  # Thunderbolt 3 device authorization (bolt)
+  services.hardware.bolt.enable = true;
 
+  hardware = {
     # Intel Graphics extras (Iris 550)
     graphics = {
       enable = true;
@@ -119,7 +190,7 @@
       extraPackages = with pkgs; [
         intel-media-driver      # VAAPI moderno (iHD)
         intel-vaapi-driver      # VAAPI legacy (i965)
-        vaapiVdpau
+        libva-vdpau-driver      # Antes: vaapiVdpau
         libvdpau-va-gl
       ];
     };
@@ -142,23 +213,23 @@
     # Driver Intel moderno
     videoDrivers = [ "modesetting" ];
 
-    # Trackpad Force Touch con libinput
-    libinput = {
-      enable = true;
-      touchpad = {
-        naturalScrolling = true;
-        accelProfile = "adaptive";
-        accelSpeed = "0.3";
-        tapping = true;
-        tappingDragLock = true;
-        clickMethod = "clickfinger";    # Force Touch style
-        disableWhileTyping = true;
-        scrollMethod = "twofinger";
-      };
-    };
-
     # DPI para Retina 2560x1600 @ 13.3"
     dpi = 227;
+  };
+
+  # Trackpad Force Touch con libinput (opcion movida de xserver)
+  services.libinput = {
+    enable = true;
+    touchpad = {
+      naturalScrolling = true;
+      accelProfile = "adaptive";
+      accelSpeed = "0.3";
+      tapping = true;
+      tappingDragLock = true;
+      clickMethod = "clickfinger";    # Force Touch style
+      disableWhileTyping = true;
+      scrollMethod = "twofinger";
+    };
   };
 
   # Backlight control
@@ -203,22 +274,48 @@
   security.rtkit.enable = true;
 
   # ===========================================================================
-  # TOUCH BAR: tiny-dfr daemon
+  # TOUCH BAR: tiny-dfr daemon + udev rules
+  # ===========================================================================
+  # El chip T1 de MacBook Pro 13,2 (2016) requiere:
+  #   1. Modulos kernel: apple-ibridge, apple-ib-tb (compilados arriba)
+  #   2. Daemon: tiny-dfr para mostrar teclas de funcion
+  #   3. Udev rules: para rebind automatico del dispositivo USB
+  #
+  # El daemon tiny-dfr muestra F1-F12 y Escape en la Touch Bar.
+  # El boton Fn fisico alterna entre F-keys y controles multimedia.
+  #
+  # ESTADO ACTUAL: T1 en RECOVERY MODE (05ac:1281)
+  # El firmware del T1 esta corrupto. Hasta restaurarlo con Apple Configurator 2,
+  # tiny-dfr no puede funcionar. Ver README.org seccion "T1 Touch Bar".
+  #
+  # Para reactivar cuando el T1 funcione:
+  #   1. Verificar: lsusb | grep "05ac:8600"  (debe mostrar iBridge)
+  #   2. Descomentar el bloque systemd.services.tiny-dfr abajo
+  #   3. sudo nixos-rebuild switch
   # ===========================================================================
 
-  systemd.services.tiny-dfr = {
-    description = "Apple Touch Bar Function Row Daemon";
-    documentation = [ "https://github.com/kekrby/tiny-dfr" ];
-    wantedBy = [ "multi-user.target" ];
-    after = [ "systemd-udev-settle.service" ];
-
-    serviceConfig = {
-      Type = "simple";
-      ExecStart = "${pkgs.tiny-dfr}/bin/tiny-dfr";
-      Restart = "on-failure";
-      RestartSec = "5s";
-    };
-  };
+  # DESHABILITADO: T1 en recovery mode - descomentar cuando se restaure el firmware
+  # systemd.services.tiny-dfr = {
+  #   description = "Apple Touch Bar Function Row Daemon";
+  #   documentation = [ "https://github.com/WhatAmISupposedToPutHere/tiny-dfr" ];
+  #   wantedBy = [ "multi-user.target" ];
+  #
+  #   # Esperar a que udev y los modulos esten cargados
+  #   after = [ "systemd-udev-settle.service" "systemd-modules-load.service" ];
+  #   wants = [ "systemd-modules-load.service" ];
+  #
+  #   serviceConfig = {
+  #     Type = "simple";
+  #     ExecStartPre = "${pkgs.coreutils}/bin/sleep 2";  # Esperar dispositivos USB
+  #     ExecStart = "${pkgs.tiny-dfr}/bin/tiny-dfr";
+  #     Restart = "on-failure";
+  #     RestartSec = "5s";
+  #
+  #     # Reintentar varias veces si falla al inicio
+  #     StartLimitIntervalSec = 60;
+  #     StartLimitBurst = 5;
+  #   };
+  # };
 
   # ===========================================================================
   # POWER MANAGEMENT: TLP para laptop
@@ -226,39 +323,51 @@
   # nixos-hardware/common/pc/laptop habilita TLP por defecto
   # Aqui configuramos settings especificos Intel Skylake
 
-  services.tlp.settings = {
-    # CPU Intel Skylake
-    CPU_SCALING_GOVERNOR_ON_AC = "performance";
-    CPU_SCALING_GOVERNOR_ON_BAT = "powersave";
-    CPU_ENERGY_PERF_POLICY_ON_AC = "performance";
-    CPU_ENERGY_PERF_POLICY_ON_BAT = "power";
+  # Deshabilitar power-profiles-daemon (conflicto con TLP, GNOME lo activa)
+  services.power-profiles-daemon.enable = false;
 
-    # Limites P-State en bateria
-    CPU_MIN_PERF_ON_BAT = 0;
-    CPU_MAX_PERF_ON_BAT = 75;
+  services.tlp = {
+    enable = true;
+    settings = {
+      # CPU Intel Skylake
+      CPU_SCALING_GOVERNOR_ON_AC = "performance";
+      CPU_SCALING_GOVERNOR_ON_BAT = "powersave";
+      CPU_ENERGY_PERF_POLICY_ON_AC = "performance";
+      CPU_ENERGY_PERF_POLICY_ON_BAT = "power";
 
-    # Intel GPU
-    INTEL_GPU_MIN_FREQ_ON_BAT = 300;
-    INTEL_GPU_MAX_FREQ_ON_BAT = 800;
+      # Limites P-State en bateria
+      CPU_MIN_PERF_ON_BAT = 0;
+      CPU_MAX_PERF_ON_BAT = 75;
 
-    # Desactivar USB autosuspend (estabilidad TB3)
-    USB_AUTOSUSPEND = 0;
+      # Intel GPU
+      INTEL_GPU_MIN_FREQ_ON_BAT = 300;
+      INTEL_GPU_MAX_FREQ_ON_BAT = 800;
 
-    # WiFi power save
-    WIFI_PWR_ON_AC = "off";
-    WIFI_PWR_ON_BAT = "on";
+      # Desactivar USB autosuspend (estabilidad TB3)
+      USB_AUTOSUSPEND = 0;
+
+      # WiFi power save
+      WIFI_PWR_ON_AC = "off";
+      WIFI_PWR_ON_BAT = "on";
+    };
   };
 
   # ===========================================================================
-  # UDEV: Reglas hardware Apple
+  # UDEV: Reglas hardware Apple + Touch Bar rebind
   # ===========================================================================
 
   services.udev.extraRules = ''
     # Apple SPI devices
     SUBSYSTEM=="spi", KERNEL=="spidev*", GROUP="input", MODE="0660"
 
-    # Touch Bar USB
+    # Touch Bar USB - iBridge device
+    # Vendor: 05ac (Apple), Product: 8600 (iBridge)
     SUBSYSTEM=="usb", ATTRS{idVendor}=="05ac", ATTRS{idProduct}=="8600", GROUP="video", MODE="0664"
+
+    # Rebind automatico del iBridge cuando se detecta
+    # Esto ayuda a que apple-ibridge tome control del dispositivo
+    ACTION=="add", SUBSYSTEM=="usb", ATTRS{idVendor}=="05ac", ATTRS{idProduct}=="8600", \
+      RUN+="${pkgs.bash}/bin/bash -c 'echo 1-3 > /sys/bus/usb/drivers_probe 2>/dev/null || true'"
 
     # Backlight permisos
     ACTION=="add", SUBSYSTEM=="backlight", KERNEL=="intel_backlight", RUN+="${pkgs.coreutils}/bin/chmod 666 /sys/class/backlight/intel_backlight/brightness"
@@ -269,20 +378,38 @@
   # ===========================================================================
 
   environment.variables = {
-    # GTK HiDPI
-    GDK_SCALE = "2";
-    GDK_DPI_SCALE = "0.5";
+    # GTK - sin escalado de ventanas, solo DPI
+    GDK_SCALE = "1";
+    GDK_DPI_SCALE = "1";
 
-    # Qt HiDPI
+    # Qt HiDPI - automático
     QT_AUTO_SCREEN_SCALE_FACTOR = "1";
     QT_ENABLE_HIGHDPI_SCALING = "1";
 
-    # Cursor
-    XCURSOR_SIZE = "48";
+    # Cursor (32 es normal, 48 es grande)
+    XCURSOR_SIZE = "32";
+    XCURSOR_THEME = "Adwaita";
+
+    # Java apps
+    _JAVA_OPTIONS = "-Dsun.java2d.uiScale=1.75";
 
     # Intel VAAPI
     LIBVA_DRIVER_NAME = "iHD";
   };
+
+  # Xresources para Xft (fonts en X11)
+  # DPI 168 = 1.75x del estándar 96 (punto medio para Retina 13")
+  environment.etc."X11/Xresources".text = ''
+    Xft.dpi: 168
+    Xft.autohint: 0
+    Xft.lcdfilter: lcddefault
+    Xft.hintstyle: hintfull
+    Xft.hinting: 1
+    Xft.antialias: 1
+    Xft.rgba: rgb
+    Xcursor.size: 32
+    Xcursor.theme: Adwaita
+  '';
 
   # ===========================================================================
   # FONTS: Optimizacion Retina
@@ -363,7 +490,7 @@
       echo ""
       echo "Touch Bar: $(systemctl is-active tiny-dfr 2>/dev/null || echo 'unknown')"
       echo ""
-      echo "Commands: macbook-diag, touchbar-status"
+      echo "Commands: macbook-diag, touchbar-status, touchbar-rebind"
     '')
 
     # Script: Diagnostico hardware
@@ -382,12 +509,20 @@
       done
       echo ""
 
-      echo "=== 2. TOUCH BAR ==="
-      if lsmod | grep -q "apple_ib\|apple-ib"; then
-        echo "[OK] iBridge modules"
-      else
-        echo "[WARN] iBridge modules missing"
-      fi
+      echo "=== 2. TOUCH BAR (T1 iBridge) ==="
+      for mod in apple_ibridge apple_ib_tb apple_ib_als; do
+        mod_alt=$(echo $mod | tr '_' '-')
+        if lsmod | grep -qE "^$mod|^$mod_alt"; then
+          echo "[OK] $mod"
+        else
+          echo "[WARN] $mod NOT loaded"
+        fi
+      done
+      echo ""
+      echo "iBridge USB device:"
+      lsusb | grep -i "8600\|iBridge" || echo "  [WARN] iBridge not found (05ac:8600)"
+      echo ""
+      echo "tiny-dfr service:"
       systemctl is-active tiny-dfr &>/dev/null && echo "[OK] tiny-dfr running" || echo "[FAIL] tiny-dfr not running"
       echo ""
 
@@ -418,15 +553,90 @@
       echo "=== TOUCH BAR STATUS ==="
       echo ""
       echo "Kernel modules:"
-      lsmod | grep -E "apple.*(ib|tb)" || echo "  (none loaded)"
+      echo "  apple-ibridge: $(lsmod | grep -qE '^apple.ibridge' && echo 'LOADED' || echo 'NOT LOADED')"
+      echo "  apple-ib-tb:   $(lsmod | grep -qE '^apple.ib.tb' && echo 'LOADED' || echo 'NOT LOADED')"
+      echo "  apple-ib-als:  $(lsmod | grep -qE '^apple.ib.als' && echo 'LOADED' || echo 'NOT LOADED')"
       echo ""
-      echo "Service:"
-      systemctl status tiny-dfr --no-pager 2>/dev/null | head -5
+      echo "USB iBridge device (05ac:8600):"
+      lsusb | grep -i "8600\|iBridge" || echo "  NOT FOUND"
       echo ""
-      echo "USB devices:"
-      lsusb | grep -i apple || echo "  (none)"
+      echo "USB tree for iBridge:"
+      lsusb -t 2>/dev/null | grep -A5 "8600" | head -6 || echo "  (run lsusb -t manually)"
       echo ""
-      echo "Control: sudo systemctl {start|stop|restart} tiny-dfr"
+      echo "Service status:"
+      systemctl status tiny-dfr --no-pager 2>/dev/null | head -10
+      echo ""
+      echo "Commands:"
+      echo "  touchbar-rebind    - Force USB rebind for iBridge"
+      echo "  sudo systemctl restart tiny-dfr"
+      echo "  sudo modprobe apple-ib-tb"
+    '')
+
+    # Script: Force rebind Touch Bar USB
+    (writeShellScriptBin "touchbar-rebind" ''
+      #!/bin/bash
+      echo "=== TOUCH BAR USB REBIND ==="
+      echo ""
+      echo "This script forces the iBridge USB device to rebind to the apple-ibridge driver."
+      echo "Run with sudo if needed."
+      echo ""
+
+      # Encontrar el bus/device del iBridge
+      IBRIDGE=$(lsusb | grep "05ac:8600" | head -1)
+      if [ -z "$IBRIDGE" ]; then
+        echo "[ERROR] iBridge device (05ac:8600) not found!"
+        echo "Check if T1 chip is in recovery mode:"
+        lsusb | grep -i apple
+        exit 1
+      fi
+
+      echo "Found: $IBRIDGE"
+      echo ""
+
+      # Extraer el puerto USB (tipicamente 1-3 para MacBook Pro 13,2)
+      # Buscar en /sys/bus/usb/devices/
+      USB_PORT=""
+      for dev in /sys/bus/usb/devices/*/idProduct; do
+        if [ -f "$dev" ] && [ "$(cat $dev 2>/dev/null)" = "8600" ]; then
+          USB_PORT=$(dirname $dev | xargs basename)
+          break
+        fi
+      done
+
+      if [ -z "$USB_PORT" ]; then
+        echo "[WARN] Could not determine USB port, trying default 1-3"
+        USB_PORT="1-3"
+      fi
+
+      echo "USB port: $USB_PORT"
+      echo ""
+
+      echo "Unbinding and rebinding..."
+      # Unbind
+      echo "$USB_PORT" | sudo tee /sys/bus/usb/drivers/usb/unbind 2>/dev/null || true
+      sleep 1
+
+      # Rebind
+      echo "$USB_PORT" | sudo tee /sys/bus/usb/drivers_probe 2>/dev/null || true
+      sleep 1
+
+      # Unbind HID interfaces if present (1-3:1.2 and 1-3:1.3)
+      for iface in "$USB_PORT:1.2" "$USB_PORT:1.3"; do
+        echo "$iface" | sudo tee /sys/bus/usb/drivers/usbhid/unbind 2>/dev/null || true
+      done
+      sleep 1
+
+      # Reprobe interfaces
+      for iface in "$USB_PORT:1.2" "$USB_PORT:1.3"; do
+        echo "$iface" | sudo tee /sys/bus/usb/drivers_probe 2>/dev/null || true
+      done
+
+      echo ""
+      echo "Restarting tiny-dfr..."
+      sudo systemctl restart tiny-dfr
+
+      echo ""
+      echo "Done. Check with: touchbar-status"
     '')
   ];
 }

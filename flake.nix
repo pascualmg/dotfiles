@@ -160,8 +160,11 @@
                 useGlobalPkgs = true;
                 # Instalar paquetes en /etc/profiles en lugar de ~/.nix-profile
                 useUserPackages = true;
-                # Pasar inputs a home-manager modules
-                extraSpecialArgs = { inherit inputs; };
+                # Pasar inputs Y hostname a home-manager modules
+                extraSpecialArgs = {
+                  inherit inputs;
+                  hostname = hostname;  # NUEVO: permite configs por maquina
+                };
                 # Configuracion del usuario passh
                 users.passh = import ./modules/home-manager;
                 # Permitir paquetes unfree en home-manager
@@ -249,31 +252,19 @@
         # ---------------------------------------------------------------------
         # MACBOOK - Laptop Apple MacBook Pro 13,2 (2016)
         # ---------------------------------------------------------------------
-        # Hardware: MacBook Pro 13" 2016 con Touch Bar
-        # - CPU: Intel Core i5/i7 Skylake
-        # - Display: Retina 2560x1600 (227 DPI)
-        # - GPU: Intel Iris Graphics 550
-        # - WiFi: Broadcom BCM43602
-        # - Touch Bar: OLED con T1 chip
-        #
-        # Instalacion: USB 128GB (testing)
-        # Desktop: XMonad (compartido con aurin)
-        #
-        # PURE FLAKE desde dia 1:
-        #   - Home Manager integrado
-        #   - nixos-hardware para Apple
-        #   - NO requiere --impure
+        # Hardware: Intel Skylake, Touch Bar, SSD externo Thunderbolt
+        # Rol: Uso movil, desarrollo ligero
         #
         # Uso:
         #   sudo nixos-rebuild switch --flake ~/dotfiles#macbook
         # ---------------------------------------------------------------------
         macbook = mkNixosConfig {
           hostname = "macbook";
-          configPath = ./nixos-macbook/etc/nixos/configuration-pure.nix;
+          configPath = ./nixos-macbook/etc/nixos/configuration.nix;
           enableHomeManager = true;
-          # nixos-hardware para MacBook Pro
           extraModules = [
-            nixos-hardware.nixosModules.apple-macbook-pro-13-2
+            nixos-hardware.nixosModules.apple-macbook-pro
+            nixos-hardware.nixosModules.common-pc-ssd
           ];
         };
       };
@@ -292,7 +283,10 @@
       homeConfigurations = {
         passh = home-manager.lib.homeManagerConfiguration {
           inherit pkgs;
-          extraSpecialArgs = { inherit inputs; };
+          extraSpecialArgs = {
+            inherit inputs;
+            hostname = "aurin";  # Default para standalone
+          };
           modules = [
             ./modules/home-manager
           ];

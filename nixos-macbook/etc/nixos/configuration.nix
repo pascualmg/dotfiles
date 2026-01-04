@@ -29,20 +29,13 @@
 #   5. Copiar esta config + hardware-configuration.nix generado
 #   6. nixos-install
 #
-# Stow:
-#   sudo stow -v -t / nixos-macbook
-#   sudo nixos-rebuild switch
+# Flake:
+#   sudo nixos-rebuild switch --flake ~/dotfiles#macbook
 # =============================================================================
 
 { config, pkgs, lib, ... }:
 
-let
-  # Canal unstable para paquetes recientes
-  unstable = import (fetchTarball
-    "https://github.com/nixos/nixpkgs/archive/nixos-unstable.tar.gz") {
-      config = config.nixpkgs.config;
-    };
-in {
+{
   imports = [
     # Hardware configuration generado por nixos-generate-config
     ./hardware-configuration.nix
@@ -51,26 +44,22 @@ in {
     # Incluye: SPI drivers, Touch Bar, Broadcom WiFi, HiDPI, audio quirks
     ./modules/apple-hardware.nix
 
-    # nixos-hardware profiles (importar via nix-channel o flake)
-    # OPCION A: Via nix-channel (tradicional)
-    #   sudo nix-channel --add https://github.com/NixOS/nixos-hardware/archive/master.tar.gz nixos-hardware
-    #   sudo nix-channel --update
-    #   Luego descomentar:
-    # <nixos-hardware/apple/macbook-pro>
-    # <nixos-hardware/common/pc/ssd>
-
-    # OPCION B: Via fetchTarball (sin channels)
-    # (Descomentado para uso inmediato)
-    "${builtins.fetchTarball "https://github.com/NixOS/nixos-hardware/archive/master.tar.gz"}/apple/macbook-pro"
-    "${builtins.fetchTarball "https://github.com/NixOS/nixos-hardware/archive/master.tar.gz"}/common/pc/ssd"
-
-    # Home Manager (opcional - descomentar si usas channels)
-    # <home-manager/nixos>
+    # nixos-hardware profiles: Se importan via flake.nix extraModules
+    # - nixos-hardware.nixosModules.apple-macbook-pro
+    # - nixos-hardware.nixosModules.common-pc-ssd
+    #
+    # Home Manager: Se integra via flake.nix enableHomeManager = true
   ];
 
   # ===== UNFREE =====
   # CRITICO: Necesario para firmware Broadcom WiFi
   nixpkgs.config.allowUnfree = true;
+
+  # Broadcom WiFi driver marcado como inseguro (CVEs conocidos)
+  # Necesario para BCM43602 en MacBook Pro 13,2
+  nixpkgs.config.permittedInsecurePackages = [
+    "broadcom-sta-6.30.223.271-59-6.18.2"
+  ];
 
   # ===== CONSOLE =====
   console = {
@@ -137,11 +126,7 @@ in {
     xserver = {
       enable = true;
 
-      # Display Manager
-      displayManager.gdm.enable = true;
-
-      # Desktop (elegir uno)
-      # desktopManager.gnome.enable = true;
+      # Window Manager
       windowManager.xmonad = {
         enable = true;
         enableContribAndExtras = true;
@@ -151,8 +136,16 @@ in {
       xkb = {
         layout = "us,es";
         variant = "";
+        # Caps Lock → Escape (workaround Touch Bar sin funcionar)
+        options = "caps:escape";
       };
     };
+
+    # Display Manager (opcion movida de xserver)
+    displayManager.gdm.enable = true;
+
+    # GNOME Desktop (nueva ubicación, fuera de xserver)
+    desktopManager.gnome.enable = true;
 
     # SSH
     openssh = {
@@ -162,6 +155,9 @@ in {
         PasswordAuthentication = true;
       };
     };
+
+    # Bluetooth manager (GUI para XMonad)
+    blueman.enable = true;
 
     # Printing (opcional)
     # printing.enable = true;
@@ -203,10 +199,24 @@ in {
     sudo.wheelNeedsPassword = true;  # Seguridad laptop
   };
 
+  # ===== FONTS =====
+  fonts.packages = with pkgs; [
+    # Nerd Fonts (para alacritty, xmobar, etc)
+    nerd-fonts.hack
+    nerd-fonts.monoid
+    nerd-fonts.jetbrains-mono
+    nerd-fonts.fira-code
+    # Fuentes básicas
+    dejavu_fonts
+    liberation_ttf
+    noto-fonts
+    noto-fonts-color-emoji
+  ];
+
   # ===== SYSTEM PACKAGES =====
   environment.systemPackages = with pkgs; [
     # Terminal
-    unstable.alacritty
+    alacritty  # Ya es unstable via flake
     tmux
     byobu
 
@@ -231,6 +241,9 @@ in {
 
     # Network
     networkmanagerapplet
+
+    # Bluetooth GUI (para XMonad)
+    blueman
 
     # LSP Nix
     nil

@@ -17,6 +17,7 @@
 #   - fetchTarball eliminado (usa nixpkgs del flake)
 #   - Opciones de git actualizadas a nueva sintaxis
 #   - Paquetes problematicos comentados o reemplazados
+#   - xmobar: migrado a modules/home-manager/programs/xmobar.nix
 # =============================================================================
 
 { config, pkgs, lib, ... }:
@@ -44,6 +45,8 @@
     # =========================================================================
     # NOTA: Usamos pkgs directamente (viene del flake nixpkgs-unstable).
     # Ya no necesitamos fetchTarball para unstable/master.
+    #
+    # xmobar se instala via programs/xmobar.nix cuando enable=true
     # =========================================================================
     packages = with pkgs; [
       # Core utils
@@ -78,7 +81,7 @@
 
       # XMonad y dependencias
       # xmonad-with-packages  # DISABLED: xmonad configurado a nivel de sistema (modules/xmonad.nix)
-      xmobar
+      # xmobar  # MIGRATED: ahora via programs/xmobar.nix
       # trayer  # DISABLED: build failure in nixpkgs-unstable (panel.c compilation error)
       dmenu
       xwinwrap
@@ -249,13 +252,15 @@
     };
 
     # Activaciones
+    # NOTA: xmobar REMOVIDO de stow - ahora gestionado por home-manager
     activation = {
       linkDotfiles = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
         echo "Linkeando dotfiles con stow..."
         cd ${config.home.homeDirectory}/dotfiles
         # Solo linkear configs de usuario, no módulos de sistema ni nixos-*
+        # NOTA: xmobar removido - ahora gestionado por home-manager
         ${pkgs.stow}/bin/stow -v -R -t ${config.home.homeDirectory} \
-          alacritty composer fish picom xmobar xmonad claude-code
+          alacritty composer fish picom xmonad claude-code
       '';
 
       createDirectories = lib.hm.dag.entryAfter [ "linkDotfiles" ] ''
