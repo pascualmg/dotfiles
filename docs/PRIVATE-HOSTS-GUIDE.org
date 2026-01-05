@@ -1,30 +1,27 @@
-#+TITLE: Hosts de Vocento - Problema y Soluciones
+#+TITLE: Hosts Privados/Trabajo - Problema y Soluciones
 #+AUTHOR: passh
 #+DATE: 2026-01-05
 #+OPTIONS: toc:2
 
 * El Problema
 
-En =aurin= y =macbook= necesitamos ~534 líneas de hosts de desarrollo de Vocento
-(dominios como =desnlocal.abc.es=, =desnlocal.elcorreo.com=, etc.)
+En =aurin= y =macbook= necesitamos hosts de desarrollo del trabajo
+(dominios internos, staging, desarrollo local, etc.)
 
-El archivo fuente está en:
-#+BEGIN_SRC
-/home/passh/src/vocento/autoenv/hosts_all.txt
-#+END_SRC
+El archivo fuente está en un repo de trabajo externo al flake.
 
 ** Por qué no puede estar en el repo público
 
-- Contiene IPs internas de Vocento
-- Dominios de desarrollo/staging
-- Información de infraestructura corporativa
+- Contiene IPs internas
+- Dominios de desarrollo/staging corporativos
+- Información de infraestructura que no debe ser pública
 
 ** El código actual (configuration-pure.nix)
 
 #+BEGIN_SRC nix
 networking.extraHosts = if builtins.pathExists
-  "/home/passh/src/vocento/autoenv/hosts_all.txt" then
-    builtins.readFile "/home/passh/src/vocento/autoenv/hosts_all.txt"
+  "/home/passh/src/work/work-env/hosts_all.txt" then
+    builtins.readFile "/home/passh/src/work/work-env/hosts_all.txt"
   else
     "";
 #+END_SRC
@@ -45,14 +42,14 @@ Por eso necesitamos =--impure= para que Nix pueda leer el archivo externo.
 sudo nixos-rebuild switch --flake ~/dotfiles#aurin --impure
 #+END_SRC
 
-El repo =vocento/autoenv= ya está clonado en =/home/passh/src/vocento/autoenv=.
+El repo =work/work-env= ya está clonado en =/home/passh/src/work/work-env=.
 
 ** Macbook
 
-Requiere clonar el repo de autoenv:
+Requiere clonar el repo de work-env:
 #+BEGIN_SRC bash
 # Primera vez
-git clone <url-vocento/autoenv> ~/src/vocento/autoenv
+git clone <url-work/work-env> ~/src/work/work-env
 
 # Luego
 sudo nixos-rebuild switch --flake ~/dotfiles#macbook --impure
@@ -61,8 +58,8 @@ sudo nixos-rebuild switch --flake ~/dotfiles#macbook --impure
 Añadir a =nixos-macbook/etc/nixos/configuration.nix=:
 #+BEGIN_SRC nix
 networking.extraHosts = if builtins.pathExists
-  "/home/passh/src/vocento/autoenv/hosts_all.txt" then
-    builtins.readFile "/home/passh/src/vocento/autoenv/hosts_all.txt"
+  "/home/passh/src/work/work-env/hosts_all.txt" then
+    builtins.readFile "/home/passh/src/work/work-env/hosts_all.txt"
   else
     "";
 #+END_SRC
@@ -117,19 +114,19 @@ creation_rules:
 
 4. Encriptar el archivo:
 #+BEGIN_SRC bash
-sops -e /home/passh/src/vocento/autoenv/hosts_all.txt > secrets/vocento-hosts.enc
+sops -e /home/passh/src/work/work-env/hosts_all.txt > secrets/work-hosts.enc
 #+END_SRC
 
 5. Usar en NixOS:
 #+BEGIN_SRC nix
 { config, ... }:
 {
-  sops.defaultSopsFile = ./secrets/vocento-hosts.enc;
+  sops.defaultSopsFile = ./secrets/work-hosts.enc;
   sops.age.keyFile = "/home/passh/.config/sops/age/keys.txt";
 
-  sops.secrets.vocento-hosts = {};
+  sops.secrets.work-hosts = {};
 
-  networking.extraHosts = builtins.readFile config.sops.secrets.vocento-hosts.path;
+  networking.extraHosts = builtins.readFile config.sops.secrets.work-hosts.path;
 }
 #+END_SRC
 
@@ -151,13 +148,13 @@ sops -e /home/passh/src/vocento/autoenv/hosts_all.txt > secrets/vocento-hosts.en
 
 *** Implementación
 
-1. Crear repo privado (ej: =github.com/pascualmg/vocento-secrets=)
+1. Crear repo privado (ej: =github.com/pascualmg/work-secrets=)
 
 2. Añadir como input:
 #+BEGIN_SRC nix
 # flake.nix
-inputs.vocento-secrets = {
-  url = "git+ssh://git@github.com/pascualmg/vocento-secrets";
+inputs.work-secrets = {
+  url = "git+ssh://git@github.com/pascualmg/work-secrets";
   flake = false;  # No es un flake, solo archivos
 };
 #+END_SRC
@@ -166,13 +163,13 @@ inputs.vocento-secrets = {
 #+BEGIN_SRC nix
 { inputs, ... }:
 {
-  networking.extraHosts = builtins.readFile "${inputs.vocento-secrets}/hosts_all.txt";
+  networking.extraHosts = builtins.readFile "${inputs.work-secrets}/hosts_all.txt";
 }
 #+END_SRC
 
 4. Actualizar cuando cambie:
 #+BEGIN_SRC bash
-nix flake update vocento-secrets
+nix flake update work-secrets
 sudo nixos-rebuild switch --flake .#aurin
 #+END_SRC
 
@@ -180,7 +177,7 @@ sudo nixos-rebuild switch --flake .#aurin
 
 Intentar con symlink dentro del flake:
 #+BEGIN_SRC bash
-ln -s /home/passh/src/vocento/autoenv/hosts_all.txt ~/dotfiles/secrets/vocento-hosts.txt
+ln -s /home/passh/src/work/work-env/hosts_all.txt ~/dotfiles/secrets/work-hosts.txt
 #+END_SRC
 
 *Por qué no funciona*:
@@ -193,7 +190,7 @@ ln -s /home/passh/src/vocento/autoenv/hosts_all.txt ~/dotfiles/secrets/vocento-h
 ** Opción D: Copiar archivo manualmente
 
 #+BEGIN_SRC bash
-cp /home/passh/src/vocento/autoenv/hosts_all.txt ~/dotfiles/secrets/vocento-hosts.txt
+cp /home/passh/src/work/work-env/hosts_all.txt ~/dotfiles/secrets/work-hosts.txt
 echo "secrets/" >> ~/dotfiles/.gitignore
 #+END_SRC
 
@@ -210,11 +207,11 @@ echo "secrets/" >> ~/dotfiles/.gitignore
 
 *Fecha*: 2026-01-05
 
-*Decisión*: Usar =--impure= con el archivo en =vocento/autoenv=
+*Decisión*: Usar =--impure= con el archivo en =work/work-env=
 
 *Razón*:
 - Simplicidad
-- El archivo ya existe en el repo de autoenv
+- El archivo ya existe en el repo de work-env
 - No requiere setup adicional
 - Funciona aunque requiera --impure
 
@@ -226,13 +223,13 @@ echo "secrets/" >> ~/dotfiles/.gitignore
 * Comandos de Referencia
 
 #+BEGIN_SRC bash
-# Aurin (con hosts Vocento)
+# Aurin (con hosts Work)
 sudo nixos-rebuild switch --flake ~/dotfiles#aurin --impure
 
-# Macbook (con hosts Vocento, requiere clonar autoenv primero)
+# Macbook (con hosts Work, requiere clonar work-env primero)
 sudo nixos-rebuild switch --flake ~/dotfiles#macbook --impure
 
-# Macbook (sin hosts Vocento, si no tienes autoenv clonado)
+# Macbook (sin hosts Work, si no tienes work-env clonado)
 sudo nixos-rebuild switch --flake ~/dotfiles#macbook
 #+END_SRC
 
