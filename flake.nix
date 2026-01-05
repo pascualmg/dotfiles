@@ -11,25 +11,19 @@
 #   - macbook: Laptop Apple MacBook Pro 13,2 (2016)
 #
 # USO CON FLAKES:
-#   # IMPORTANTE: Requiere --impure mientras las configs usen channels
-#   # (Esto es temporal hasta migrar completamente a flakes)
-#
 #   # Desde el directorio dotfiles
-#   sudo nixos-rebuild switch --flake .#aurin --impure
-#   sudo nixos-rebuild switch --flake .#vespino --impure
-#   sudo nixos-rebuild switch --flake .#macbook --impure
+#   sudo nixos-rebuild switch --flake .#aurin
+#   sudo nixos-rebuild switch --flake .#vespino --impure  # vespino aun usa channels
+#   sudo nixos-rebuild switch --flake .#macbook
 #
 #   # Desde cualquier lugar
-#   sudo nixos-rebuild switch --flake ~/dotfiles#aurin --impure
-#
-#   # Desde GitHub (requiere migracion completa a flakes puros)
-#   # sudo nixos-rebuild switch --flake github:pascualmg/dotfiles#aurin
+#   sudo nixos-rebuild switch --flake ~/dotfiles#aurin
 #
 #   # Solo testear (sin hacer switch)
-#   sudo nixos-rebuild test --flake .#aurin --impure
+#   sudo nixos-rebuild test --flake .#aurin
 #
 #   # Ver que cambiaria (dry-run)
-#   sudo nixos-rebuild dry-build --flake .#aurin --impure
+#   sudo nixos-rebuild dry-build --flake .#aurin
 #
 # USO TRADICIONAL (sigue funcionando igual que siempre):
 #   sudo stow -v -t / nixos-aurin
@@ -44,20 +38,15 @@
 #   nix flake check --impure      # Verificar (con impure por channels)
 #
 # =============================================================================
-# NOTA SOBRE --impure:
+# NOTA SOBRE MIGRACION:
 #
-# Las configuraciones actuales usan channels para home-manager:
-#   imports = [ <home-manager/nixos> ];
+# aurin y macbook usan home-manager integrado en el flake (NO requieren --impure)
+# vespino aun usa <home-manager/nixos> channel (requiere --impure)
 #
-# Esto requiere --impure porque Nix puro no puede resolver paths como <...>.
-#
-# PLAN DE MIGRACION (en progreso):
-#   Fase 1: Crear modules/home-manager/ con config pura [COMPLETADO]
-#   Fase 2: Integrar home-manager en flake [ESTE ARCHIVO]
-#   Fase 3: Eliminar <home-manager/nixos> de configuration.nix [PENDIENTE]
-#   Fase 4: Entonces se puede usar sin --impure
-#
-# Por ahora, --impure funciona perfectamente y es seguro.
+# ESTADO:
+#   aurin:   ✅ Migrado (configuration-pure.nix + enableHomeManager=true)
+#   macbook: ✅ Migrado
+#   vespino: ⏳ Pendiente de migracion
 # =============================================================================
 
 {
@@ -192,36 +181,14 @@
         # Testear cambios en vespino primero cuando sea posible
         #
         # Uso:
-        #   sudo nixos-rebuild test --flake ~/dotfiles#aurin --impure
         #   sudo nixos-rebuild switch --flake ~/dotfiles#aurin --impure
         #
-        # ESTADO HOME-MANAGER:
-        #   enableHomeManager = false (por ahora)
-        #   configuration.nix todavia usa <home-manager/nixos>
-        #   Cambiar a true cuando se elimine el import del channel
+        # NOTA: --impure necesario para leer /home/passh/src/vocento/autoenv/hosts_all.txt
+        # Sin --impure, los hosts de desarrollo Vocento no se incluyen en /etc/hosts
+        #
+        # Home Manager integrado via flake (configuration-pure.nix)
         # ---------------------------------------------------------------------
         aurin = mkNixosConfig {
-          hostname = "aurin";
-          configPath = ./nixos-aurin/etc/nixos/configuration.nix;
-          enableHomeManager = false;  # TODO: cambiar a true en Fase 3
-        };
-
-        # ---------------------------------------------------------------------
-        # AURIN-PURE - Version experimental sin channels
-        # ---------------------------------------------------------------------
-        # EXPERIMENTAL: Esta configuracion usa home-manager del flake
-        # en lugar del channel. Usar para testing antes de migrar aurin.
-        #
-        # FASE 3: Configuracion lista con:
-        #   - configuration-pure.nix (sin <home-manager/nixos>)
-        #   - Home Manager integrado via flake
-        #   - NO requiere --impure
-        #
-        # Uso:
-        #   sudo nixos-rebuild test --flake ~/dotfiles#aurin-pure
-        #   (sin --impure!)
-        # ---------------------------------------------------------------------
-        aurin-pure = mkNixosConfig {
           hostname = "aurin";
           configPath = ./nixos-aurin/etc/nixos/configuration-pure.nix;
           enableHomeManager = true;
@@ -324,18 +291,16 @@
           echo ""
           echo "Comandos flake:"
           echo "  nix flake show           - Mostrar outputs"
-          echo "  nix flake check --impure - Verificar sintaxis"
+          echo "  nix flake check          - Verificar sintaxis"
           echo "  nix flake update         - Actualizar lock"
           echo ""
-          echo "Rebuild NixOS (requiere --impure por ahora):"
-          echo "  sudo nixos-rebuild test --flake .#aurin --impure"
-          echo "  sudo nixos-rebuild switch --flake .#vespino --impure"
+          echo "Rebuild NixOS:"
+          echo "  sudo nixos-rebuild switch --flake .#aurin"
+          echo "  sudo nixos-rebuild switch --flake .#macbook"
+          echo "  sudo nixos-rebuild switch --flake .#vespino --impure  # aun usa channels"
           echo ""
           echo "Home Manager standalone:"
           echo "  home-manager switch --flake .#passh"
-          echo ""
-          echo "Metodo tradicional (sigue funcionando):"
-          echo "  sudo stow -t / nixos-aurin && sudo nixos-rebuild switch"
           echo ""
         '';
       };

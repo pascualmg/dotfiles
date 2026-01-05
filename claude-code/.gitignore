@@ -7,9 +7,10 @@
 # máquinas (aurin → vespino → macbook)
 # =============================================================================
 
-# TOKENS Y CREDENCIALES (NUNCA SUBIR)
-# Si .claude.json contiene tokens OAuth, API keys, etc., descomentaresto:
-# .claude.json
+# DATOS PERSONALES Y ESTADÍSTICAS (NUNCA SUBIR)
+# .claude.json contiene: userID, estadísticas de uso, contadores de sesión,
+# costos acumulados, historial de tips, etc. - datos personales por máquina
+.claude.json
 
 # CACHE Y TEMPORALES (NO SUBIR)
 *.swp

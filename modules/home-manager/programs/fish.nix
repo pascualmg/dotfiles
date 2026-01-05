@@ -48,9 +48,9 @@
         ll = "eza -la --icons";
         tree = "eza --tree --icons";
 
-        # NixOS helpers
-        nrs = "sudo nixos-rebuild switch --flake ~/dotfiles#aurin-pure";
-        nrt = "sudo nixos-rebuild test --flake ~/dotfiles#aurin-pure";
+        # NixOS helpers (--impure needed for Vocento hosts file)
+        nrs = "sudo nixos-rebuild switch --flake ~/dotfiles#aurin --impure";
+        nrt = "sudo nixos-rebuild test --flake ~/dotfiles#aurin --impure";
         hms = "home-manager switch";
       };
 

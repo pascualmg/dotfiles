@@ -558,12 +558,45 @@ El teclado Apple SPI tiene las teclas =º ª= y =< >= intercambiadas respecto al
 
 Esto funciona tanto en X11 (XMonad) como en Wayland (GNOME) porque keyd opera a nivel evdev.
 
+* Hosts Privados de Trabajo
+
+** El Problema
+
+Para desarrollo necesitamos hosts internos (staging, dev, etc.) que no pueden
+estar en un repo público. El archivo está en un repo de trabajo externo.
+
+** Por qué requiere --impure
+
+En NixOS Flakes, =builtins.pathExists= para paths externos al flake SIEMPRE
+devuelve =false= en evaluación pura. Por eso usamos =--impure=.
+
+** Solución Actual
+
+#+BEGIN_SRC bash
+# Aurin (con hosts de trabajo)
+sudo nixos-rebuild switch --flake ~/dotfiles#aurin --impure
+
+# Macbook (requiere clonar repo de trabajo primero)
+git clone <work-repo> ~/src/work/work-env
+sudo nixos-rebuild switch --flake ~/dotfiles#macbook --impure
+#+END_SRC
+
+** Opciones Futuras (cuando haga falta)
+
+| Opción | Puro? | Complejidad | Notas |
+|--------|-------|-------------|-------|
+| =--impure= (actual) | No | Baja | Simple, funciona |
+| sops-nix | Sí | Media | Encripta secretos en repo |
+| Repo privado input | Sí | Media | Flake input con SSH |
+
+Para implementar sops-nix: [[https://github.com/Mic92/sops-nix][sops-nix GitHub]]
+
 * TODO Tareas Pendientes
 
 - [ ] Revisar y limpiar configs obsoletas (shell/, composer/)
 - [ ] Documentar scripts útiles en scripts/
-- [ ] Añadir config de alacritty al README
-- [ ] Backup automático dotfiles a GitHub/GitLab
+- [ ] Migrar xmonad a home-manager (si merece la pena)
+- [ ] Considerar sops-nix para secretos
 
 * Roadmap: Migración Stow → Home Manager
 
@@ -734,8 +767,11 @@ Esto crea: =~/.config/nueva-app/config.conf= → =~/dotfiles/nueva-app/.config/n
 
 ---
 
-*Última actualización:* 2026-01-04
-*Sistemas:* Aurin (NixOS 25.05), MacBook Pro 13,2 (NixOS Flakes)
+*Última actualización:* 2026-01-05
+*Sistemas:* Aurin (NixOS 25.05), MacBook Pro 13,2 (NixOS Flakes), Vespino (pendiente migrar)
 *Shell principal:* Fish
 *Window Manager:* XMonad
 *Terminal:* Alacritty
+
+*Documentación adicional:*
+- [[file:docs/MACBOOK-INSTALL-GUIDE.org][Guía instalación MacBook]] - Paso a paso para instalar NixOS en MacBook Pro 2016

@@ -130,11 +130,13 @@
       shellcheck
       nodePackages.js-beautify
       nodePackages.stylelint
+      html-tidy  # HTML/XML formatter (doom :lang web)
 
       # Language Servers
       nodePackages.intelephense
       nodePackages.typescript-language-server
       clang-tools
+      glslang  # GLSL validator (doom :lang cc)
 
       # System monitoring
       mission-center
