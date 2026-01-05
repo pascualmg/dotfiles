@@ -478,7 +478,7 @@ direnv allow
 | Audio (CS8409)     | ✅ OK  | Driver snd-hda-macbookpro (davidjo)            |
 | WiFi (BCM43602)    | ❌ NO  | Driver wl abandonado 2019, usar USB dongle     |
 | Touch Bar (T1)     | ❌ NO  | Chip T1 en recovery mode, workaround con keyd  |
-| Webcam FaceTime HD | ✅ OK  | Driver facetimehd                              |
+| Webcam FaceTime HD | ❌ NO  | Conectada via T1, requiere reset del T1        |
 | Teclado/Trackpad   | ✅ OK  | Drivers applespi + keyd (fix ISO swap)         |
 | Pantalla HiDPI     | ✅ OK  | 168 DPI, scaling 2x en GNOME                   |
 | Batería            | ✅ OK  | ACPI estándar                                  |
@@ -525,12 +525,19 @@ No hay solución posible sin que Broadcom libere código o alguien haga ingenier
 
 ** Touch Bar T1 - Sin solución
 
-El chip T1 (Touch Bar + Touch ID) está en "Recovery Mode" permanente.
+El chip T1 (Touch Bar + Touch ID + *FaceTime HD Camera*) está en "Recovery Mode" permanente.
+
+*Dispositivos conectados al T1:*
+- Touch Bar (OLED strip)
+- Touch ID (sensor huella)
+- FaceTime HD Camera (720p)
+- Ambient Light Sensor
 
 *Problema:*
 - El T1 aparece como =05ac:1281= (DFU/Recovery) en lugar de =05ac:8600= (iBridge)
 - El firmware está corrupto o nunca fue inicializado
-- Los drivers Linux (apple-ibridge, tiny-dfr) requieren el T1 en modo normal
+- Los drivers Linux (apple-ibridge, tiny-dfr, facetimehd) requieren el T1 en modo normal
+- Sin T1 funcional, la cámara no es visible para el sistema (no hay =/dev/video*=)
 
 *Única solución:*
 - Conectar a un Mac con macOS
