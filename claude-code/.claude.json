@@ -1,5 +1,5 @@
 {
-  "numStartups": 268,
+  "numStartups": 269,
   "installMethod": "native",
   "autoUpdates": false,
   "editorMode": "vim",
@@ -44,7 +44,7 @@
     "guest-passes": 268
   },
   "memoryUsageCount": 6,
-  "promptQueueUseCount": 678,
+  "promptQueueUseCount": 681,
   "showExpandedTodos": true,
   "autoConnectIde": true,
   "cachedStatsigGates": {
@@ -572,7 +572,7 @@
     "f201405d-3116-4ec0-950a-51d4ed4edd42": {
       "hasAccess": false,
       "hasAccessNotAsDefault": false,
-      "timestamp": 1767559903629
+      "timestamp": 1767619540349
     }
   },
   "hasOpusPlanDefault": false,

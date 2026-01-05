@@ -253,6 +253,22 @@
     sudo.wheelNeedsPassword = true;  # Seguridad laptop
   };
 
+  # ===== POWER MANAGEMENT =====
+  # Deshabilitar suspensión - el MacBook no se recupera bien
+  systemd.targets = {
+    sleep.enable = false;
+    suspend.enable = false;
+    hibernate.enable = false;
+    hybrid-sleep.enable = false;
+  };
+
+  # Deshabilitar suspend en lid close
+  services.logind = {
+    lidSwitch = "ignore";
+    lidSwitchExternalPower = "ignore";
+    lidSwitchDocked = "ignore";
+  };
+
   # ===== FONTS =====
   fonts.packages = with pkgs; [
     # Nerd Fonts (para alacritty, xmobar, etc)
