@@ -64,6 +64,18 @@
     useXkbConfig = false;
   };
 
+  # ===== FONTS =====
+  fonts.packages = with pkgs; [
+    nerd-fonts.symbols-only  # Requerido por Doom Emacs (nerd-icons)
+    nerd-fonts.hack
+    nerd-fonts.jetbrains-mono
+    nerd-fonts.fira-code
+    dejavu_fonts
+    liberation_ttf
+    noto-fonts
+    noto-fonts-color-emoji
+  ];
+
   # ===== BOOT =====
   boot = {
     loader = {
@@ -145,6 +157,8 @@
     useDHCP = false;
 
     hosts = { "185.14.56.20" = [ "pascualmg" ]; };
+    # NOTA: Requiere --impure para leer paths externos al flake
+    # Sin --impure, builtins.pathExists siempre devuelve false para paths externos
     extraHosts = if builtins.pathExists
     "/home/passh/src/vocento/autoenv/hosts_all.txt" then
       builtins.readFile "/home/passh/src/vocento/autoenv/hosts_all.txt"

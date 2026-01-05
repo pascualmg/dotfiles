@@ -60,6 +60,18 @@
     useXkbConfig = false;
   };
 
+  # ===== FONTS =====
+  fonts.packages = with pkgs; [
+    nerd-fonts.symbols-only  # Requerido por Doom Emacs (nerd-icons)
+    nerd-fonts.hack
+    nerd-fonts.jetbrains-mono
+    nerd-fonts.fira-code
+    dejavu_fonts
+    liberation_ttf
+    noto-fonts
+    noto-fonts-color-emoji
+  ];
+
   # ===== BOOT =====
   boot = {
     loader = {
