@@ -69,8 +69,8 @@ for drive in /dev/nvme?n?; do
         level=$(level_char "$used_pct")
         color=$(color_by_pct "$used_pct")
 
-        # Formato con indicador de nivel para xmobar
-        output+="<fc=${color}>${level}</fc>${used_pct}% (${used_size}/${total_size}) 🌡${temp}C ⏱${hours}h ✍${written_tb} "
+        # Formato: (usado/total) 🌡temp ⏱horas ✍escrito pct% 💾[barra]
+        output+="(${used_size}/${total_size}) 🌡${temp}C ⏱${hours}h ✍${written_tb} ${used_pct}%💾<fc=${color}>${level}</fc> "
     fi
 done
 
