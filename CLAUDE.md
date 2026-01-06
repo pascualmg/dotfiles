@@ -47,25 +47,28 @@ git clone <repo-url> dotfiles
 
 **Nota**: Los wallpapers (785MB) NO están en git, solo locales en aurin:/home/passh/dotfiles/wallpapers/
 
-## Aplicar configuraciones con Stow
+## Aplicar configuraciones (FLAKES)
+
+**IMPORTANTE**: Este repo usa NixOS Flakes. Home-manager está integrado en NixOS, NO es un comando separado.
+
+```bash
+# Aurin - SIEMPRE usar --impure (necesario para hosts Vocento)
+sudo nixos-rebuild switch --flake ~/dotfiles#aurin --impure
+
+# Macbook
+sudo nixos-rebuild switch --flake ~/dotfiles#macbook
+
+# Actualizar flake.lock
+nix flake update
+```
+
+**NO usar** `home-manager switch` - no existe como comando separado, está integrado en nixos-rebuild.
+
+### Stow (solo para configs NO migradas a home-manager)
 
 ```bash
 cd ~/dotfiles
-
-# Configs de usuario
-stow -v home-manager
-stow -v fish
-stow -v xmonad
-stow -v xmobar
-stow -v picom
-stow -v alacritty
-
-# NixOS config (necesita root)
-sudo stow -v -t / nixos-aurin
-
-# Aplicar cambios
-home-manager switch
-sudo nixos-rebuild switch
+stow -v xmonad   # XMonad aún usa stow
 ```
 
 ## Estructura de carpetas ignoradas
@@ -79,8 +82,10 @@ Estas carpetas NO están en git (ver .gitignore):
 
 - **NO versionar archivos grandes** (imágenes, binarios, etc.) en git
 - Usar `.gitignore` para excluir wallpapers, caches, temporales
-- Las configuraciones se gestionan con **GNU Stow**
-- Home Manager usa channels: stable, unstable, master
+- **Home-manager está integrado en NixOS flake** - NO usar `home-manager switch`
+- Para aplicar cambios: `sudo nixos-rebuild switch --flake ~/dotfiles#aurin --impure`
+- Configs migradas a home-manager: alacritty, fish, picom, xmobar
+- Configs aún con stow: xmonad
 - El sistema es NixOS 25.05 en Aurin (Dual Xeon + RTX 5080)
 
 ## Comandos útiles del sistema
@@ -103,5 +108,5 @@ numa-info           # Info NUMA dual socket
 
 ---
 
-**Última actualización**: 2025-11-22
+**Última actualización**: 2026-01-06
 **Sistema**: Aurin (NixOS 25.05, Dual Xeon E5-2699v3, RTX 5080)

@@ -36,6 +36,11 @@ in
       enable = true;
 
       settings = {
+        # Environment variables
+        env = {
+          COLORTERM = "truecolor";
+        };
+
         # Window configuration
         window = {
           padding = {
