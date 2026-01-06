@@ -181,6 +181,9 @@ in
   # nixos-hardware/common/cpu/intel ya habilita: microcode, intel GPU
   # Aqui agregamos lo que falta para 13,2
 
+  # FaceTime HD Camera - firmware necesario
+  hardware.facetimehd.enable = true;
+
   # Thunderbolt 3 device authorization (bolt)
   services.hardware.bolt.enable = true;
 
