@@ -5,7 +5,7 @@
 
 {
   imports =
-    [ (modulesPath + "/hardware/network/broadcom-43xx.nix")
+    [ # (modulesPath + "/hardware/network/broadcom-43xx.nix")  # Driver wl muerto, usando USB dongle
       (modulesPath + "/installer/scan/not-detected.nix")
     ];
 

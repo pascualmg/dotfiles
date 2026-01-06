@@ -166,12 +166,7 @@ in
       "b43" "b43legacy" "bcma" "brcmsmac" "ssb"
       # NOTA: NO blacklistear brcmfmac - algunos dongles USB lo usan
     ];
-
-    # Audio Intel HDA con quirks MacBook Pro
-    extraModprobeConfig = ''
-      options snd-hda-intel model=mbp13
-      options snd-hda-intel power_save=1
-    '';
+    # NOTA: extraModprobeConfig para audio está en snd-hda-macbookpro.nix
   };
 
   # ===========================================================================
@@ -251,7 +246,7 @@ in
     enable = true;
     percentageLow = 15;
     percentageCritical = 5;
-    criticalPowerAction = "Hibernate";
+    criticalPowerAction = "PowerOff";  # Hibernate deshabilitado, apagar en batería crítica
   };
 
   # ===========================================================================
