@@ -59,10 +59,10 @@ let
         , fgColor = "#abb2bf"
         , alpha = 255
 
-        -- Posicionamiento
-        , position = Top
-        , textOffset = -1
-        , iconOffset = -1
+        -- Posicionamiento (TopH = altura en pixels)
+        , position = TopH 26
+        , textOffset = 2
+        , iconOffset = 2
 
         -- Comportamiento
         , lowerOnStart = True
