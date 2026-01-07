@@ -99,6 +99,7 @@
       nitrogen
       picom
       xfce4-clipman-plugin  # Fixed: moved to top-level
+      stalonetray           # Standalone systray for xfce4-clipman
       flameshot
       # alttab  # DISABLED: build failure in nixpkgs-unstable (getOffendingModifiersMask compilation error)
 
