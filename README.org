@@ -395,6 +395,31 @@ git pull
 stow -R xmonad  # Recrear enlaces
 #+END_SRC
 
+** Credenciales Git Persistentes
+
+Las credenciales de git se almacenan permanentemente gracias a =credential.helper = store=
+configurado en =modules/home-manager/passh.nix=.
+
+*Ubicación:* =~/.git-credentials=
+
+*Formato del archivo:*
+#+BEGIN_SRC text
+https://usuario:password@bitbucket.vocento.com
+https://usuario:token@github.com
+#+END_SRC
+
+*Primera vez:* Git pedirá credenciales una vez y las guardará automáticamente.
+
+*Regenerar credenciales:*
+#+BEGIN_SRC bash
+# Borrar credenciales existentes
+rm ~/.git-credentials
+
+# El próximo git push/pull pedirá credenciales de nuevo
+#+END_SRC
+
+*Seguridad:* El archivo tiene permisos =600= (solo el usuario puede leer/escribir).
+
 * Comandos Más Usados
 
 #+BEGIN_SRC bash
