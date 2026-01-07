@@ -306,6 +306,7 @@
       init.defaultBranch = "main";
       pull.rebase = false;
       color.ui = "auto";
+      credential.helper = "store";
     };
     ignores = [
       ".org-id-locations"
