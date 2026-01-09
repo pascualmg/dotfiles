@@ -365,6 +365,18 @@
     Install.WantedBy = [ "graphical-session.target" ];
   };
 
+  # =========================================================================
+  # DCONF / GSETTINGS (GNOME)
+  # =========================================================================
+  dconf.settings = {
+    "org/gnome/desktop/input-sources" = {
+      sources = [
+        (lib.hm.gvariant.mkTuple ["xkb" "us"])
+        (lib.hm.gvariant.mkTuple ["xkb" "es"])
+      ];
+    };
+  };
+
   # XDG dirs
   xdg = {
     enable = true;
