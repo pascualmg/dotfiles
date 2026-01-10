@@ -16,6 +16,7 @@ import XMonad.Layout.ResizableTile
 import XMonad.Layout.MultiColumns
 import XMonad.Hooks.ManageHelpers
 import Data.Monoid
+import Data.List (elemIndex, sort)
 import qualified Data.Map as M
 import XMonad.Layout.Spacing
 import XMonad.Layout.NoBorders
@@ -83,6 +84,27 @@ myStartupHook = do
     spawnOnce "systemctl --user restart pipewire pipewire-pulse"
     spawnOnce "notify-send 'XMonad configuración recargada 8==D~mente'"
 
+-- Navegacion de workspaces SIN wrap (para HHKB Hybrid)
+prevWS' :: X ()
+prevWS' = do
+    ws <- gets windowset
+    let wss = map W.tag $ W.workspaces ws
+    let cur = W.currentTag ws
+    let sorted = sort wss
+    case elemIndex cur sorted of
+        Just i | i > 0 -> windows $ W.greedyView (sorted !! (i - 1))
+        _ -> return ()
+
+nextWS' :: X ()
+nextWS' = do
+    ws <- gets windowset
+    let wss = map W.tag $ W.workspaces ws
+    let cur = W.currentTag ws
+    let sorted = sort wss
+    case elemIndex cur sorted of
+        Just i | i < length sorted - 1 -> windows $ W.greedyView (sorted !! (i + 1))
+        _ -> return ()
+
 -- Función principal
 main :: IO ()
 main = do
@@ -138,4 +160,7 @@ main = do
         -- Spacing controls
         , ("M-S-plus", incScreenWindowSpacing 2)
         , ("M-S-minus", decScreenWindowSpacing 2)
+        -- Workspace navigation (sin wrap) - HHKB Hybrid
+        , ("M-<Left>", prevWS')
+        , ("M-<Right>", nextWS')
         ]

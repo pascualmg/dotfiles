@@ -38,6 +38,7 @@ in
     ./programs/alacritty.nix
     ./programs/picom.nix
     ./programs/fish.nix
+    ./programs/libinput-gestures.nix
 
     # Config especifica de maquina (setea las opciones)
     # Solo importar si existe el archivo para esa maquina

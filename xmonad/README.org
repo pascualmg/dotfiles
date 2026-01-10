@@ -1,0 +1,251 @@
+#+TITLE: XMonad Configuration
+#+AUTHOR: passh
+#+DATE: 2026-01-10
+#+STARTUP: overview
+
+* XMonad - Tiling Window Manager
+
+Este documento explica la configuracion de XMonad en este repositorio de dotfiles.
+
+** Arquitectura
+
+La configuracion de XMonad esta distribuida en varios archivos:
+
+| Archivo                                      | Descripcion                          |
+|----------------------------------------------+--------------------------------------|
+| =xmonad/.config/xmonad/xmonad.hs=            | Configuracion Haskell principal      |
+| =modules/desktop/xmonad.nix=                 | Modulo NixOS compartido              |
+| =nixos-aurin/etc/nixos/modules/xmonad.nix=   | Config especifica Aurin              |
+| =modules/home-manager/programs/xmobar.nix=   | Barra de estado (parametrizable)     |
+| =modules/home-manager/programs/picom.nix=    | Compositor X11                       |
+
+** Como Funciona XMonad
+
+*** Conceptos Basicos
+
+- *Workspaces*: Escritorios virtuales (1-9 por defecto)
+- *Layouts*: Formas de organizar ventanas (Tall, ThreeCol, Grid, Full, etc.)
+- *Master*: Ventana principal que ocupa mas espacio
+- *Stack*: Resto de ventanas apiladas
+- *Mod Key*: Tecla modificadora (Super/Windows key = mod4)
+
+*** Flujo de Trabajo Tipico
+
+1. Abres aplicaciones con =Mod+Shift+Enter= (terminal) o =Mod+p= (dmenu)
+2. Las ventanas se organizan automaticamente segun el layout activo
+3. Cambias entre workspaces con =Mod+[1-9]=
+4. Mueves ventanas entre workspaces con =Mod+Shift+[1-9]=
+5. Cambias layouts con =Mod+Space=
+
+** Keybindings
+
+*** Navegacion de Workspaces
+
+| Keybinding      | Accion                                    |
+|-----------------+-------------------------------------------|
+| =Mod+[1-9]=     | Ir al workspace N                         |
+| =Mod+Left=      | Workspace anterior (sin wrap)             |
+| =Mod+Right=     | Workspace siguiente (sin wrap)            |
+| =Mod+Shift+[1-9]= | Mover ventana al workspace N            |
+
+*** Gestion de Ventanas
+
+| Keybinding      | Accion                                    |
+|-----------------+-------------------------------------------|
+| =Mod+j=         | Siguiente ventana                         |
+| =Mod+k=         | Ventana anterior                          |
+| =Mod+Enter=     | Swap con master                           |
+| =Mod+h=         | Reducir area master                       |
+| =Mod+l=         | Aumentar area master                      |
+| =Mod+t=         | Volver a tiling (unfloat)                 |
+| =Mod+Shift+s=   | Unfloat todas las ventanas                |
+| =Mod+Shift+c=   | Cerrar ventana                            |
+
+*** Layouts
+
+| Keybinding      | Accion                                    |
+|-----------------+-------------------------------------------|
+| =Mod+Space=     | Siguiente layout                          |
+| =Mod+Shift+Space= | Reset layout                            |
+| =Mod+,=         | Incrementar ventanas en master            |
+| =Mod+.=         | Decrementar ventanas en master            |
+
+*** Aplicaciones y Utilidades
+
+| Keybinding      | Accion                                    |
+|-----------------+-------------------------------------------|
+| =Mod+p=         | dmenu (lanzador de apps)                  |
+| =Mod+Shift+Enter= | Terminal (Alacritty)                    |
+| =Mod+i=         | IntelliJ IDEA                             |
+| =Mod+s=         | Grid select (selector visual)             |
+| =Mod+c=         | Clipboard manager                         |
+| =Print=         | Flameshot (captura de pantalla)           |
+| =Mod+Shift+l=   | Bloquear pantalla                         |
+
+*** Scratchpads (Ventanas Flotantes)
+
+| Keybinding      | Accion                                    |
+|-----------------+-------------------------------------------|
+| =Mod+a=         | Terminal scratchpad                       |
+| =Mod+e=         | Doom Emacs                                |
+| =Mod+j=         | JetBrains Toolbox                         |
+| =Mod+v=         | VPN Pulse Secure                          |
+
+*** Audio
+
+| Keybinding           | Accion                               |
+|----------------------+--------------------------------------|
+| =XF86AudioRaiseVolume= | Subir volumen 2%                   |
+| =XF86AudioLowerVolume= | Bajar volumen 2%                   |
+| =XF86AudioMute=      | Silenciar                            |
+| =XF86AudioMicMute=   | Silenciar microfono                  |
+
+*** Otros
+
+| Keybinding      | Accion                                    |
+|-----------------+-------------------------------------------|
+| =Mod+;= / =Mod+n= | Toggle layout teclado US/ES             |
+| =Mod+Shift+w=   | Wallpaper aleatorio                       |
+| =Mod+Shift+m=   | GLMatrix screensaver                      |
+| =Mod+S-plus=    | Aumentar spacing entre ventanas           |
+| =Mod+S-minus=   | Reducir spacing entre ventanas            |
+| =Alt+Tab=       | Alt-tab clasico                           |
+
+** Gestos de Trackpad (MacBook)
+
+Usando =libinput-gestures=:
+
+| Gesto                  | Accion                               |
+|------------------------+--------------------------------------|
+| 3 dedos izquierda      | Workspace anterior                   |
+| 3 dedos derecha        | Workspace siguiente                  |
+
+Configuracion en: =modules/home-manager/programs/libinput-gestures.nix=
+
+** Layouts Disponibles
+
+#+begin_src text
+ThreeColMid  : Tres columnas, master en medio
+ResizableTall: Dos columnas redimensionables
+MultiCol     : Multiples columnas
+Column       : Una sola columna
+Grid         : Cuadricula automatica
+Tall         : Tiling clasico (master izquierda)
+Mirror Tall  : Tiling espejo (master arriba)
+Full         : Pantalla completa sin bordes
+#+end_src
+
+Spacing entre ventanas: 5px por defecto
+
+** XMobar - Barra de Estado
+
+*** Monitores Disponibles (Aurin)
+
+| Monitor  | Descripcion                                  |
+|----------+----------------------------------------------|
+| GPU      | nvidia-smi + overclock                       |
+| CPU      | Uso CPU (clickeable para btop)               |
+| RAM      | Memoria usada + porcentaje                   |
+| Network  | Velocidad RX/TX                              |
+| Docker   | Numero de containers activos                 |
+| NVMe     | Monitor de disco                             |
+| Volumen  | Control ALSA                                 |
+| Fecha    | Fecha y hora con calendario                  |
+
+*** Parametrizacion por Maquina
+
+En =modules/home-manager/machines/*.nix=:
+
+#+begin_src nix
+dotfiles.xmobar = {
+  enable = true;
+  fontSize = 16;              # 16 para 96 DPI, 36 para HiDPI
+  gpuType = "nvidia";         # nvidia, intel, none
+  networkInterface = "enp10s0";
+  wifiInterface = "wlp8s5";
+  showBattery = false;        # true para laptops
+  showNvmeMonitor = true;
+  showTrayer = true;
+  alsaMixer = "Master";       # Master o PCM
+};
+#+end_src
+
+** Picom - Compositor
+
+Efectos visuales configurados:
+
+- Sombras con offset
+- Bordes redondeados (16px)
+- Blur dual_kawase
+- Animaciones de ventanas
+- VSync habilitado
+
+Exclusiones para gaming (Steam, Lutris, mpv).
+
+** Aplicar Cambios
+
+*** En Aurin
+
+#+begin_src bash
+sudo nixos-rebuild switch --flake ~/dotfiles#aurin --impure
+xmonad --recompile && xmonad --restart
+#+end_src
+
+*** En MacBook
+
+#+begin_src bash
+sudo nixos-rebuild switch --flake ~/dotfiles#macbook
+xmonad --recompile && xmonad --restart
+#+end_src
+
+** Troubleshooting
+
+*** xmonad no compila
+
+#+begin_src bash
+# Ver errores de compilacion
+xmonad --recompile
+
+# Verificar sintaxis Haskell
+ghc -fno-code ~/.config/xmonad/xmonad.hs
+#+end_src
+
+*** xmobar no aparece
+
+#+begin_src bash
+# Iniciar manualmente para ver errores
+xmobar
+
+# Verificar que el archivo se genero
+cat ~/.config/xmobar/xmobarrc
+#+end_src
+
+*** libinput-gestures no funciona
+
+#+begin_src bash
+# Verificar servicio
+systemctl --user status libinput-gestures
+
+# Ver gestos detectados
+libinput-gestures -d
+
+# Verificar grupo input
+groups | grep input
+#+end_src
+
+** HiDPI (MacBook Retina)
+
+Para pantallas HiDPI se necesita:
+
+1. Configurar DPI correcto (227 para Retina 13")
+2. Variables de entorno GTK/Qt para escalado
+3. Xresources con Xft.dpi
+
+Ver =nixos-macbook/etc/nixos/modules/apple-hardware.nix= para la configuracion actual.
+
+** Referencias
+
+- [[https://xmonad.org/][XMonad Official]]
+- [[https://wiki.archlinux.org/title/Xmonad][ArchWiki - XMonad]]
+- [[https://wiki.archlinux.org/title/HiDPI][ArchWiki - HiDPI]]
+- [[https://github.com/bulletmark/libinput-gestures][libinput-gestures]]

@@ -18,7 +18,7 @@
   # XMobar configurado para macbook HiDPI
   dotfiles.xmobar = {
     enable = true;
-    fontSize = 24;              # 168 DPI HiDPI - necesita fuente mas grande
+    fontSize = 18;              # Con GDK_SCALE=2 se vera como 36
     gpuType = "intel";          # Intel integrated
     networkInterface = null;    # Sin ethernet fijo, ajustar si usas adaptador
     wifiInterface = "wlp0s20f0u7";   # WiFi USB dongle (Broadcom interno no soportado)
@@ -38,6 +38,9 @@
   dotfiles.picom = {
     backend = "xrender";        # Intel integrated - xrender mas compatible
   };
+
+  # Gestos de trackpad para cambiar workspaces
+  dotfiles.libinput-gestures.enable = true;
 
   # GNOME dconf settings
   dconf.settings = {
