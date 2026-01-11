@@ -25,10 +25,11 @@
     XCURSOR_SIZE = "48";
   };
 
-  # XMobar configurado para macbook HiDPI
+  # XMobar configurado para macbook HiDPI (arriba)
+  # NOTA: fontSize ahora es pixelsize (pixels absolutos, ignora DPI)
   dotfiles.xmobar = {
-    enable = false;             # DESHABILITADO: probando taffybar
-    fontSize = 24;              # xmobar no usa GDK_SCALE, necesita fuente grande
+    enable = true;              # Tu katana de siempre
+    fontSize = 16;              # Tamaño estándar (HiDPI no escala bien en xmobar)
     gpuType = "intel";          # Intel integrated
     networkInterface = null;    # Sin ethernet fijo, ajustar si usas adaptador
     wifiInterface = "wlp0s20f0u7";   # WiFi USB dongle (Broadcom interno no soportado)
@@ -38,11 +39,12 @@
     alsaMixer = "PCM";          # MacBook usa PCM en lugar de Master
   };
 
-  # Taffybar - Barra GTK3 con systray nativo
+  # Taffybar - Barra GTK3 con systray nativo (ABAJO, para probar junto a xmobar)
   dotfiles.taffybar = {
     enable = true;
     fontSize = 14;              # GTK3 respeta GDK_SCALE, no necesita fuente grande
     barHeight = 32;
+    barPosition = "Bottom";     # Abajo - xmobar va arriba
     showBattery = true;
     showSystray = true;         # nm-applet, blueman-applet funcionan directo
   };

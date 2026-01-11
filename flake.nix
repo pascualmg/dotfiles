@@ -50,6 +50,7 @@
 # =============================================================================
 
 {
+  
   description = "NixOS configurations for aurin, vespino, and macbook";
 
   # ---------------------------------------------------------------------------
@@ -121,6 +122,10 @@
           modules = [
             # Configuracion principal de la maquina
             configPath
+
+            # MODULOS COMUNES - compartidos por todas las maquinas
+            ./modules/common/packages.nix
+            ./modules/common/services.nix
 
             # Modulo para compatibilidad: registra el flake en el sistema
             {

@@ -8,11 +8,12 @@
 
 {
   # ===== SSH =====
+  # Valores por defecto - cada maquina puede sobreescribir
   services.openssh = {
-    enable = true;
+    enable = lib.mkDefault true;
     settings = {
-      PermitRootLogin = "no";
-      PasswordAuthentication = false;
+      PermitRootLogin = lib.mkDefault "no";
+      PasswordAuthentication = lib.mkDefault false;  # Macbook lo pone a true
     };
   };
 
@@ -31,18 +32,20 @@
   };
 
   # ===== BLUETOOTH =====
-  hardware.bluetooth.enable = true;
-  services.blueman.enable = true;
+  # mkDefault permite que configs de maquina sobreescriban
+  hardware.bluetooth.enable = lib.mkDefault true;
+  services.blueman.enable = lib.mkDefault true;
 
   # ===== AUDIO (PipeWire) =====
   # Moderno reemplazo de PulseAudio + JACK
-  security.rtkit.enable = true;
+  # mkDefault para que aurin pueda añadir config FiiO K7
+  security.rtkit.enable = lib.mkDefault true;
   services.pipewire = {
-    enable = true;
-    alsa.enable = true;
-    alsa.support32Bit = true;
-    pulse.enable = true;
-    jack.enable = true;
+    enable = lib.mkDefault true;
+    alsa.enable = lib.mkDefault true;
+    alsa.support32Bit = lib.mkDefault true;
+    pulse.enable = lib.mkDefault true;
+    jack.enable = lib.mkDefault true;
   };
 
   # ===== DBUS =====
@@ -54,7 +57,7 @@
   # ===== LOCATE (Database de archivos) =====
   services.locate = {
     enable = true;
-    locate = pkgs.mlocate;
+    package = pkgs.plocate;  # Mas rapido que mlocate (usa io_uring)
     interval = "hourly";
   };
 

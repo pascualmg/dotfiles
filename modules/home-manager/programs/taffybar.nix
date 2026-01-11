@@ -105,7 +105,7 @@ let
                 , pollingGraphNew memCfg 1 memCallback
                 , pollingGraphNew cpuCfg 0.5 cpuCallback
                 ]
-            , barPosition = Top
+            , barPosition = ${cfg.barPosition}
             , barHeight = ExactSize ${toString cfg.barHeight}
             , widgetSpacing = 8
             }
@@ -220,6 +220,12 @@ in {
       type = lib.types.bool;
       default = true;
       description = "Show system tray (SNI - StatusNotifierItem)";
+    };
+
+    barPosition = lib.mkOption {
+      type = lib.types.enum [ "Top" "Bottom" ];
+      default = "Top";
+      description = "Position of the bar (Top or Bottom)";
     };
   };
 

@@ -48,21 +48,22 @@ let
   };
 
   # Generar el xmobarrc completo
+  # NOTA: Usamos pixelsize (no size) para consistencia en HiDPI
   xmobarConfig = ''
     Config {
         -- Apariencia basica
         font = "xft:Monoid Nerd Font:size=${toString cfg.fontSize}:bold"
-        , additionalFonts = [ "xft:Monoid Nerd Font:pixelsize=${toString (cfg.fontSize + 12)}:bold" ]
+        , additionalFonts = [ "xft:Monoid Nerd Font:size=${toString (cfg.fontSize + 4)}:bold" ]
         , borderColor = "#282c34"
         , border = TopB
         , bgColor = "#282c34"
         , fgColor = "#abb2bf"
         , alpha = 255
 
-        -- Posicionamiento (TopH = altura en pixels)
-        , position = TopH 26
-        , textOffset = 2
-        , iconOffset = 2
+        -- Posicionamiento (TopH = altura en pixels, calculada segun fontSize)
+        , position = TopH ${toString (builtins.floor (cfg.fontSize * 1.4))}
+        , textOffset = ${toString (builtins.floor (cfg.fontSize * 0.15))}
+        , iconOffset = ${toString (builtins.floor (cfg.fontSize * 0.15))}
 
         -- Comportamiento
         , lowerOnStart = True

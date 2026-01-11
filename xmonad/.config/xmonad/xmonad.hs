@@ -159,6 +159,9 @@ myLayoutHook = toggleLayouts                    -- Permite Mod+f para toggle ful
 
 myStartupHook :: X ()
 myStartupHook = do
+    -- Teclado: layout US por defecto (HHKB) - spawn (no spawnOnce) para que aplique en cada Mod+q
+    spawn "setxkbmap us"
+
     -- Display: configurar resolución y DPI
     spawnOnce "xrandr --output DP-4 --mode 5120x1440 --rate 120 --primary --dpi 96"
 
@@ -235,9 +238,9 @@ nextWS' = do
 
 main :: IO ()
 main = do
-    -- NOTA: Taffybar no necesita spawnPipe (usa EWMH/DBus)
-    -- Si quieres volver a xmobar, descomenta la siguiente línea:
-    -- xmproc <- spawnPipe "xmobar"
+    -- Xmobar arriba (tu katana de siempre)
+    xmproc <- spawnPipe "xmobar"
+    -- Taffybar abajo usa EWMH/DBus (no necesita pipe)
 
     -- Configuración de XMonad
     -- ewmh exporta info de workspaces que taffybar lee automáticamente
@@ -264,11 +267,8 @@ main = do
         -- =========================================
         -- LOG HOOK
         -- =========================================
-        -- Taffybar usa EWMH, no necesita logHook especial
-        -- Si quieres volver a xmobar, restaura el logHook con xmobarPP
-        , logHook = return ()  -- Taffybar lee de EWMH automáticamente
-        {-
-        , logHook = dynamicLogWithPP xmobarPP  -- Para xmobar
+        -- Xmobar recibe info via pipe, taffybar lee de EWMH automáticamente
+        , logHook = dynamicLogWithPP xmobarPP
             { ppOutput          = hPutStrLn xmproc
             , ppCurrent         = xmobarColor "#98c379" "" . wrap "[" "]"
             , ppVisible         = xmobarColor "#61afef" ""
@@ -278,7 +278,6 @@ main = do
             , ppSep             = "<fc=#666666> | </fc>"
             , ppUrgent          = xmobarColor "#e06c75" "" . wrap "!" "!"
             }
-        -}
         }
 
         -- =========================================
