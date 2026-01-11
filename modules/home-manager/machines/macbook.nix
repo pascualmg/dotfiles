@@ -27,7 +27,7 @@
 
   # XMobar configurado para macbook HiDPI
   dotfiles.xmobar = {
-    enable = true;
+    enable = false;             # DESHABILITADO: probando taffybar
     fontSize = 24;              # xmobar no usa GDK_SCALE, necesita fuente grande
     gpuType = "intel";          # Intel integrated
     networkInterface = null;    # Sin ethernet fijo, ajustar si usas adaptador
@@ -36,6 +36,15 @@
     showNvmeMonitor = false;    # SSD externo, no NVMe interno
     showTrayer = false;         # No hay trayer-padding-icon instalado
     alsaMixer = "PCM";          # MacBook usa PCM en lugar de Master
+  };
+
+  # Taffybar - Barra GTK3 con systray nativo
+  dotfiles.taffybar = {
+    enable = true;
+    fontSize = 14;              # GTK3 respeta GDK_SCALE, no necesita fuente grande
+    barHeight = 32;
+    showBattery = true;
+    showSystray = true;         # nm-applet, blueman-applet funcionan directo
   };
 
   # Alacritty configurado para macbook HiDPI

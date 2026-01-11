@@ -13,7 +13,8 @@
 #   |-- passh.nix         <- Configuracion base del usuario passh
 #   |-- programs/
 #   |   |-- xmobar.nix    <- Modulo xmobar parametrizable (dotfiles.xmobar)
-#   |   +-- (futuros: alacritty.nix, fish.nix, etc.)
+#   |   |-- taffybar.nix  <- Barra alternativa GTK3 con systray (dotfiles.taffybar)
+#   |   +-- (otros: alacritty.nix, fish.nix, etc.)
 #   +-- machines/
 #       |-- aurin.nix     <- Config especifica aurin
 #       +-- macbook.nix   <- Config especifica macbook
@@ -35,6 +36,7 @@ in
 
     # Modulos de programas (definen opciones en namespace dotfiles.*)
     ./programs/xmobar.nix
+    ./programs/taffybar.nix
     ./programs/alacritty.nix
     ./programs/picom.nix
     ./programs/fish.nix

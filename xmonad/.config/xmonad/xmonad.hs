@@ -173,8 +173,15 @@ myStartupHook = do
     spawnOnce "emacs --daemon || emacsclient -e '(kill-emacs)' && emacs --daemon"
     spawnOnce "xfce4-clipman"  -- Gestor de portapapeles
 
-    -- System tray (iconos de apps en xmobar)
-    spawnOnce "trayer --edge top --align right --widthtype request --padding 6 --SetDockType true --SetPartialStrut true --expand true --monitor 0 --transparent true --alpha 0 --tint 0x282c34 --height 28"
+    -- Barra de estado: Taffybar (GTK3 con systray nativo)
+    -- NOTA: Si quieres volver a xmobar, comenta estas líneas y descomenta trayer
+    spawnOnce "systemctl --user start status-notifier-watcher"  -- Necesario para systray
+    spawnOnce "taffybar"
+    -- spawnOnce "trayer --edge top --align right --widthtype request --padding 6 --SetDockType true --SetPartialStrut true --expand true --monitor 0 --transparent true --alpha 0 --tint 0x282c34 --height 28"
+
+    -- Applets para systray (taffybar los muestra automáticamente)
+    spawnOnce "nm-applet"
+    spawnOnce "blueman-applet"
 
     -- SSH agent
     spawnOnce "eval $(ssh-agent) && ssh-add ~/.ssh/id_rsa"
@@ -228,10 +235,12 @@ nextWS' = do
 
 main :: IO ()
 main = do
-    -- Iniciar xmobar y obtener handle para enviarle info
-    xmproc <- spawnPipe "xmobar"
+    -- NOTA: Taffybar no necesita spawnPipe (usa EWMH/DBus)
+    -- Si quieres volver a xmobar, descomenta la siguiente línea:
+    -- xmproc <- spawnPipe "xmobar"
 
     -- Configuración de XMonad
+    -- ewmh exporta info de workspaces que taffybar lee automáticamente
     xmonad $ ewmh $ ewmhFullscreen $ docks $ def
         -- =========================================
         -- CONFIGURACIÓN BÁSICA
@@ -253,18 +262,23 @@ main = do
         , handleEventHook = handleEventHook def  -- Eventos X11
 
         -- =========================================
-        -- LOG HOOK (comunicación con xmobar)
+        -- LOG HOOK
         -- =========================================
-        , logHook = dynamicLogWithPP xmobarPP
-            { ppOutput          = hPutStrLn xmproc           -- Enviar a xmobar
-            , ppCurrent         = xmobarColor "#98c379" "" . wrap "[" "]"  -- WS actual (verde)
-            , ppVisible         = xmobarColor "#61afef" ""   -- WS visible otro monitor (azul)
-            , ppHidden          = xmobarColor "#c678dd" "" . wrap "*" ""   -- WS con ventanas (púrpura)
-            , ppHiddenNoWindows = xmobarColor "#666666" ""   -- WS vacío (gris)
-            , ppTitle           = xmobarColor "#abb2bf" "" . shorten 160   -- Título ventana
-            , ppSep             = "<fc=#666666> | </fc>"     -- Separador
-            , ppUrgent          = xmobarColor "#e06c75" "" . wrap "!" "!"  -- WS urgente (rojo)
+        -- Taffybar usa EWMH, no necesita logHook especial
+        -- Si quieres volver a xmobar, restaura el logHook con xmobarPP
+        , logHook = return ()  -- Taffybar lee de EWMH automáticamente
+        {-
+        , logHook = dynamicLogWithPP xmobarPP  -- Para xmobar
+            { ppOutput          = hPutStrLn xmproc
+            , ppCurrent         = xmobarColor "#98c379" "" . wrap "[" "]"
+            , ppVisible         = xmobarColor "#61afef" ""
+            , ppHidden          = xmobarColor "#c678dd" "" . wrap "*" ""
+            , ppHiddenNoWindows = xmobarColor "#666666" ""
+            , ppTitle           = xmobarColor "#abb2bf" "" . shorten 160
+            , ppSep             = "<fc=#666666> | </fc>"
+            , ppUrgent          = xmobarColor "#e06c75" "" . wrap "!" "!"
             }
+        -}
         }
 
         -- =========================================
