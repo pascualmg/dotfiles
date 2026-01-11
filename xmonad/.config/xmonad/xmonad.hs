@@ -317,6 +317,7 @@ main = do
         , ("M-s", goToSelected def)              -- Selector visual de ventanas
         , ("M1-<Tab>", spawn "alttab -w 1 -d 0") -- Alt-Tab clásico
         , ("M-S-w", spawn "nitrogen --random --set-zoom-fill ~/wallpapers")  -- Wallpaper random
+        , ("M-S-m", spawn "~/.config/xmonad/my-scripts/glmatrix-bg.sh")    -- Matrix de fondo
         , ("M-S-s", sinkAll)                     -- Unfloat todas las ventanas
 
         -- -----------------------------------------
