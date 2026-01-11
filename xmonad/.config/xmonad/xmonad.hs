@@ -74,8 +74,9 @@ myScratchPads = [
     NS "terminal" "alacritty --class=scratchpad" (className =? "scratchpad")
         (customFloating $ W.RationalRect 0.1 0.1 0.8 0.8),
 
-    -- Doom Emacs para notas rápidas (Mod+e)
-    NS "doom" "doom run --class=scratchpad-notes" (className =? "scratchpad-notes")
+    -- Emacs para notas rápidas (Mod+e)
+    -- Emacs usa --name (no --class), y XMonad lo detecta con "resource"
+    NS "doom" "emacs --name=scratchpad-emacs" (resource =? "scratchpad-emacs")
         (customFloating $ W.RationalRect 0.15 0.1 0.7 0.75),
 
     -- JetBrains Toolbox (Mod+j)
@@ -86,8 +87,8 @@ myScratchPads = [
     NS "vpn-vocento" "/opt/pulsesecure/bin/pulseUI" (title =? "Pulse Secure")
         (customFloating $ W.RationalRect 0.1 0.1 0.8 0.8),
 
-    -- Emacs client (alternativo)
-    NS "emacs" "emacsclient -c -a 'emacs' --class=Emacs" (className =? "Emacs")
+    -- Emacs client (alternativo) - usa className porque emacsclient SÍ respeta --class
+    NS "emacs" "emacsclient -c -a 'emacs'" (className =? "Emacs")
         (customFloating $ W.RationalRect 0.02 0.02 0.96 0.96)
     ]
 
@@ -292,7 +293,6 @@ main = do
         -- Aplicaciones
         -- -----------------------------------------
         , ("M-t", spawn "xsel -o | python3 ~/.config/xmonad/my-scripts/tts.py")  -- TTS
-        , ("M-S-e", spawn "/home/passh/.config/emacs/bin/doom run")  -- Doom Emacs
         , ("M-i", spawn "$(which idea)")         -- IntelliJ IDEA
 
         -- -----------------------------------------
