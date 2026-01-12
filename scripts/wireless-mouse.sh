@@ -12,13 +12,18 @@ BAT_PATH=$(ls /sys/class/power_supply/hidpp_battery_*/capacity 2>/dev/null | hea
 
 if [[ -n "$BAT_PATH" && -f "$BAT_PATH" ]]; then
     BAT=$(cat "$BAT_PATH" 2>/dev/null)
-
     if [[ -n "$BAT" ]]; then
         COLOR=$(pct_to_color_inverse "$BAT")
         echo "<fc=${COLOR}>$(xmobar_icon "󰍽") ${BAT}%</fc>"
-    else
-        echo "<fc=${COLOR_GRAY}>$(xmobar_icon "󰍾")</fc>"
+        exit 0
     fi
+fi
+
+# Fallback: detectar ratón Logitech via xinput (sin info de batería)
+if xinput list 2>/dev/null | grep -qi "Logitech.*Pro\|G Pro"; then
+    # Ratón conectado pero sin info de batería (driver no soporta)
+    echo "<fc=${COLOR_GREEN}>$(xmobar_icon "󰍽")</fc>"
 else
+    # Ratón no detectado
     echo "<fc=${COLOR_GRAY}>$(xmobar_icon "󰍾")</fc>"
 fi
