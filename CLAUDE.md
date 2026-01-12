@@ -102,6 +102,12 @@ services.libinput = {
 };
 ```
 
+### Indicador batería en xmobar
+- Script `scripts/wireless-mouse.sh` lee batería via `/sys/class/power_supply/hidpp_battery_*`
+- Opción `dotfiles.xmobar.showWirelessMouse = true` (default)
+- Siempre visible: icono color + % si conectado, gris si desconectado
+- Colores: verde >80%, amarillo 20-80%, rojo <20%
+
 ## Notas para Claude
 
 - **NO versionar archivos grandes** (imágenes, binarios, etc.) en git
