@@ -341,7 +341,14 @@
         PasswordAuthentication = true;
         AllowTcpForwarding = true;
         GatewayPorts = "clientspecified";
+        # Gateway abre muchos canales - aumentar límites
+        MaxSessions = 100;
+        ClientAliveInterval = 60;
+        ClientAliveCountMax = 3;
       };
+      extraConfig = ''
+        MaxStartups 100:30:200
+      '';
     };
 
     # Ollama AI

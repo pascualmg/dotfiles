@@ -337,12 +337,21 @@
     cat > ~/.ssh/config << 'SSHEOF'
 Host *
   AddKeysToAgent yes
+  ServerAliveInterval 30
+  ServerAliveCountMax 5
+  TCPKeepAlive yes
 
 Host aurin
   HostName campo.zapto.org
   Port 2222
   User passh
+  # JetBrains Gateway necesita muchos canales
+  ControlMaster auto
+  ControlPath ~/.ssh/sockets/%r@%h-%p
+  ControlPersist 600
 SSHEOF
+    mkdir -p ~/.ssh/sockets
+    chmod 700 ~/.ssh/sockets
     chmod 600 ~/.ssh/config
   '';
 
