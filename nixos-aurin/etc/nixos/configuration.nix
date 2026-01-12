@@ -1,7 +1,12 @@
 # =============================================================================
-# NixOS Aurin - Dual Xeon E5-2699v3 + RTX 5080
+# NixOS Aurin - Dual Xeon E5-2699v3 + RTX 5080 (PURE FLAKE VERSION)
 # =============================================================================
 # Workstation de alto rendimiento con configuracion modular
+#
+# NOTA: Esta es la version "pure" para uso con flakes.
+# - NO usa <home-manager/nixos> (channel)
+# - Home Manager se integra via flake inputs
+# - NO requiere --impure flag
 #
 # Hardware:
 #   - CPU: Dual Xeon E5-2699v3 (72 threads)
@@ -17,7 +22,7 @@
 #   - printing.nix: HP M148dw + Avahi
 #   - xrdp.nix: Remote desktop (disabled)
 #   - virtualization.nix: Docker + libvirt
-#   - xmonad.nix: Window manager + X11
+#   - xmonad.nix: Window manager + X11 (modulo compartido)
 # =============================================================================
 
 { config, pkgs, ... }:
@@ -35,11 +40,32 @@
     ./modules/printing.nix
     # ./modules/xrdp.nix  # Desactivado - no se usa
     ./modules/virtualization.nix
-    ./modules/xmonad.nix
 
-    # Home Manager
-    <home-manager/nixos>
+    # Modulo compartido XMonad (usado por aurin y macbook)
+    # Path: dotfiles/modules/desktop/xmonad.nix
+    # Desde: dotfiles/nixos-aurin/etc/nixos/ -> 3 niveles arriba
+    ../../../modules/desktop/xmonad.nix
+
+    # Home Manager se integra via flake (no usa <home-manager/nixos>)
   ];
+
+  # ===========================================================================
+  # XMONAD CONFIG (modulo compartido)
+  # ===========================================================================
+  # Configuracion especifica del display RTX 5080 + ultrawide 5120x1440@120Hz
+  desktop.xmonad = {
+    enable = true;
+
+    # RTX 5080 ultrawide setup
+    displaySetupCommand = ''
+      ${pkgs.xorg.xrandr}/bin/xrandr --output DP-4 --mode 5120x1440 --rate 120 --primary --dpi 96
+    '';
+
+    # NVIDIA usa backend GLX
+    picomBackend = "glx";
+
+    refreshRate = 120;
+  };
 
   # ===== UNFREE =====
   nixpkgs.config.allowUnfree = true;
@@ -153,6 +179,8 @@
     useDHCP = false;
 
     hosts = { "185.14.56.20" = [ "pascualmg" ]; };
+    # NOTA: Requiere --impure para leer paths externos al flake
+    # Sin --impure, builtins.pathExists siempre devuelve false para paths externos
     extraHosts = if builtins.pathExists
     "/home/passh/src/vocento/autoenv/hosts_all.txt" then
       builtins.readFile "/home/passh/src/vocento/autoenv/hosts_all.txt"

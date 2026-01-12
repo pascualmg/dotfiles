@@ -195,7 +195,7 @@
         # ---------------------------------------------------------------------
         aurin = mkNixosConfig {
           hostname = "aurin";
-          configPath = ./nixos-aurin/etc/nixos/configuration-pure.nix;
+          configPath = ./nixos-aurin/etc/nixos/configuration.nix;
           enableHomeManager = true;
         };
 
