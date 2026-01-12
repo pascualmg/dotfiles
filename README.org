@@ -590,6 +590,117 @@ El teclado Apple SPI tiene las teclas =º ª= y =< >= intercambiadas respecto al
 
 Esto funciona tanto en X11 (XMonad) como en Wayland (GNOME) porque keyd opera a nivel evdev.
 
+* Doom Emacs: Tree-Sitter y Syntax Highlighting en NixOS
+
+** Qué es Tree-Sitter
+
+Tree-sitter es un sistema de parseo incremental que genera árboles de sintaxis abstracta (AST)
+para código fuente. A diferencia del syntax highlighting tradicional basado en expresiones
+regulares, tree-sitter:
+
+- *Parsea el código completo* como lo haría un compilador
+- *Es incremental*: solo reparsea las partes que cambian
+- *Entiende la estructura* del código, no solo patrones de texto
+- *Es más rápido* para archivos grandes
+- *Proporciona highlighting más preciso* (distingue variables locales de globales, etc.)
+
+** Tree-sitter en Emacs
+
+Emacs 29+ incluye soporte nativo para tree-sitter (=treesit=), pero necesita *grammars compilados*
+para cada lenguaje. Estos grammars son bibliotecas dinámicas (.so en Linux, .dylib en macOS).
+
+*** El Problema en NixOS
+
+Cuando Doom Emacs intenta usar tree-sitter, necesita compilar los grammars si no existen.
+Esto falla o se congela en NixOS porque:
+
+1. El compilador de C (gcc/clang) puede no estar en el PATH de Emacs
+2. Las rutas de bibliotecas del sistema son diferentes en NixOS
+3. El sandbox de Nix complica la compilación dinámica
+
+** Opciones Disponibles
+
+*** Opción 1: Deshabilitar Tree-sitter (Recomendado)
+
+Si el syntax highlighting tradicional es suficiente, simplemente quita los flags =+tree-sitter=.
+
+*En =~/.config/doom/init.el=:*
+
+#+BEGIN_SRC emacs-lisp
+;; ANTES (con tree-sitter)
+:tools
+tree-sitter
+
+:lang
+(nix +lsp +tree-sitter)
+(php +lsp +tree-sitter)
+
+;; DESPUÉS (sin tree-sitter)
+:tools
+;;tree-sitter  ; Comentado o eliminado
+
+:lang
+(nix +lsp)
+(php +lsp)
+#+END_SRC
+
+*Aplicar cambios:*
+#+BEGIN_SRC bash
+~/.config/emacs/bin/doom sync
+# Reiniciar Emacs
+#+END_SRC
+
+*Pros:* Sin configuración adicional, funciona inmediatamente, LSP ya proporciona el 90% de los beneficios.
+
+*** Opción 2: Instalar Grammars via NixOS
+
+NixOS puede preinstalar los grammars compilados. En =modules/home-manager/passh.nix=:
+
+#+BEGIN_SRC nix
+home.packages = with pkgs; [
+  tree-sitter-grammars.tree-sitter-nix
+  tree-sitter-grammars.tree-sitter-javascript
+  tree-sitter-grammars.tree-sitter-php
+  tree-sitter-grammars.tree-sitter-json
+  tree-sitter-grammars.tree-sitter-html
+  tree-sitter-grammars.tree-sitter-bash
+];
+#+END_SRC
+
+Y en =~/.config/doom/config.el=:
+
+#+BEGIN_SRC emacs-lisp
+(when (and (fboundp 'treesit-available-p) (treesit-available-p))
+  (setq treesit-extra-load-path
+        (list (expand-file-name "~/.nix-profile/lib/tree-sitter")
+              "/run/current-system/sw/lib/tree-sitter")))
+#+END_SRC
+
+** Verificar Estado
+
+#+BEGIN_SRC emacs-lisp
+;; M-x eval-expression RET
+(treesit-available-p)              ; Debería retornar t
+(treesit-language-available-p 'nix) ; Ver si grammar de nix está
+#+END_SRC
+
+*Modo activo:* Sin tree-sitter usa =nix-mode=, con tree-sitter usa =nix-ts-mode= (sufijo =-ts-=).
+
+** Grammars Disponibles
+
+#+BEGIN_SRC bash
+nix search nixpkgs tree-sitter-grammars
+#+END_SRC
+
+| Lenguaje   | Paquete Nix                                 |
+|------------+---------------------------------------------|
+| Nix        | tree-sitter-grammars.tree-sitter-nix        |
+| JavaScript | tree-sitter-grammars.tree-sitter-javascript |
+| PHP        | tree-sitter-grammars.tree-sitter-php        |
+| JSON       | tree-sitter-grammars.tree-sitter-json       |
+| HTML       | tree-sitter-grammars.tree-sitter-html       |
+| Bash       | tree-sitter-grammars.tree-sitter-bash       |
+
 * Hosts Privados de Trabajo
 
 ** El Problema
