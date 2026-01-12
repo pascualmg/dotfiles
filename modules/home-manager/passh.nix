@@ -323,19 +323,26 @@
   # =========================================================================
   # SSH CONFIG
   # =========================================================================
-  # NOTA: Deshabilitamos config por defecto para evitar warnings
+  # NOTA: No usamos programs.ssh porque crea symlinks al nix store con owner
+  # root, lo cual SSH rechaza por seguridad. En su lugar, usamos home.activation
+  # para crear el archivo con permisos correctos (600, owner=user).
   # =========================================================================
-  programs.ssh = {
-    enable = true;
-    # Deshabilitar config por defecto para evitar deprecation warnings
-    enableDefaultConfig = false;
-    matchBlocks = {
-      "*" = {
-        # Config general para todos los hosts
-        addKeysToAgent = "yes";
-      };
-    };
-  };
+  programs.ssh.enable = false;
+
+  home.activation.createSshConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    mkdir -p ~/.ssh
+    chmod 700 ~/.ssh
+    cat > ~/.ssh/config << 'SSHEOF'
+Host *
+  AddKeysToAgent yes
+
+Host aurin
+  HostName campo.zapto.org
+  Port 2222
+  User passh
+SSHEOF
+    chmod 600 ~/.ssh/config
+  '';
 
   # Servicios
   services = {
