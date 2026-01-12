@@ -46,6 +46,9 @@
     # Desde: dotfiles/nixos-aurin/etc/nixos/ -> 3 niveles arriba
     ../../../modules/desktop/xmonad.nix
 
+    # Modulo compartido nix-ld (binarios dinámicos: JetBrains Gateway, VSCode Remote, etc.)
+    ../../../modules/common/nix-ld.nix
+
     # Home Manager se integra via flake (no usa <home-manager/nixos>)
   ];
 
@@ -69,28 +72,6 @@
 
   # ===== UNFREE =====
   nixpkgs.config.allowUnfree = true;
-
-  # ===== NIX-LD (para binarios dinámicos como JetBrains Gateway) =====
-  # Permite ejecutar binarios Linux genéricos descargados (no de nixpkgs)
-  # Necesario para: IntelliJ Gateway, VSCode Remote, etc.
-  programs.nix-ld = {
-    enable = true;
-    # Librerías comunes que necesitan los binarios de JetBrains
-    libraries = with pkgs; [
-      stdenv.cc.cc.lib
-      zlib
-      glib
-      libGL
-      libxkbcommon
-      freetype
-      fontconfig
-      xorg.libX11
-      xorg.libXext
-      xorg.libXrender
-      xorg.libXi
-      xorg.libXtst
-    ];
-  };
 
   # ===== HARDWARE =====
   hardware.enableAllFirmware = true;
