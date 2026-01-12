@@ -1,0 +1,463 @@
+#+TITLE: kmonad para HHKB Hybrid - SpaceFN en NixOS
+#+AUTHOR: pascualmg
+#+DATE: 2025-01-12
+#+STARTUP: overview
+#+OPTIONS: toc:3 num:t
+
+* Motivacion
+** El problema
+
+Tengo dos teclados HHKB:
+
+| Teclado              | Controller | Programable | Conexion    |
+|----------------------+------------+-------------+-------------|
+| HHKB Pro 2 (viejo)   | Hasu       | QMK/TMK     | USB         |
+| HHKB Hybrid (nuevo)  | Stock PFU  | Limitado    | BT + USB-C  |
+
+El Hasu controller me daba:
+- *SpaceFN*: Hold Space = Fn layer, Tap Space = espacio normal
+- *Mouse keys*: Control completo del raton desde el teclado (IJKL, botones, wheel)
+- Layers personalizadas, macros, tap-hold en cualquier tecla
+
+El Hybrid con firmware stock de PFU *NO puede hacer nada de esto*. Solo permite:
+- Cambios basicos via DIP switches
+- 4 perfiles Bluetooth
+- Macros muy limitados
+
+** La solucion elegida
+
+*kmonad* - un remapeador de teclados a nivel de sistema operativo.
+
+*** Por que kmonad y no otras alternativas?
+
+| Alternativa         | Pros                          | Contras                           |
+|---------------------+-------------------------------+-----------------------------------|
+| Cipulot EC Pro-X    | Hardware-first, QMK/VIA       | ~$100, pierde Bluetooth           |
+| keyd                | Mas simple                    | Menos features que kmonad         |
+| xkb                 | Nativo en X11                 | No soporta tap-hold               |
+| Dual setup (2 HHKBs)| Ya funciona                   | Dos teclados, no es practico      |
+| *kmonad*            | Tap-hold, layers, gratis      | Depende del OS, no funciona BIOS  |
+
+*Decision*: kmonad porque:
+1. Mantengo Bluetooth del Hybrid (critico para el MacBook)
+2. SpaceFN funciona perfecto
+3. Config compartida via dotfiles (aurin + macbook = mismo NixOS)
+4. Mouse keys los sacrifico (usare raton fisico o el HHKB viejo para eso)
+
+** Limitaciones aceptadas
+
+- [ ] Mouse keys NO funcionan bien en kmonad (limitado) -> usar raton fisico
+- [ ] No funciona en BIOS/bootloader -> aceptable, casi nunca lo necesito
+- [ ] Depende del OS -> ambas maquinas son NixOS, no es problema
+- [ ] En el Mac con macOS (si alguna vez) -> no tendra SpaceFN
+
+* Que es kmonad
+** Overview
+
+kmonad es un daemon que intercepta eventos de un teclado fisico, los transforma
+segun tu configuracion, y los emite a traves de un teclado virtual (uinput).
+
+#+begin_src
++------------------------------+     +------------------+     +------------------------------+
+|   HHKB Hybrid                |     |    kmonad        |     |   Sistema (xmonad)           |
+|   /dev/input/eventX          | --> |    (daemon)      | --> |   ve "HHKB-kmonad"           |
+|   (eventos crudos)           |     |    layers,       |     |   (eventos procesados)       |
+|                              |     |    tap-hold      |     |                              |
++------------------------------+     +------------------+     +------------------------------+
+#+end_src
+
+** Origen y comunidad
+
+- Creado por David Janssen en 2019
+- Escrito en Haskell
+- GitHub: https://github.com/kmonad/kmonad
+- Muy popular en la comunidad Linux/NixOS
+- Inspirado en QMK pero a nivel de software
+
+** Conceptos clave
+
+*** Device file
+El fichero en ~/dev/input/~ que representa tu teclado fisico.
+- USB: ~/dev/input/by-id/usb-PFU_Limited_HHKB-Hybrid...-event-kbd~
+- Bluetooth: ~/dev/input/eventX~ (necesita udev rule para symlink estable)
+
+*** Layers
+Capas de teclas. Puedes tener multiples layouts y cambiar entre ellos.
+- ~base~: layout normal
+- ~spacefn~: activado al mantener Space
+
+*** Tap-hold
+Una tecla hace cosas diferentes segun como la pulses:
+- *Tap* (pulsar y soltar rapido): una accion (ej: espacio)
+- *Hold* (mantener): otra accion (ej: activar layer)
+
+*** Aliases
+Nombres para comportamientos complejos:
+#+begin_src lisp
+(defalias
+  spfn (tap-hold-next 200 spc (layer-toggle spacefn)))
+  ;;                   |   |         |
+  ;;                   |   |         +-- accion hold: activar layer
+  ;;                   |   +-- accion tap: espacio
+  ;;                   +-- threshold en ms
+#+end_src
+
+* Arquitectura de la solucion
+** Ficheros necesarios
+
+#+begin_src
+~/dotfiles/
++-- modules/
+|   +-- kmonad.nix              # Modulo NixOS (servicio, permisos, udev)
++-- config/
+|   +-- kmonad/
+|       +-- hhkb-hybrid.kbd     # Configuracion de layers y SpaceFN
++-- docs/
+    +-- KMONAD-HHKB-HYBRID.org  # Esta documentacion
+#+end_src
+
+** Flujo de datos
+
+1. *Boot*: systemd inicia ~kmonad-hhkb-hybrid.service~
+2. *Conexion*: udev detecta HHKB, crea symlink, (re)inicia kmonad
+3. *Uso*: kmonad intercepta ~/dev/input/hhkb-hybrid-*~, aplica config
+4. *Output*: Sistema ve teclado virtual "HHKB-kmonad" con SpaceFN activo
+
+** Compatibilidad USB + Bluetooth
+
+El Hybrid se puede conectar de dos formas. kmonad necesita manejar ambas:
+
+| Conexion | Device                                      | Estable? |
+|----------+---------------------------------------------+----------|
+| USB      | ~/dev/input/by-id/usb-PFU_Limited_HHKB-...~ | Si       |
+| BT       | ~/dev/input/eventX~ (X cambia)              | No       |
+
+*Solucion*: udev rule que crea symlink persistente para BT:
+
+#+begin_src udev
+SUBSYSTEM=="input", ATTRS{name}=="HHKB-Hybrid_1 Keyboard", SYMLINK+="input/hhkb-hybrid-bt"
+#+end_src
+
+* Plan de implementacion
+** TODO [0/7] Tareas
+*** TODO Verificar device USB del HHKB Hybrid
+
+Conectar el Hybrid por USB y obtener el path exacto:
+
+#+begin_src bash
+ls -la /dev/input/by-id/ | grep -i hhkb
+#+end_src
+
+Resultado esperado (ejemplo):
+#+begin_example
+usb-PFU_Limited_HHKB-Hybrid-event-kbd -> ../event5
+#+end_example
+
+*Nota*: Si es Type-S, el nombre incluira "Type-S".
+
+*** TODO Crear modulo kmonad.nix
+
+Fichero: ~~/dotfiles/modules/kmonad.nix~
+
+#+begin_src nix
+# ============================================================
+# kmonad NixOS Module - HHKB Hybrid SpaceFN
+# ============================================================
+{ config, pkgs, lib, ... }:
+
+{
+  services.kmonad = {
+    enable = true;
+
+    keyboards = {
+      # Configuracion para conexion USB
+      hhkb-hybrid-usb = {
+        # IMPORTANTE: Verificar este path con el comando:
+        # ls /dev/input/by-id/ | grep -i hhkb
+        device = "/dev/input/by-id/usb-PFU_Limited_HHKB-Hybrid-event-kbd";
+        config = builtins.readFile ../config/kmonad/hhkb-hybrid.kbd;
+
+        defcfg = {
+          enable = true;
+          fallthrough = true;
+          allowCommands = false;
+        };
+      };
+
+      # Configuracion para conexion Bluetooth
+      hhkb-hybrid-bt = {
+        device = "/dev/input/hhkb-hybrid-bt";  # symlink creado por udev
+        config = builtins.readFile ../config/kmonad/hhkb-hybrid.kbd;
+
+        defcfg = {
+          enable = true;
+          fallthrough = true;
+          allowCommands = false;
+        };
+      };
+    };
+  };
+
+  # Usuario en grupos necesarios
+  users.users.passh.extraGroups = [ "input" "uinput" ];
+
+  # Modulo uinput
+  boot.kernelModules = [ "uinput" ];
+
+  # Reglas udev
+  services.udev.extraRules = ''
+    # kmonad uinput access
+    KERNEL=="uinput", MODE="0660", GROUP="uinput", OPTIONS+="static_node=uinput"
+
+    # HHKB Hybrid Bluetooth - crear symlink persistente
+    SUBSYSTEM=="input", ATTRS{name}=="HHKB-Hybrid_1 Keyboard", SYMLINK+="input/hhkb-hybrid-bt"
+
+    # HHKB Hybrid USB hotplug
+    SUBSYSTEM=="input", ATTRS{idVendor}=="0853", ATTRS{idProduct}=="0136", TAG+="systemd"
+  '';
+}
+#+end_src
+
+*** TODO Crear configuracion hhkb-hybrid.kbd
+
+Fichero: ~~/dotfiles/config/kmonad/hhkb-hybrid.kbd~
+
+#+begin_src lisp
+;; ============================================================
+;; HHKB Hybrid - SpaceFN Configuration for kmonad
+;; ============================================================
+;; Author: pascualmg
+;; Purpose: SpaceFN layer for HHKB Hybrid on NixOS
+;;
+;; Features:
+;; - Hold Space -> SpaceFN layer (F-keys + navigation)
+;; - Tap Space -> Normal space
+;;
+;; Philosophy: Keep it simple. Mouse keys stay in the Hasu HHKB.
+
+(defcfg
+  ;; NOTA: Este input se ignora cuando se usa desde NixOS module
+  ;; El module define el device en la configuracion de keyboards
+  input  (device-file "/dev/input/by-id/usb-PFU_Limited_HHKB-Hybrid-event-kbd")
+  output (uinput-sink "HHKB-Hybrid-kmonad"
+    "sleep 1 && setxkbmap -option compose:ralt")
+  cmp-seq ralt    ;; Right Alt como Compose key
+  fallthrough true
+  allow-cmd false
+)
+
+;; ============================================================
+;; Source Layout (Physical HHKB)
+;; ============================================================
+(defsrc
+  esc  1    2    3    4    5    6    7    8    9    0    -    =    \    grv
+  tab  q    w    e    r    t    y    u    i    o    p    [    ]    bspc
+  lctl a    s    d    f    g    h    j    k    l    ;    '    ret
+  lsft z    x    c    v    b    n    m    ,    .    /    rsft fn
+  lalt lmet           spc                 rmet ralt
+)
+
+;; ============================================================
+;; Base Layer - HHKB Standard
+;; ============================================================
+(deflayer base
+  esc  1    2    3    4    5    6    7    8    9    0    -    =    \    grv
+  tab  q    w    e    r    t    y    u    i    o    p    [    ]    bspc
+  lctl a    s    d    f    g    h    j    k    l    ;    '    ret
+  lsft z    x    c    v    b    n    m    ,    .    /    rsft @fnl
+  lalt lmet           @spfn               rmet ralt
+)
+
+;; ============================================================
+;; SpaceFN Layer - Hold Space
+;; ============================================================
+;; Layout inspirado en el keymap ultimate del Hasu:
+;; Row 1: F1-F12 en number row, Ins/Del al final
+;; Row 2: Navigation cluster (home/up/end) en UIO
+;; Row 3: Arrow keys estilo vim (HJKL)
+;; Row 4: Space literal en B (por si necesitas espacio mientras hold)
+;;
+(deflayer spacefn
+  grv  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12  ins  del
+  _    _    _    esc  _    _    _    home up   end  prnt slck pause _
+  _    _    _    _    _    _    pgup left down rght _    _    _
+  _    _    _    _    _    spc  pgdn _    _    _    _    _    _
+  _    _              _                   _    _
+)
+
+;; ============================================================
+;; Fn Layer - Standard HHKB Fn (physical Fn key)
+;; ============================================================
+(deflayer fn
+  _    f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12  ins  del
+  caps _    _    _    _    _    _    _    prnt slck pause up   _    _
+  _    vold volu mute _    _    kp*  kp/  home pgup left rght _
+  _    _    _    _    _    _    kp+  kp-  end  pgdn down _    _
+  _    _              _                   _    _
+)
+
+;; ============================================================
+;; Aliases
+;; ============================================================
+(defalias
+  ;; SpaceFN: tap for space, hold for spacefn layer
+  ;; 200ms threshold - ajustar si se activa muy rapido/lento
+  spfn (tap-hold-next 200 spc (layer-toggle spacefn))
+
+  ;; Physical Fn key
+  fnl (layer-toggle fn)
+)
+#+end_src
+
+*** TODO Importar modulo en configuracion NixOS
+
+Editar los ficheros de configuracion de cada maquina:
+
+**** aurin (~nixos-aurin/configuration.nix~ o ~flake.nix~)
+
+#+begin_src nix
+imports = [
+  # ... otros imports
+  ../modules/kmonad.nix
+];
+#+end_src
+
+**** macbook (~nixos-macbook/configuration.nix~ o ~flake.nix~)
+
+#+begin_src nix
+imports = [
+  # ... otros imports
+  ../modules/kmonad.nix
+];
+#+end_src
+
+*** TODO Rebuild y probar
+
+#+begin_src bash
+# En aurin (USB)
+sudo nixos-rebuild switch --flake ~/dotfiles#aurin
+
+# Verificar servicio
+systemctl status kmonad-hhkb-hybrid-usb.service
+
+# Ver logs
+journalctl -fu kmonad-hhkb-hybrid-usb.service
+#+end_src
+
+*** TODO Test de SpaceFN
+
+Abrir un editor de texto y probar:
+
+| Accion           | Resultado esperado      |
+|------------------+-------------------------|
+| Tap Space        | Escribe espacio         |
+| Hold Space + 1   | F1                      |
+| Hold Space + H   | Page Up                 |
+| Hold Space + J   | Flecha izquierda        |
+| Hold Space + K   | Flecha abajo            |
+| Hold Space + L   | Flecha derecha          |
+| Hold Space + U   | Home                    |
+| Hold Space + I   | Flecha arriba           |
+| Hold Space + O   | End                     |
+| Hold Space + B   | Espacio (mientras hold) |
+
+*** TODO Ajustar timing si es necesario
+
+Si Space se activa como layer muy rapido (no llega a escribir espacio) o muy
+lento (tarda en activar F-keys), editar el threshold en ~hhkb-hybrid.kbd~:
+
+#+begin_src lisp
+;; Linea ~77 - cambiar 200 a tu gusto
+spfn (tap-hold-next 200 spc (layer-toggle spacefn))
+;;                   ^^^
+;;                   150 = mas rapido (hold se activa antes)
+;;                   250 = mas lento (mas tiempo para tap)
+#+end_src
+
+Luego reiniciar servicio:
+#+begin_src bash
+sudo systemctl restart kmonad-hhkb-hybrid-usb.service
+#+end_src
+
+* Troubleshooting
+** Error: "Could not open device file"
+
+#+begin_src bash
+# Verificar que el device existe
+ls -la /dev/input/by-id/ | grep -i hhkb
+
+# Verificar permisos del usuario
+groups
+# Debe incluir: input, uinput
+
+# Si no estan, hacer logout/login o reboot despues de rebuild
+#+end_src
+
+** Error: "uinput module not loaded"
+
+#+begin_src bash
+# Verificar modulo
+lsmod | grep uinput
+
+# Si no esta, cargar manualmente (temporal)
+sudo modprobe uinput
+
+# Solucion permanente: verificar que boot.kernelModules incluye "uinput"
+#+end_src
+
+** Bluetooth: device no detectado
+
+#+begin_src bash
+# Ver todos los devices de input
+cat /proc/bus/input/devices | grep -A5 -i hhkb
+
+# Verificar que la udev rule creo el symlink
+ls -la /dev/input/hhkb-hybrid-bt
+
+# Si no existe, verificar udev rules y recargar
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+#+end_src
+
+** SpaceFN no se activa / Space no escribe
+
+#+begin_src bash
+# Verificar que kmonad esta corriendo
+systemctl status kmonad-hhkb-hybrid-usb.service
+
+# Ver logs en tiempo real mientras pruebas
+journalctl -fu kmonad-hhkb-hybrid-usb.service
+
+# Test manual sin systemd
+sudo kmonad ~/dotfiles/config/kmonad/hhkb-hybrid.kbd
+# Ctrl+C para salir
+#+end_src
+
+** Conflicto con xmonad
+
+kmonad trabaja a nivel de input (antes de X11), asi que es compatible con
+cualquier WM. Sin embargo:
+
+*NO usar Space como mod key en xmonad* - conflicto con SpaceFN.
+
+Usar Win/Super (lmet) como mod key:
+#+begin_src haskell
+-- xmonad.hs
+myModMask = mod4Mask  -- Win/Super key, NO mod1Mask (Alt)
+#+end_src
+
+* Referencias
+
+- kmonad GitHub: https://github.com/kmonad/kmonad
+- kmonad Tutorial: https://github.com/kmonad/kmonad/blob/master/keymap/tutorial.kbd
+- NixOS kmonad module: https://github.com/kmonad/kmonad/blob/master/nix/nixos-module.nix
+- HHKB Hasu controller: https://geekhack.org/index.php?topic=12047.0
+- Cipulot EC (alternativa hardware): https://github.com/Cipulot/EC-PCBs
+
+* Historial de cambios
+
+| Fecha      | Cambio                                    |
+|------------+-------------------------------------------|
+| 2025-01-12 | Documento inicial creado                  |
+|            | Plan de implementacion definido           |
+|            | Decision: kmonad para SpaceFN, no Cipulot |
