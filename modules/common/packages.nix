@@ -23,6 +23,8 @@
     tree
     unzip
     zip
+    file        # Detectar tipo de archivo
+    which       # Localizar ejecutables
 
     # === HERRAMIENTAS MODERNAS (reemplazan coreutils) ===
     ripgrep     # rg - grep ultrarapido (Rust)
