@@ -320,6 +320,9 @@
     btop
     neofetch
 
+    # Power management GUI (cambiar governor en caliente)
+    cpupower-gui
+
     # Network
     networkmanagerapplet
 
