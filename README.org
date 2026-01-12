@@ -29,21 +29,67 @@ sudo nixos-rebuild switch
 
 #+BEGIN_SRC text
 dotfiles/
-├── home-manager/     ★ Home Manager (paquetes, config base)
-├── nixos-aurin/      ★ Configuración NixOS específica de Aurin
-├── xmonad/           ★ Window manager
-├── xmobar/           ★ Status bar
-├── picom/            ★ Compositor X11
-├── fish/             ★ Fish shell
-├── alacritty/        ★ Terminal emulator
-├── shell/            • Bashrc/Zshrc (legacy?)
-├── scripts/          • Scripts útiles
-├── wallpapers/       • Fondos de pantalla
-├── composer/         • PHP Composer config
-└── README.org        • Este archivo
+├── flake.nix         ★ Entry point NixOS (multi-máquina)
+├── modules/          ★ Módulos NixOS compartidos
+│   ├── common/       ★ Paquetes y servicios comunes
+│   ├── desktop/      ★ XMonad, Hyprland, GNOME
+│   └── home-manager/ ★ Configs de usuario (fish, alacritty, etc.)
+├── nixos-aurin/      ★ Config NixOS Aurin (workstation)
+├── nixos-macbook/    ★ Config NixOS MacBook Pro
+├── nixos-vespino/    ★ Config NixOS Vespino (servidor)
+├── xmonad/           ★ XMonad config (stow)
+├── xmobar/           • Legacy (migrado a home-manager)
+├── picom/            • Legacy (migrado a home-manager)
+├── fish/             • Legacy (migrado a home-manager)
+├── alacritty/        • Legacy (migrado a home-manager)
+├── claude-code/      ★ Config Claude Code CLI
+└── README.org          Este archivo
 #+END_SRC
 
-*Leyenda:* =★ Activo= | =• Posiblemente legacy/sin usar=
+*Leyenda:* =★ Activo= | =• Legacy/migrado=
+
+** Arquitectura de Módulos NixOS
+
+Filosofía: *módulos compartidos* con *opciones configurables* por máquina.
+
+#+BEGIN_SRC text
+modules/
+├── common/
+│   ├── packages.nix      # Paquetes compartidos (todas las máquinas)
+│   └── services.nix      # Servicios comunes
+├── desktop/
+│   ├── xmonad.nix        # XMonad + X11 + Picom + libinput
+│   ├── hyprland.nix      # Wayland (experimental)
+│   └── gnome.nix         # GNOME Desktop
+└── home-manager/
+    ├── default.nix       # Entry point
+    ├── passh.nix         # Config usuario passh
+    └── programs/         # Configs por programa
+#+END_SRC
+
+*Ejemplo - XMonad compartido:*
+#+BEGIN_SRC nix
+# En modules/desktop/xmonad.nix - define opciones
+options.desktop.xmonad = {
+  enable = lib.mkEnableOption "XMonad";
+  displaySetupCommand = lib.mkOption { ... };
+  picomBackend = lib.mkOption { ... };
+  refreshRate = lib.mkOption { ... };
+};
+
+# En nixos-aurin/configuration.nix - usa el módulo
+imports = [ ../../../modules/desktop/xmonad.nix ];
+desktop.xmonad = {
+  enable = true;
+  displaySetupCommand = "xrandr --output DP-4 --mode 5120x1440 --rate 120";
+  picomBackend = "glx";
+  refreshRate = 120;
+};
+#+END_SRC
+
+*Hardware de Input - Filosofía HHKB:*
+El módulo =desktop/xmonad.nix= incluye =libinput= con perfil =flat= (raw input).
+El hardware manda, no el software. Ratones gaming usan su DPI sin aceleración del sistema.
 
 * Configuraciones Principales
 
