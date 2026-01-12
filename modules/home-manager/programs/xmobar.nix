@@ -112,7 +112,7 @@ let
             ${lib.optionalString (cfg.alsaMixer != null) ''
             -- Volumen
             , Run Alsa "default" "${cfg.alsaMixer}"
-                [ "-t", "<action=`pavucontrol`><fn=1>\xf028</fn> <volume>% <status></action>"
+                [ "-t", "<action=`pavucontrol`><fn=1>\xf028</fn>  <volume>% <status></action>"
                 , "--"
                 , "--on", ""
                 , "--off", "<fn=1>\xf026</fn>"

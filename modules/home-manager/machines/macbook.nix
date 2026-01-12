@@ -36,7 +36,7 @@
     showBattery = true;         # Laptop, mostrar bateria
     showNvmeMonitor = false;    # SSD externo, no NVMe interno
     showTrayer = false;         # No hay trayer-padding-icon instalado
-    alsaMixer = "PCM";          # MacBook usa PCM en lugar de Master
+    alsaMixer = "Master";       # PipeWire expone Master, no PCM
   };
 
   # Taffybar - Barra GTK3 con systray nativo (ABAJO, para probar junto a xmobar)
