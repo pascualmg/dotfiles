@@ -39,7 +39,7 @@ in {
   imports = [
     ./hardware-configuration.nix
     ./minecraft.nix
-    <home-manager/nixos>
+    # home-manager ahora viene del flake (enableHomeManager = true)
   ];
 
   # ===== UNFREE =====

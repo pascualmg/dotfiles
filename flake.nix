@@ -218,7 +218,7 @@
         vespino = mkNixosConfig {
           hostname = "vespino";
           configPath = ./nixos-vespino/etc/nixos/configuration.nix;
-          enableHomeManager = false;  # TODO: cambiar a true en Fase 3
+          enableHomeManager = true;
         };
 
         # ---------------------------------------------------------------------
