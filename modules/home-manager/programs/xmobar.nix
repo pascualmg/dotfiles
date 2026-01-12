@@ -76,19 +76,19 @@ let
         , commands = [
             ${lib.optionalString (cfg.gpuType != "none") (gpuCommand.${cfg.gpuType})}
 
-            -- CPU con btop
-            ${lib.optionalString (cfg.gpuType != "none") ","}Run Cpu [ "-t", "<action=`alacritty --class=btop-monitor --option=font.size=12 --option=window.startup_mode=Maximized -e btop`><fn=1>\xf2db</fn> CPU: <total>%</action>"
-                    , "-L", "3"
-                    , "-H", "50"
+            -- CPU con btop (icono + %, sin texto)
+            ${lib.optionalString (cfg.gpuType != "none") ","}Run Cpu [ "-t", "<action=`alacritty --class=btop-monitor --option=font.size=12 --option=window.startup_mode=Maximized -e btop`><fn=1>󰻠</fn> <total>%</action>"
+                    , "-L", "30"
+                    , "-H", "70"
                     , "-l", "#98c379"
                     , "-n", "#e5c07b"
                     , "-h", "#e06c75"
                     ] 10
 
-            -- Memoria RAM mejorada
-            , Run Memory [ "-t", "<action=`alacritty --class=btop-monitor --option=font.size=12 --option=window.startup_mode=Maximized -e btop`><fn=1>\xf233</fn> Mem: <usedratio>% (<used>/<total>)</action>"
-                        , "-L", "50"
-                        , "-H", "80"
+            -- Memoria RAM (icono + %, sin texto)
+            , Run Memory [ "-t", "<action=`alacritty --class=btop-monitor --option=font.size=12 --option=window.startup_mode=Maximized -e btop`><fn=1>󰍛</fn> <usedratio>%</action>"
+                        , "-L", "60"
+                        , "-H", "85"
                         , "-l", "#98c379"
                         , "-n", "#e5c07b"
                         , "-h", "#e06c75"
