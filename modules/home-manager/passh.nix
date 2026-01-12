@@ -332,6 +332,8 @@
   home.activation.createSshConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     mkdir -p ~/.ssh
     chmod 700 ~/.ssh
+    # Eliminar symlink si existe (Home Manager anterior)
+    rm -f ~/.ssh/config 2>/dev/null || true
     cat > ~/.ssh/config << 'SSHEOF'
 Host *
   AddKeysToAgent yes
