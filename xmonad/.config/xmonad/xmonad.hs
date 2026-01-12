@@ -159,6 +159,10 @@ myLayoutHook = toggleLayouts                    -- Permite Mod+f para toggle ful
 
 myStartupHook :: X ()
 myStartupHook = do
+    -- Systemd: Exportar variables de sesión gráfica para servicios como Sunshine
+    spawnOnce "systemctl --user import-environment DISPLAY XAUTHORITY"
+    spawnOnce "systemctl --user start graphical-session.target"
+
     -- Teclado: layout US por defecto (HHKB), ES disponible con Alt+Shift
     spawn "setxkbmap us,es -option grp:alt_shift_toggle,caps:escape"
 
