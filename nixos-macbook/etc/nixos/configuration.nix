@@ -294,37 +294,17 @@
     noto-fonts-color-emoji
   ];
 
-  # ===== SYSTEM PACKAGES =====
+  # ===== SYSTEM PACKAGES (solo específicos de MacBook) =====
+  # Los comunes (vim, git, htop, etc.) están en modules/common/packages.nix
   environment.systemPackages = with pkgs; [
-    # Terminal
-    alacritty  # Ya es unstable via flake
-    tmux
-    byobu
+    # Terminal (versión unstable específica)
+    alacritty
 
-    # Editors
-    vim
+    # Editor
     emacs
 
-    # Dev tools
-    git
-    curl
-    wget
-    tree
-    unzip
-    ripgrep
-    fd
-    jq
-
-    # System
-    htop
-    btop
-    neofetch
-
-    # Power management GUI (cambiar governor en caliente)
+    # Power management GUI (solo laptops - cambiar governor en caliente)
     cpupower-gui
-
-    # Network
-    networkmanagerapplet
 
     # Bluetooth GUI (para XMonad)
     blueman

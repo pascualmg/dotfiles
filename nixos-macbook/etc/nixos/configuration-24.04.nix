@@ -268,41 +268,20 @@ in {
   };
 
   # ===========================================================================
-  # SYSTEM PACKAGES
+  # SYSTEM PACKAGES (solo específicos de MacBook)
+  # Los comunes (vim, git, htop, etc.) están en modules/common/packages.nix
   # ===========================================================================
   environment.systemPackages = with pkgs; [
-    # Terminal
+    # Terminal (versión unstable específica)
     alacritty
-    tmux
 
-    # Editors
-    vim
+    # Editor
     emacs
 
-    # Dev tools
-    git
-    curl
-    wget
-    tree
-    unzip
-    ripgrep
-    fd
-    jq
-    htop
-    btop
-
-    # Network tools (importantes para debug WiFi)
-    networkmanagerapplet
-    wpa_supplicant_gui  # GUI para WiFi
+    # WiFi debug tools (específicos MacBook)
+    wpa_supplicant_gui
     iw
     wirelesstools
-
-    # System info
-    neofetch
-    inxi
-    lshw
-    pciutils
-    usbutils
 
     # LSP Nix
     nil
@@ -310,12 +289,6 @@ in {
 
     # Home Manager
     home-manager
-
-    # Extras
-    file
-    which
-    gnumake
-    gcc
   ];
 
   # ===========================================================================
