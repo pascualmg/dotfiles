@@ -57,6 +57,9 @@
     iotop       # Monitor I/O disco
     iftop       # Monitor trafico red
 
+    # === STREAMING/REMOTE ===
+    moonlight-qt  # Cliente Sunshine/GameStream (conectar a Aurin)
+
     # === BUILD TOOLS ===
     gcc
     gnumake
