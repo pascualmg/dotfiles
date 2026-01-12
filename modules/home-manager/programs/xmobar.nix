@@ -153,6 +153,11 @@ let
                 ] 50
             ''}
 
+            -- Raton wireless (Logitech hidpp)
+            ${lib.optionalString cfg.showWirelessMouse ''
+            , Run Com "/home/passh/dotfiles/scripts/wireless-mouse.sh" [] "mouse" 100
+            ''}
+
             -- XMonad Workspaces y Layout
             , Run StdinReader
 
@@ -165,7 +170,7 @@ let
         -- Template
         , sepChar = "%"
         , alignSep = "}{"
-        , template = " ${lib.optionalString (cfg.gpuType != "none") (gpuTemplate.${cfg.gpuType})}${lib.optionalString (cfg.networkInterface != null) " (eth %${cfg.networkInterface}%)"}${lib.optionalString cfg.showNvmeMonitor " %nvme%"}${lib.optionalString (cfg.wifiInterface != null) " %wifi%"} } %StdinReader% { %cpu% %memory% <fc=#56b6c2>%docker%</fc>${lib.optionalString cfg.showBattery " %battery%"} ${lib.optionalString (cfg.alsaMixer != null) " %alsa:default:${cfg.alsaMixer}%"} %date%${lib.optionalString cfg.showTrayer " | %trayerpad%"}"
+        , template = " ${lib.optionalString (cfg.gpuType != "none") (gpuTemplate.${cfg.gpuType})}${lib.optionalString (cfg.networkInterface != null) " (eth %${cfg.networkInterface}%)"}${lib.optionalString cfg.showNvmeMonitor " %nvme%"}${lib.optionalString (cfg.wifiInterface != null) " %wifi%"} } %StdinReader% { %cpu% %memory% <fc=#56b6c2>%docker%</fc>${lib.optionalString cfg.showBattery " %battery%"}${lib.optionalString cfg.showWirelessMouse " %mouse%"} ${lib.optionalString (cfg.alsaMixer != null) " %alsa:default:${cfg.alsaMixer}%"} %date%${lib.optionalString cfg.showTrayer " | %trayerpad%"}"
 
     }
   '';
@@ -206,6 +211,12 @@ in {
       type = lib.types.bool;
       default = false;
       description = "Show battery indicator (for laptops)";
+    };
+
+    showWirelessMouse = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Show wireless mouse battery indicator (Logitech hidpp)";
     };
 
     showNvmeMonitor = lib.mkOption {
