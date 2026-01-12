@@ -378,36 +378,37 @@ in
   # ===========================================================================
 
   environment.variables = {
-    # GTK - sin escalado de ventanas, solo DPI
-    GDK_SCALE = "1";
-    GDK_DPI_SCALE = "1";
+    # GTK HiDPI - escalado 2x con compensacion de fonts
+    GDK_SCALE = "2";
+    GDK_DPI_SCALE = "0.5";  # 1/GDK_SCALE para evitar doble escalado de fonts
 
-    # Qt HiDPI - automático
+    # Qt HiDPI - automatico
     QT_AUTO_SCREEN_SCALE_FACTOR = "1";
     QT_ENABLE_HIGHDPI_SCALING = "1";
+    QT_SCALE_FACTOR = "2";
 
-    # Cursor (32 es normal, 48 es grande)
-    XCURSOR_SIZE = "32";
+    # Cursor HiDPI (48 para 2x scaling)
+    XCURSOR_SIZE = "48";
     XCURSOR_THEME = "Adwaita";
 
-    # Java apps
-    _JAVA_OPTIONS = "-Dsun.java2d.uiScale=1.75";
+    # Java apps HiDPI
+    _JAVA_OPTIONS = "-Dsun.java2d.uiScale=2";
 
     # Intel VAAPI
     LIBVA_DRIVER_NAME = "iHD";
   };
 
   # Xresources para Xft (fonts en X11)
-  # DPI 168 = 1.75x del estándar 96 (punto medio para Retina 13")
+  # DPI 227 = nativo Retina 13" (2560x1600 @ 13.3")
   environment.etc."X11/Xresources".text = ''
-    Xft.dpi: 168
+    Xft.dpi: 227
     Xft.autohint: 0
     Xft.lcdfilter: lcddefault
     Xft.hintstyle: hintfull
     Xft.hinting: 1
     Xft.antialias: 1
     Xft.rgba: rgb
-    Xcursor.size: 32
+    Xcursor.size: 48
     Xcursor.theme: Adwaita
   '';
 

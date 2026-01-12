@@ -15,10 +15,21 @@
 { config, lib, pkgs, ... }:
 
 {
-  # XMobar configurado para macbook HiDPI
+  # HiDPI variables para sesion X (GDM no lee /etc/set-environment)
+  home.sessionVariables = {
+    GDK_SCALE = "2";
+    GDK_DPI_SCALE = "0.5";
+    QT_SCALE_FACTOR = "2";
+    QT_AUTO_SCREEN_SCALE_FACTOR = "1";
+    QT_ENABLE_HIGHDPI_SCALING = "1";
+    XCURSOR_SIZE = "48";
+  };
+
+  # XMobar configurado para macbook HiDPI (arriba)
+  # NOTA: fontSize ahora es pixelsize (pixels absolutos, ignora DPI)
   dotfiles.xmobar = {
-    enable = true;
-    fontSize = 24;              # 168 DPI HiDPI - necesita fuente mas grande
+    enable = true;              # Tu katana de siempre
+    fontSize = 16;              # Tamaño estándar (HiDPI no escala bien en xmobar)
     gpuType = "intel";          # Intel integrated
     networkInterface = null;    # Sin ethernet fijo, ajustar si usas adaptador
     wifiInterface = "wlp0s20f0u7";   # WiFi USB dongle (Broadcom interno no soportado)
@@ -28,9 +39,19 @@
     alsaMixer = "PCM";          # MacBook usa PCM en lugar de Master
   };
 
+  # Taffybar - Barra GTK3 con systray nativo (ABAJO, para probar junto a xmobar)
+  dotfiles.taffybar = {
+    enable = true;
+    fontSize = 14;              # GTK3 respeta GDK_SCALE, no necesita fuente grande
+    barHeight = 32;
+    barPosition = "Bottom";     # Abajo - xmobar va arriba
+    showBattery = true;
+    showSystray = true;         # nm-applet, blueman-applet funcionan directo
+  };
+
   # Alacritty configurado para macbook HiDPI
   dotfiles.alacritty = {
-    fontSize = 18;              # 168 DPI HiDPI - fuente mas grande
+    fontSize = 11;              # Con Xft.dpi=227, 11 se ve bien
     theme = "dark";             # Spacemacs Dark
   };
 
@@ -38,6 +59,9 @@
   dotfiles.picom = {
     backend = "xrender";        # Intel integrated - xrender mas compatible
   };
+
+  # Gestos de trackpad para cambiar workspaces
+  dotfiles.libinput-gestures.enable = true;
 
   # GNOME dconf settings
   dconf.settings = {

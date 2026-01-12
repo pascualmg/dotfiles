@@ -13,3 +13,10 @@ fish/.config/fish/conf.d/fish_frozen_*
 # Nix build results
 result
 result-*
+
+# Claude Code local settings (cada máquina tiene los suyos)
+claude-code/.claude/settings.local.json
+
+# Carpetas stow vacías/locales (configs ya están en home-manager)
+alacritty/
+fish/
