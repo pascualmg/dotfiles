@@ -70,6 +70,28 @@
   # ===== UNFREE =====
   nixpkgs.config.allowUnfree = true;
 
+  # ===== NIX-LD (para binarios dinámicos como JetBrains Gateway) =====
+  # Permite ejecutar binarios Linux genéricos descargados (no de nixpkgs)
+  # Necesario para: IntelliJ Gateway, VSCode Remote, etc.
+  programs.nix-ld = {
+    enable = true;
+    # Librerías comunes que necesitan los binarios de JetBrains
+    libraries = with pkgs; [
+      stdenv.cc.cc.lib
+      zlib
+      glib
+      libGL
+      libxkbcommon
+      freetype
+      fontconfig
+      xorg.libX11
+      xorg.libXext
+      xorg.libXrender
+      xorg.libXi
+      xorg.libXtst
+    ];
+  };
+
   # ===== HARDWARE =====
   hardware.enableAllFirmware = true;
 
