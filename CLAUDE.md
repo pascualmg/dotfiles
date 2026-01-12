@@ -78,6 +78,30 @@ Estas carpetas NO están en git (ver .gitignore):
 - `.aider*` - Cache de aider
 - `*.swp`, `*.swo` - Archivos temporales de vim
 
+## Hardware de Input - Filosofía "Hardware-First"
+
+Filosofía HHKB aplicada a todo el input: **el hardware manda, no el software**.
+
+### Teclados
+- **HHKB original** con Hasu controller (QMK)
+- **HHKB Hybrid** (BT + USB-C) - Topre switches
+
+### Ratón
+- **Logitech G Pro X Superlight 2** - Perfil único en memoria interna (DPI configurado en el ratón)
+- **libinput configurado en flat** (raw input) en todas las máquinas NixOS
+- Sin aceleración del sistema - movimiento 1:1 con el DPI del ratón
+
+```nix
+# Configuración aplicada en todas las máquinas (aurin, macbook, vespino)
+services.libinput = {
+  enable = true;
+  mouse = {
+    accelProfile = "flat";  # Raw input
+    accelSpeed = "0";       # Respeta DPI del ratón
+  };
+};
+```
+
 ## Notas para Claude
 
 - **NO versionar archivos grandes** (imágenes, binarios, etc.) en git
@@ -108,5 +132,5 @@ numa-info           # Info NUMA dual socket
 
 ---
 
-**Última actualización**: 2026-01-06
+**Última actualización**: 2026-01-12
 **Sistema**: Aurin (NixOS 25.05, Dual Xeon E5-2699v3, RTX 5080)

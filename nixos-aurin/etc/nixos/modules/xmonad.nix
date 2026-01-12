@@ -30,6 +30,17 @@
 {
   # ===== SERVICES: X.Org + XMonad + XFCE + Picom =====
   services = {
+    # ===== LIBINPUT: Raw input para ratones gaming =====
+    # Filosofía HHKB: el hardware manda, no el software
+    # Perfil flat = movimiento 1:1 con el DPI del ratón
+    libinput = {
+      enable = true;
+      mouse = {
+        accelProfile = "flat";  # Raw input, sin aceleración del sistema
+        accelSpeed = "0";       # Velocidad base (respeta DPI del ratón)
+      };
+    };
+
     xserver = {
       enable = true;
 
