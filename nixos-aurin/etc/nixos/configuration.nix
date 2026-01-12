@@ -333,12 +333,14 @@
 
   # ===== SERVICES =====
   services = {
-    # SSH
+    # SSH (con TCP forwarding para JetBrains Gateway)
     openssh = {
       enable = true;
       settings = {
         PermitRootLogin = "yes";
         PasswordAuthentication = true;
+        AllowTcpForwarding = true;
+        GatewayPorts = "clientspecified";
       };
     };
 
