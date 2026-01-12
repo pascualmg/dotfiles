@@ -143,12 +143,12 @@
         enableContribAndExtras = true;
       };
 
-      # Keyboard layout - Spanish ISO (teclado físico del MacBook)
+      # Keyboard layout - US por defecto (HHKB), ES como alternativa
       xkb = {
-        layout = "es";
+        layout = "us,es";
         variant = "";
-        # Caps Lock → Escape (workaround Touch Bar sin funcionar)
-        options = "caps:escape";
+        # Alt+Shift para cambiar layout, Caps Lock → Escape
+        options = "grp:alt_shift_toggle,caps:escape";
       };
     };
 

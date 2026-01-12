@@ -86,6 +86,36 @@ Filosofía HHKB aplicada a todo el input: **el hardware manda, no el software**.
 - **HHKB original** con Hasu controller (QMK)
 - **HHKB Hybrid** (BT + USB-C) - Topre switches
 
+### Layout de teclado - US/ES
+
+Configuración dual US (default) + ES con toggle:
+
+- **Layout por defecto**: US (para programar con HHKB)
+- **Layout alternativo**: ES (para chats ocasionales)
+- **Toggle**: **Alt+Shift** cambia entre US y ES
+- **Caps Lock → Escape** (útil para Vim/Emacs)
+
+Configurado en 3 lugares (redundancia para robustez):
+1. **NixOS xkb** (`modules/desktop/xmonad.nix`): Sistema base
+2. **XMonad startup** (`xmonad.hs`): Aplica en cada Mod+q
+3. **Máquinas individuales**: vespino, macbook configs
+
+```nix
+# Configuración xkb en todas las máquinas
+services.xserver.xkb = {
+  layout = "us,es";
+  options = "grp:alt_shift_toggle,caps:escape";
+};
+```
+
+```bash
+# Aplicar manualmente (sesión actual)
+setxkbmap us,es -option grp:alt_shift_toggle,caps:escape
+
+# Verificar configuración actual
+setxkbmap -query
+```
+
 ### Ratón
 - **Logitech G Pro X Superlight 2** - Perfil único en memoria interna (DPI configurado en el ratón)
 - **libinput configurado en flat** (raw input) en todas las máquinas NixOS

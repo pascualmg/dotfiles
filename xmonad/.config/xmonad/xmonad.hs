@@ -159,8 +159,8 @@ myLayoutHook = toggleLayouts                    -- Permite Mod+f para toggle ful
 
 myStartupHook :: X ()
 myStartupHook = do
-    -- Teclado: layout US por defecto (HHKB) - spawn (no spawnOnce) para que aplique en cada Mod+q
-    spawn "setxkbmap us"
+    -- Teclado: layout US por defecto (HHKB), ES disponible con Alt+Shift
+    spawn "setxkbmap us,es -option grp:alt_shift_toggle,caps:escape"
 
     -- Display: configurar resolución y DPI
     spawnOnce "xrandr --output DP-4 --mode 5120x1440 --rate 120 --primary --dpi 96"

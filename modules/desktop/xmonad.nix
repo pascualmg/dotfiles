@@ -15,8 +15,10 @@
 #   - ContribAndExtras habilitado
 #
 # Keyboard:
-#   - Layout: US + ES
+#   - Layout: US (default) + ES (Alt+Shift to toggle)
+#   - Caps Lock → Escape
 #   - Key repeat: 350ms delay, 50 rate
+#   - NOTA: XMonad también ejecuta setxkbmap en startup (xmonad.hs)
 #
 # Display Setup:
 #   - Se configura via displaySetupCommand (parametro)
@@ -76,6 +78,8 @@
         xkb = {
           layout = "us,es";
           variant = "";
+          # Alt+Shift para cambiar layout, Caps Lock → Escape
+          options = "grp:alt_shift_toggle,caps:escape";
         };
 
         windowManager.xmonad = {

@@ -331,6 +331,8 @@ in {
       xkb = {
         layout = "us,es";
         variant = "";
+        # Alt+Shift para cambiar layout, Caps Lock → Escape
+        options = "grp:alt_shift_toggle,caps:escape";
       };
       windowManager.xmonad = {
         enable = true;
