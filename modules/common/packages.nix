@@ -59,6 +59,9 @@
     iotop       # Monitor I/O disco
     iftop       # Monitor trafico red
 
+    # === GAMING MICE ===
+    piper       # GUI para ratbagd (config ratones gaming: DPI, botones, LEDs)
+
     # === STREAMING/REMOTE ===
     moonlight-qt  # Cliente Sunshine/GameStream (conectar a Aurin)
 

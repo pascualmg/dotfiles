@@ -54,6 +54,10 @@
   # ===== UDISKS2 (Auto-mount USBs) =====
   services.udisks2.enable = true;
 
+  # ===== RATBAGD (Logitech gaming mice) =====
+  # Permite gestionar ratones Logitech (DPI, batería, botones)
+  services.ratbagd.enable = true;
+
   # ===== LOCATE (Database de archivos) =====
   services.locate = {
     enable = true;

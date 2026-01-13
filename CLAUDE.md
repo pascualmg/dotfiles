@@ -117,9 +117,11 @@ setxkbmap -query
 ```
 
 ### Ratón
-- **Logitech G Pro X Superlight 2** - Perfil único en memoria interna (DPI configurado en el ratón)
+- **Logitech G Pro X Superlight 2** (nuevo) - DPI configurado via G Hub en Windows, guardado en onboard memory
+- **Logitech G Pro** (viejo) - DPI configurable via ratbagctl en Linux
 - **libinput configurado en flat** (raw input) en todas las máquinas NixOS
 - Sin aceleración del sistema - movimiento 1:1 con el DPI del ratón
+- **DPI recomendado**: 1000 (equilibrio gaming/escritorio)
 
 ```nix
 # Configuración aplicada en todas las máquinas (aurin, macbook, vespino)
@@ -131,6 +133,25 @@ services.libinput = {
   };
 };
 ```
+
+#### Configuración DPI con ratbagctl
+
+**G Pro viejo** - Soportado por libratbag/ratbagd:
+```bash
+ratbagctl list                        # Ver dispositivos (ej: "singing-hare")
+ratbagctl "singing-hare" info         # Ver DPI actual y perfiles
+ratbagctl "singing-hare" dpi get      # DPI activo
+ratbagctl "singing-hare" dpi set 1000 # Cambiar DPI
+```
+
+**G Pro X Superlight 2** - NO soportado por libratbag 0.18 ni solaar 1.1.16 (ratón muy nuevo, 2023):
+- Usar **G Hub en Windows** para configurar DPI
+- Activar **Onboard Memory Mode** para guardar en el ratón
+- Configurar los 3 perfiles (Lightspeed, USB, Bluetooth) con el mismo DPI para consistencia
+
+#### Herramientas instaladas
+- **ratbagd** - Daemon para configurar ratones gaming (habilitado en services.nix)
+- **piper** - GUI para ratbagd (útil para ratones soportados)
 
 ### Indicador batería en xmobar
 - Script `scripts/wireless-mouse.sh` lee batería via `/sys/class/power_supply/hidpp_battery_*`
