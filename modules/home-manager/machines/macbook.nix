@@ -26,10 +26,10 @@
   };
 
   # XMobar configurado para macbook HiDPI (arriba)
-  # NOTA: fontSize ahora es pixelsize (pixels absolutos, ignora DPI)
+  # NOTA: Usa sintaxis Pango que escala correctamente con DPI
   dotfiles.xmobar = {
     enable = true;              # Tu katana de siempre
-    fontSize = 16;              # Tamaño estándar (HiDPI no escala bien en xmobar)
+    fontSize = 22;              # Pango escala con DPI
     gpuType = "intel";          # Intel integrated
     networkInterface = null;    # Sin ethernet fijo, ajustar si usas adaptador
     wifiInterface = "wlp0s20f0u7";   # WiFi USB dongle (Broadcom interno no soportado)

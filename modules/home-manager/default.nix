@@ -12,6 +12,7 @@
 #   |-- default.nix       <- Este archivo (entry point)
 #   |-- passh.nix         <- Configuracion base del usuario passh
 #   |-- programs/
+#   |   |-- emacs.nix     <- Wrapper inteligente X11/Wayland (dotfiles.emacs)
 #   |   |-- xmobar.nix    <- Modulo xmobar parametrizable (dotfiles.xmobar)
 #   |   |-- taffybar.nix  <- Barra alternativa GTK3 con systray (dotfiles.taffybar)
 #   |   +-- (otros: alacritty.nix, fish.nix, etc.)
@@ -35,6 +36,7 @@ in
     ./passh.nix
 
     # Modulos de programas (definen opciones en namespace dotfiles.*)
+    ./programs/emacs.nix            # Wrapper inteligente X11/Wayland
     ./programs/xmobar.nix
     ./programs/taffybar.nix
     ./programs/alacritty.nix

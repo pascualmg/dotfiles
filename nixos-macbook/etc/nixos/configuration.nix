@@ -287,6 +287,7 @@
     nerd-fonts.monoid
     nerd-fonts.jetbrains-mono
     nerd-fonts.fira-code
+    nerd-fonts.heavy-data
     # Fuentes básicas
     dejavu_fonts
     liberation_ttf

@@ -48,12 +48,13 @@ let
   };
 
   # Generar el xmobarrc completo
-  # NOTA: Usamos pixelsize (no size) para consistencia en HiDPI
+  # NOTA: Usamos sintaxis Pango (no Xft) - funciona correctamente en HiDPI
+  # Sintaxis Pango: "Font Name Style Size" (ej: "Monoid Nerd Font Bold 16")
   xmobarConfig = ''
     Config {
-        -- Apariencia basica
-        font = "xft:Monoid Nerd Font:size=${toString cfg.fontSize}:bold"
-        , additionalFonts = [ "xft:Monoid Nerd Font:size=${toString (cfg.fontSize + 4)}:bold" ]
+        -- Apariencia basica (Pango para soporte HiDPI correcto)
+        font = "HeavyData Nerd Font ${toString cfg.fontSize}"
+        , additionalFonts = [ "HeavyData Nerd Font ${toString (cfg.fontSize + 4)}" ]
         , borderColor = "#282c34"
         , border = TopB
         , bgColor = "#282c34"
@@ -61,9 +62,9 @@ let
         , alpha = 255
 
         -- Posicionamiento (TopH = altura en pixels, calculada segun fontSize)
-        , position = TopH ${toString (builtins.floor (cfg.fontSize * 1.4))}
-        , textOffset = ${toString (builtins.floor (cfg.fontSize * 0.15))}
-        , iconOffset = ${toString (builtins.floor (cfg.fontSize * 0.15))}
+        , position = TopH ${toString (builtins.floor (cfg.fontSize * 1.8))}
+        , textOffset = ${toString (builtins.floor (cfg.fontSize * 0.2))}
+        , iconOffset = ${toString (builtins.floor (cfg.fontSize * 0.2))}
 
         -- Comportamiento
         , lowerOnStart = True

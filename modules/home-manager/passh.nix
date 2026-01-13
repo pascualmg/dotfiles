@@ -18,6 +18,7 @@
 #   - Opciones de git actualizadas a nueva sintaxis
 #   - Paquetes problematicos comentados o reemplazados
 #   - xmobar: migrado a modules/home-manager/programs/xmobar.nix
+#   - emacs: migrado a modules/home-manager/programs/emacs.nix (wrapper X11/Wayland)
 # =============================================================================
 
 { config, pkgs, lib, ... }:
@@ -32,7 +33,7 @@
   programs.zsh.enable = false;
   programs.emacs.enable = false;
 
-  # NOTA: nixpkgs.config no se usa aquí cuando useGlobalPkgs=true
+  # NOTA: nixpkgs.config no se usa aqui cuando useGlobalPkgs=true
   # allowUnfree y permittedInsecurePackages se configuran a nivel del flake/sistema
 
   home = {
@@ -47,6 +48,7 @@
     # Ya no necesitamos fetchTarball para unstable/master.
     #
     # xmobar se instala via programs/xmobar.nix cuando enable=true
+    # emacs se instala via programs/emacs.nix (wrapper inteligente X11/Wayland)
     # =========================================================================
     packages = with pkgs; [
       # Core utils
@@ -111,8 +113,8 @@
       xorg.xrandr
       xorg.xev
 
-      # Emacs y dependencias (pgtk para soporte nativo Wayland + X11)
-      emacs-pgtk
+      # Emacs dependencias (emacs binarios via programs/emacs.nix)
+      # MIGRATED: emacs-pgtk -> programs/emacs.nix (wrapper inteligente X11/Wayland)
       nodejs_22  # nodejs_24 puede no existir, usar 22 LTS
       claude-code
       tdlib
@@ -247,27 +249,28 @@
     ]);
 
     sessionVariables = {
-      EDITOR = "emacs";
-      VISUAL = "emacs";
+      # EDITOR/VISUAL ahora se definen en programs/emacs.nix
+      # (usa emacsclient con fallback a emacs)
       ORG_DIRECTORY = "$HOME/org";
       ORG_ROAM_DIRECTORY = "$HOME/org/roam";
-      PATH = "${pkgs.emacs-pgtk}/bin:${pkgs.git}/bin:$PATH";
+      # PATH ya no necesita hardcodear emacs-pgtk (el wrapper va primero automaticamente)
       # Telega (Telegram client para Emacs) - evita hardcodear path en doom config
       TDLIB_PREFIX = "${pkgs.tdlib}";
     };
 
     # Activaciones
     # ==========================================================================
-    # STOW ACTIVATION (LEGACY - EN PROCESO DE ELIMINACIÓN)
+    # STOW ACTIVATION (LEGACY - EN PROCESO DE ELIMINACION)
     # ==========================================================================
-    # ESTADO MIGRACIÓN STOW → HOME-MANAGER:
-    #   ✅ xmobar   - Migrado (modules/home-manager/programs/xmobar.nix)
-    #   ✅ alacritty - Migrado (modules/home-manager/programs/alacritty.nix)
-    #   ✅ picom    - Migrado (modules/home-manager/programs/picom.nix)
-    #   ✅ fish     - Migrado (modules/home-manager/programs/fish.nix)
-    #   ⏳ xmonad   - Pendiente (config Haskell compleja)
-    #   ⏳ composer - Pendiente (bajo riesgo, simple)
-    #   ✅ claude-code - Se mantiene en stow (local, no compartir entre máquinas)
+    # ESTADO MIGRACION STOW -> HOME-MANAGER:
+    #   [OK] xmobar   - Migrado (modules/home-manager/programs/xmobar.nix)
+    #   [OK] alacritty - Migrado (modules/home-manager/programs/alacritty.nix)
+    #   [OK] picom    - Migrado (modules/home-manager/programs/picom.nix)
+    #   [OK] fish     - Migrado (modules/home-manager/programs/fish.nix)
+    #   [OK] emacs    - Migrado (modules/home-manager/programs/emacs.nix)
+    #   [..] xmonad   - Pendiente (config Haskell compleja)
+    #   [..] composer - Pendiente (bajo riesgo, simple)
+    #   [OK] claude-code - Se mantiene en stow (local, no compartir entre maquinas)
     #
     # PLAN: Cuando xmonad y composer migren, eliminar este bloque completamente.
     # ==========================================================================

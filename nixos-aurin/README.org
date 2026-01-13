@@ -192,6 +192,8 @@ sudo nixos-rebuild switch
 sudo nixos-rebuild switch --rollback
 #+END_SRC
 
+#+RESULTS:
+
 *** Comandos útiles:
 
 #+BEGIN_SRC bash
