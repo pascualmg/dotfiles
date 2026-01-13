@@ -63,6 +63,16 @@
   # Gestos de trackpad para cambiar workspaces
   dotfiles.libinput-gestures.enable = true;
 
+  # ===== WAYLAND COMPOSITORS =====
+  # Hyprland: moderno con animaciones (aparece en GDM)
+  dotfiles.hyprland = {
+    enable = true;
+    monitorScale = "2";  # HiDPI Retina
+  };
+
+  # niri: scroll infinito horizontal (aparece en GDM)
+  dotfiles.niri.enable = true;
+
   # GNOME dconf settings
   dconf.settings = {
     # HiDPI: Escalado de texto para pantalla Retina 227 DPI
