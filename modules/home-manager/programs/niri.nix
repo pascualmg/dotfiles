@@ -96,38 +96,38 @@
       // ===== SPAWN AT STARTUP =====
       spawn-at-startup "waybar"
 
-      // ===== KEYBINDINGS (similar a XMonad) =====
+      // ===== KEYBINDINGS (igual que XMonad) =====
       binds {
           // Programas
           Mod+Shift+Return { spawn "${config.dotfiles.niri.terminal}"; }
-          Mod+P { spawn "${config.dotfiles.niri.launcher}"; }
+          Mod+p { spawn "${config.dotfiles.niri.launcher}"; }
 
           // Ventanas
-          Mod+Shift+C { close-window; }
-          Mod+Shift+Q { quit; }
-          Mod+F { fullscreen-window; }
+          Mod+Shift+c { close-window; }
+          Mod+Shift+q { quit; }
+          Mod+f { fullscreen-window; }
           Mod+Space { switch-preset-column-width; }
 
           // Scroll horizontal (core de niri)
-          Mod+H { focus-column-left; }
-          Mod+L { focus-column-right; }
-          Mod+Shift+H { move-column-left; }
-          Mod+Shift+L { move-column-right; }
+          Mod+h { focus-column-left; }
+          Mod+l { focus-column-right; }
+          Mod+Shift+h { move-column-left; }
+          Mod+Shift+l { move-column-right; }
 
           // Flechas
           Mod+Left { focus-column-left; }
           Mod+Right { focus-column-right; }
 
           // Foco vertical
-          Mod+J { focus-window-down; }
-          Mod+K { focus-window-up; }
-          Mod+Shift+J { move-window-down; }
-          Mod+Shift+K { move-window-up; }
+          Mod+j { focus-window-down; }
+          Mod+k { focus-window-up; }
+          Mod+Shift+j { move-window-down; }
+          Mod+Shift+k { move-window-up; }
           Mod+Tab { focus-window-down-or-column-right; }
 
           // Columnas
-          Mod+W { maximize-column; }
-          Mod+C { center-column; }
+          Mod+w { maximize-column; }
+          Mod+c { center-column; }
 
           // Consume/expel
           Mod+Comma { consume-window-into-column; }
@@ -160,7 +160,7 @@
           Mod+Print { screenshot-window; }
 
           // Emacs
-          Mod+E { spawn "emacs"; }
+          Mod+e { spawn "emacs"; }
       }
 
       // ===== GESTOS TRACKPAD =====

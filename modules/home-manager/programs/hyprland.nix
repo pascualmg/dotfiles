@@ -116,11 +116,6 @@
           preserve_split = true;
         };
 
-        # ===== GESTURES (trackpad) =====
-        gestures = {
-          workspace_swipe = true;
-        };
-
         # ===== KEYBINDINGS (igual que XMonad) =====
         bind = [
           # Programas (como XMonad)
