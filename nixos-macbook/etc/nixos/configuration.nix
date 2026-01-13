@@ -300,8 +300,7 @@
     # Terminal (versión unstable específica)
     alacritty
 
-    # Editor
-    emacs
+    # Editor: emacs-pgtk instalado via home-manager (passh.nix)
 
     # Power management GUI (solo laptops - cambiar governor en caliente)
     cpupower-gui

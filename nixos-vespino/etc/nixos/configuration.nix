@@ -487,8 +487,7 @@ in {
     usbutils
     neofetch
 
-    # Editores
-    emacs
+    # Editores: emacs-pgtk instalado via home-manager (passh.nix)
     tree-sitter
     xclip
 

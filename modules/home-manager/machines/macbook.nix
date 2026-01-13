@@ -65,6 +65,10 @@
 
   # GNOME dconf settings
   dconf.settings = {
+    # HiDPI: Escalado de texto para pantalla Retina 227 DPI
+    "org/gnome/desktop/interface" = {
+      text-scaling-factor = 1.25;
+    };
     # Deshabilitar lock screen (problemas con butterfly keyboard)
     "org/gnome/desktop/screensaver" = {
       lock-enabled = false;

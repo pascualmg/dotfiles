@@ -111,8 +111,8 @@
       xorg.xrandr
       xorg.xev
 
-      # Emacs y dependencias
-      emacs
+      # Emacs y dependencias (pgtk para soporte nativo Wayland + X11)
+      emacs-pgtk
       nodejs_22  # nodejs_24 puede no existir, usar 22 LTS
       claude-code
       tdlib
@@ -251,7 +251,7 @@
       VISUAL = "emacs";
       ORG_DIRECTORY = "$HOME/org";
       ORG_ROAM_DIRECTORY = "$HOME/org/roam";
-      PATH = "${pkgs.emacs}/bin:${pkgs.git}/bin:$PATH";
+      PATH = "${pkgs.emacs-pgtk}/bin:${pkgs.git}/bin:$PATH";
     };
 
     # Activaciones
