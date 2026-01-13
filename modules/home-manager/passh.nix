@@ -252,6 +252,8 @@
       ORG_DIRECTORY = "$HOME/org";
       ORG_ROAM_DIRECTORY = "$HOME/org/roam";
       PATH = "${pkgs.emacs-pgtk}/bin:${pkgs.git}/bin:$PATH";
+      # Telega (Telegram client para Emacs) - evita hardcodear path en doom config
+      TDLIB_PREFIX = "${pkgs.tdlib}";
     };
 
     # Activaciones
