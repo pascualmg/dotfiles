@@ -65,6 +65,9 @@
     # === STREAMING/REMOTE ===
     moonlight-qt  # Cliente Sunshine/GameStream (conectar a Aurin)
 
+    # === VIRTUALIZATION ===
+    virt-manager  # GUI libvirt - conectar a VMs locales o remotas (aurin)
+
     # === BUILD TOOLS ===
     gcc
     gnumake
