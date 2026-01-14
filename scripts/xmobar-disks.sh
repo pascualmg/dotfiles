@@ -16,16 +16,29 @@ level_char() {
     echo "${chars[$idx]}"
 }
 
-# Color según porcentaje (para xmobar)
+# Color gradiente RGB según porcentaje (verde -> amarillo -> rojo)
 color_by_pct() {
     local pct=$1
-    if [ "$pct" -lt 60 ]; then
-        echo "#98c379"  # Verde (One Dark)
-    elif [ "$pct" -lt 80 ]; then
-        echo "#e5c07b"  # Amarillo
+    local r g b
+
+    if [ "$pct" -le 50 ]; then
+        # 0-50%: Verde (#98c379) -> Amarillo (#e5c07b)
+        r=$((152 + pct * 2))        # 152 -> 252
+        g=$((195 - pct / 10))       # 195 -> 190
+        b=$((121 + pct / 25))       # 121 -> 123
     else
-        echo "#e06c75"  # Rojo
+        # 50-100%: Amarillo (#e5c07b) -> Rojo (#e06c75)
+        local p=$((pct - 50))
+        r=$((229 - p / 10))         # 229 -> 224
+        g=$((192 - p * 17 / 10))    # 192 -> 107
+        b=$((123 - p / 10))         # 123 -> 118
     fi
+
+    # Clamp values
+    [ "$r" -gt 255 ] && r=255
+    [ "$g" -lt 0 ] && g=0
+
+    printf "#%02x%02x%02x" "$r" "$g" "$b"
 }
 
 output=""
@@ -100,11 +113,13 @@ for disk in $disks; do
     # Para root, mostrar /
     [ "$mount_point" = "/" ] && disk_name="root"
 
-    # Formato compacto: nombre(usado/total) temp% [barra]
+    # Formato ultra-compacto: 💾 usado/total temp barra
+    # La barra ya indica el % visualmente, no hace falta número
+    # Icono y barra con color según uso
     if [ -n "$temp" ]; then
-        output+="<fn=1>💾</fn>${disk_name}(${used_size}/${total_size}) ${temp}°C <fc=${color}>${level}</fc>${used_pct}% "
+        output+="<fc=${color}><fn=1>💾</fn></fc>${used_size}/${total_size} ${temp}° <fc=${color}>${level}</fc> "
     else
-        output+="<fn=1>💾</fn>${disk_name}(${used_size}/${total_size}) <fc=${color}>${level}</fc>${used_pct}% "
+        output+="<fc=${color}><fn=1>💾</fn></fc>${used_size}/${total_size} <fc=${color}>${level}</fc> "
     fi
 done
 
