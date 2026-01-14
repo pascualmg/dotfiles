@@ -34,7 +34,7 @@
     networkInterface = null;    # Sin ethernet fijo, ajustar si usas adaptador
     wifiInterface = "wlp0s20f0u7";   # WiFi USB dongle (Broadcom interno no soportado)
     showBattery = true;         # Laptop, mostrar bateria
-    showNvmeMonitor = false;    # SSD externo, no NVMe interno
+    showDiskMonitor = true;     # Monitor genérico (detecta SSD externo TB3)
     showTrayer = false;         # No hay trayer-padding-icon instalado
     alsaMixer = "Master";       # PipeWire expone Master, no PCM
   };

@@ -21,7 +21,7 @@
     networkInterface = "enp10s0";
     wifiInterface = "wlp8s5";
     showBattery = false;        # Desktop, no bateria
-    showNvmeMonitor = true;     # Tiene NVMe
+    showDiskMonitor = true;     # Monitor genérico (NVMe + SATA)
   };
 
   # Alacritty configurado para aurin

@@ -52,7 +52,8 @@
     pciutils
     usbutils
     lshw
-    inxi        # Info sistema completa
+    inxi           # Info sistema completa
+    smartmontools  # smartctl - SMART data para discos (NVMe, SATA, USB)
 
     # === MONITORING ===
     powertop    # Monitor energia (muy util en laptops)

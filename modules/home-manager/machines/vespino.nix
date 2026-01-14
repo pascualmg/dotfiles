@@ -20,7 +20,7 @@
     networkInterface = null;    # TODO: verificar interfaz
     wifiInterface = null;       # Sin WiFi
     showBattery = false;        # Servidor, no bateria
-    showNvmeMonitor = false;    # Sin NVMe
+    showDiskMonitor = true;     # Monitor genérico (detecta cualquier disco)
   };
 
   # Alacritty configurado para vespino

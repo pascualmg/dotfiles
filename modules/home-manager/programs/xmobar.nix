@@ -122,8 +122,9 @@ let
                 ]
             ''}
 
-            ${lib.optionalString cfg.showNvmeMonitor ''
-            , Run Com "/home/passh/dotfiles/scripts/hdmon.sh" [] "nvme" 60
+            ${lib.optionalString cfg.showDiskMonitor ''
+            -- Monitor de discos genérico (NVMe + SATA + USB)
+            , Run Com "/home/passh/dotfiles/scripts/xmobar-disks.sh" [] "disks" 60
             ''}
 
             -- Bateria (solo laptops)
@@ -157,9 +158,10 @@ let
         ]
 
         -- Template
+        -- LAYOUT: Workspaces fijos a la izquierda, monitores a la derecha
         , sepChar = "%"
         , alignSep = "}{"
-        , template = " ${lib.optionalString (cfg.gpuType != "none") (gpuTemplate.${cfg.gpuType})}${lib.optionalString (cfg.networkInterface != null) " (eth %${cfg.networkInterface}%)"}${lib.optionalString cfg.showNvmeMonitor " %nvme%"}${lib.optionalString (cfg.wifiInterface != null) " %wifi%"} } %StdinReader% { %cpu% %memory% <fc=#56b6c2>%docker%</fc>${lib.optionalString cfg.showBattery " %battery%"}${lib.optionalString cfg.showWirelessMouse " %mouse%"} ${lib.optionalString (cfg.alsaMixer != null) " %alsa:default:${cfg.alsaMixer}%"} %date%${lib.optionalString cfg.showTrayer " | %trayerpad%"}"
+        , template = "%StdinReader% }{ ${lib.optionalString (cfg.gpuType != "none") (gpuTemplate.${cfg.gpuType} + " ")}%cpu% %memory% <fc=#56b6c2>%docker%</fc>${lib.optionalString cfg.showDiskMonitor " %disks%"}${lib.optionalString (cfg.networkInterface != null) " %${cfg.networkInterface}%"}${lib.optionalString (cfg.wifiInterface != null) " %wifi%"}${lib.optionalString cfg.showBattery " %battery%"}${lib.optionalString cfg.showWirelessMouse " %mouse%"}${lib.optionalString (cfg.alsaMixer != null) " %alsa:default:${cfg.alsaMixer}%"} %date%${lib.optionalString cfg.showTrayer " | %trayerpad%"}"
 
     }
   '';
@@ -208,10 +210,10 @@ in {
       description = "Show wireless mouse battery indicator (Logitech hidpp)";
     };
 
-    showNvmeMonitor = lib.mkOption {
+    showDiskMonitor = lib.mkOption {
       type = lib.types.bool;
-      default = false;
-      description = "Show NVMe disk monitor";
+      default = true;
+      description = "Show disk monitor (NVMe + SATA + USB, auto-detected)";
     };
 
     showTrayer = lib.mkOption {
