@@ -15,7 +15,8 @@ if [[ -n "$BAT_PATH" && -f "$BAT_PATH" ]]; then
     BAT=$(cat "$BAT_PATH" 2>/dev/null)
     if [[ -n "$BAT" ]]; then
         COLOR=$(pct_to_color_inverse "$BAT")
-        echo "<fc=${COLOR}>$(xmobar_icon "󰍽") ${BAT}%</fc>"
+        BAT_PAD=$(printf "%02d" "$BAT")
+        echo "<fc=${COLOR}>$(xmobar_icon "󰍽")</fc>${BAT_PAD}%"
         exit 0
     fi
 fi
