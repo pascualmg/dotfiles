@@ -3,43 +3,12 @@
 #
 # Generic disk monitor for xmobar
 # Supports: NVMe, SATA SSDs, HDDs, USB drives
-# Shows: Used/Total, Temperature (if available), visual bar
+# Shows: percentage with colored icon
 #
 # Dependencies: smartmontools (smartctl), coreutils (df, lsblk)
 
-# Caracter único que representa el nivel (8 niveles)
-level_char() {
-    local pct=$1
-    local chars=("▁" "▂" "▃" "▄" "▅" "▆" "▇" "█")
-    local idx=$((pct * 8 / 100))
-    [ "$idx" -ge 8 ] && idx=7
-    echo "${chars[$idx]}"
-}
-
-# Color gradiente RGB según porcentaje (verde -> amarillo -> rojo)
-color_by_pct() {
-    local pct=$1
-    local r g b
-
-    if [ "$pct" -le 50 ]; then
-        # 0-50%: Verde (#98c379) -> Amarillo (#e5c07b)
-        r=$((152 + pct * 2))        # 152 -> 252
-        g=$((195 - pct / 10))       # 195 -> 190
-        b=$((121 + pct / 25))       # 121 -> 123
-    else
-        # 50-100%: Amarillo (#e5c07b) -> Rojo (#e06c75)
-        local p=$((pct - 50))
-        r=$((229 - p / 10))         # 229 -> 224
-        g=$((192 - p * 17 / 10))    # 192 -> 107
-        b=$((123 - p / 10))         # 123 -> 118
-    fi
-
-    # Clamp values
-    [ "$r" -gt 255 ] && r=255
-    [ "$g" -lt 0 ] && g=0
-
-    printf "#%02x%02x%02x" "$r" "$g" "$b"
-}
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+source "${SCRIPT_DIR}/xmobar-colors.sh"
 
 output=""
 
@@ -105,8 +74,7 @@ for disk in $disks; do
     fi
 
     # Generar salida
-    level=$(level_char "$used_pct")
-    color=$(color_by_pct "$used_pct")
+    color=$(pct_to_color "$used_pct")
 
     # Nombre corto del disco
     disk_name="$disk"

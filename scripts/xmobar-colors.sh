@@ -26,35 +26,37 @@ COLOR_GRAY="#5c6370"
 COLOR_CYAN="#56b6c2"
 COLOR_BLUE="#61afef"
 
-# Convierte porcentaje a color (0% = verde, 100% = rojo)
+# Convierte porcentaje a color gradiente RGB (0% = verde, 100% = rojo)
 # Uso: color=$(pct_to_color 75)
 pct_to_color() {
     local pct=${1:-0}
-    if [[ $pct -le 30 ]]; then
-        echo "$COLOR_GREEN"
-    elif [[ $pct -le 60 ]]; then
-        echo "$COLOR_YELLOW"
-    elif [[ $pct -le 85 ]]; then
-        echo "$COLOR_ORANGE"
+    local r g b
+
+    if [ "$pct" -le 50 ]; then
+        # 0-50%: Verde (#98c379) -> Amarillo (#e5c07b)
+        r=$((152 + pct * 2))
+        g=$((195 - pct / 10))
+        b=$((121 + pct / 25))
     else
-        echo "$COLOR_RED"
+        # 50-100%: Amarillo (#e5c07b) -> Rojo (#e06c75)
+        local p=$((pct - 50))
+        r=$((229 - p / 10))
+        g=$((192 - p * 17 / 10))
+        b=$((123 - p / 10))
     fi
+
+    [ "$r" -gt 255 ] && r=255
+    [ "$g" -lt 0 ] && g=0
+    printf "#%02x%02x%02x" "$r" "$g" "$b"
 }
 
-# Convierte porcentaje a color invertido (100% = verde, 0% = rojo)
-# Útil para: batería, espacio libre, etc.
+# Convierte porcentaje a color gradiente RGB invertido (0% = rojo, 100% = verde)
+# Útil para: batería, señal wifi, espacio libre
 # Uso: color=$(pct_to_color_inverse 75)
 pct_to_color_inverse() {
     local pct=${1:-0}
-    if [[ $pct -gt 80 ]]; then
-        echo "$COLOR_GREEN"
-    elif [[ $pct -gt 40 ]]; then
-        echo "$COLOR_YELLOW"
-    elif [[ $pct -gt 20 ]]; then
-        echo "$COLOR_ORANGE"
-    else
-        echo "$COLOR_RED"
-    fi
+    # Invertir: 100% -> 0%, 0% -> 100%
+    pct_to_color $((100 - pct))
 }
 
 # Envuelve texto en formato de color xmobar
