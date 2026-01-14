@@ -22,7 +22,11 @@
 
 {
   options.dotfiles.hyprland = {
-    enable = lib.mkEnableOption "Hyprland user configuration";
+    enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Enable Hyprland user configuration (enabled by default)";
+    };
 
     terminal = lib.mkOption {
       type = lib.types.str;

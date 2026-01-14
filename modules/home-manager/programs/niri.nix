@@ -25,7 +25,11 @@
 
 {
   options.dotfiles.niri = {
-    enable = lib.mkEnableOption "niri scrolling Wayland compositor";
+    enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Enable niri scrolling Wayland compositor (enabled by default)";
+    };
 
     terminal = lib.mkOption {
       type = lib.types.str;

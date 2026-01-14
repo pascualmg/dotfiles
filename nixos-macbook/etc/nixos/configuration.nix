@@ -47,9 +47,7 @@
     # Driver de audio CS8409 para MacBook (reemplaza el del kernel)
     ./modules/snd-hda-macbookpro.nix
 
-    # Desktop environments Wayland
-    ../../../modules/desktop/hyprland.nix
-    ../../../modules/desktop/niri.nix
+    # Desktop Wayland (Hyprland, niri): importados via flake.nix modulos comunes
 
     # nixos-hardware profiles: Se importan via flake.nix extraModules
     # - nixos-hardware.nixosModules.apple-macbook-pro
@@ -269,10 +267,8 @@
   };
 
   # ===== WAYLAND COMPOSITORS =====
-  # Hyprland: compositor moderno con animaciones y blur
-  desktop.hyprland.enable = true;
-  # niri: compositor con scroll infinito horizontal
-  desktop.niri.enable = true;
+  # Hyprland y niri: habilitados por defecto via flake.nix
+  # Para deshabilitar: desktop.hyprland.enable = false;
 
   # ===== POWER MANAGEMENT =====
   # Deshabilitar suspensión - el MacBook no se recupera bien

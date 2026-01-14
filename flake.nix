@@ -140,6 +140,10 @@
             ./modules/common/packages.nix
             ./modules/common/services.nix
 
+            # DESKTOP WAYLAND - Hyprland y niri (habilitados por defecto)
+            ./modules/desktop/hyprland.nix
+            ./modules/desktop/niri.nix
+
             # Modulo para compatibilidad: registra el flake en el sistema
             {
               # Revision del flake para trazabilidad

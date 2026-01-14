@@ -17,7 +17,11 @@
 
 {
   options = {
-    desktop.hyprland.enable = lib.mkEnableOption "Hyprland Wayland compositor";
+    desktop.hyprland.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Enable Hyprland Wayland compositor (enabled by default)";
+    };
   };
 
   config = lib.mkIf config.desktop.hyprland.enable {

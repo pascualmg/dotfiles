@@ -64,14 +64,9 @@
   dotfiles.libinput-gestures.enable = true;
 
   # ===== WAYLAND COMPOSITORS =====
-  # Hyprland: moderno con animaciones (aparece en GDM)
-  dotfiles.hyprland = {
-    enable = true;
-    monitorScale = "2";  # HiDPI Retina
-  };
-
-  # niri: scroll infinito horizontal (aparece en GDM)
-  dotfiles.niri.enable = true;
+  # Hyprland y niri habilitados por defecto
+  # Solo configuramos opciones especificas de macbook
+  dotfiles.hyprland.monitorScale = "2";  # HiDPI Retina
 
   # GNOME dconf settings
   dconf.settings = {

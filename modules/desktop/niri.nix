@@ -17,7 +17,11 @@
 
 {
   options = {
-    desktop.niri.enable = lib.mkEnableOption "niri scrolling Wayland compositor";
+    desktop.niri.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Enable niri scrolling Wayland compositor (enabled by default)";
+    };
   };
 
   config = lib.mkIf config.desktop.niri.enable {
