@@ -17,4 +17,5 @@ fi
 COLOR=$(pct_to_color "$USED_PCT")
 # Padding a 2 dígitos para evitar desplazamiento
 MEM_PAD=$(printf "%02d" "$USED_PCT")
-echo "<fc=${COLOR}>$(xmobar_icon "󰍛")${MEM_PAD}%</fc>"
+# Click abre gnome-system-monitor
+echo "<action=\`gnome-system-monitor\`><fc=${COLOR}>$(xmobar_icon "󰍛")${MEM_PAD}%</fc></action>"

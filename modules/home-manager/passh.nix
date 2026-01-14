@@ -128,7 +128,7 @@
 
       # Formatters y Linters
       jq
-      nixfmt-classic
+      nixfmt
       shfmt
       shellcheck
       nodePackages.js-beautify

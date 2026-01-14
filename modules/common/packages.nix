@@ -43,6 +43,9 @@
     networkmanager
     networkmanagerapplet
 
+    # === DESKTOP/SYSTRAY ===
+    trayer          # System tray para xmobar
+
     # === FILESYSTEM ===
     ntfs3g
     exfat

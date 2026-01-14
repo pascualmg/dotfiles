@@ -50,13 +50,19 @@ pct_to_color() {
     printf "#%02x%02x%02x" "$r" "$g" "$b"
 }
 
-# Convierte porcentaje a color gradiente RGB invertido (0% = rojo, 100% = verde)
-# Útil para: batería, señal wifi, espacio libre
+# Convierte porcentaje a color gradiente RGB invertido (0% = rojo, 70%+ = verde)
+# Útil para: batería, señal wifi, volumen
 # Uso: color=$(pct_to_color_inverse 75)
 pct_to_color_inverse() {
     local pct=${1:-0}
-    # Invertir: 100% -> 0%, 0% -> 100%
-    pct_to_color $((100 - pct))
+    # A partir de 70% es verde puro
+    if [ "$pct" -ge 70 ]; then
+        echo "#98c379"
+    else
+        # 0-70% mapeado a gradiente completo (0% = rojo, 70% = verde)
+        local mapped=$((pct * 100 / 70))
+        pct_to_color $((100 - mapped))
+    fi
 }
 
 # Envuelve texto en formato de color xmobar

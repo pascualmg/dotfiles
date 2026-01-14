@@ -16,4 +16,4 @@ fi
 COLOR=$(pct_to_color_inverse "$SIGNAL")
 # Padding a 2 dígitos
 SIG_PAD=$(printf "%02d" "$SIGNAL")
-echo "<fc=${COLOR}><fn=1>󰖩</fn></fc>${SIG_PAD}%"
+echo "<fc=${COLOR}><fn=1>󰖩</fn>${SIG_PAD}%</fc>"

@@ -32,10 +32,7 @@ let
           10
     '';
     intel = ''
-      Run Com "bash"
-          ["-c", "cat /sys/class/drm/card0/gt_cur_freq_mhz 2>/dev/null | awk '{printf \"Intel GPU %dMHz\", $1}' || echo 'Intel GPU'"]
-          "gpu"
-          30
+      Run Com "/home/passh/dotfiles/scripts/xmobar-gpu-intel.sh" [] "gpu" 20
     '';
     none = "";
   };
@@ -43,7 +40,7 @@ let
   # Template GPU en la barra segun tipo
   gpuTemplate = {
     nvidia = "<action=`nvidia-settings`><fc=#98c379><fn=1></fn> %gpu%</fc></action>";
-    intel = "<fc=#61afef><fn=1></fn> %gpu%</fc>";
+    intel = "%gpu%";  # Script ya incluye formato y color
     none = "";
   };
 
@@ -83,41 +80,18 @@ let
             -- Memoria con color dinámico (script externo)
             , Run Com "/home/passh/dotfiles/scripts/xmobar-memory.sh" [] "memory" 20
 
-            ${lib.optionalString (cfg.networkInterface != null) ''
-            -- Red Ethernet
-            , Run Network "${cfg.networkInterface}"
-                [ "-t", "<action=`alacritty -e nmtui`><fn=1>\xf0ac</fn> <rx>KB/<tx>KB</action>"
-                , "-L", "1000"
-                , "-H", "5000"
-                , "-l", "#98c379"
-                , "-n", "#e5c07b"
-                , "-h", "#e06c75"
-                ] 10
-            ''}
+            -- Red genérica (auto-detecta eth/wifi, muestra IP)
+            , Run Com "/home/passh/dotfiles/scripts/xmobar-network.sh" [] "network" 10
 
-            ${lib.optionalString (cfg.wifiInterface != null) ''
-            -- WiFi con color dinámico (script externo)
-            , Run Com "/home/passh/dotfiles/scripts/xmobar-wifi.sh" [] "wifi" 10
-            ''}
-
-            -- Docker containers
-            , Run Com "bash"
-                ["-c", "docker ps -q 2>/dev/null | wc -l | xargs -I{} echo '<fn=1>\xf308</fn> {}'"
-                ] "docker" 50
+            -- Docker containers (click abre lazydocker)
+            , Run Com "/home/passh/dotfiles/scripts/xmobar-docker.sh" [] "docker" 50
 
             -- Fecha y hora con calendario
             , Run Date "<action=`gsimplecal`><fn=1>\xf017</fn> %a %d %b %H:%M</action>" "date" 10
 
             ${lib.optionalString (cfg.alsaMixer != null) ''
-            -- Volumen
-            , Run Alsa "default" "${cfg.alsaMixer}"
-                [ "-t", "<action=`pavucontrol`><fn=1>\xf028</fn>  <volume>% <status></action>"
-                , "--"
-                , "--on", ""
-                , "--off", "<fn=1>\xf026</fn>"
-                , "--onc", "#98c379"
-                , "--offc", "#e06c75"
-                ]
+            -- Volumen con color gradiente (script externo)
+            , Run Com "/home/passh/dotfiles/scripts/xmobar-volume.sh" [] "volume" 10
             ''}
 
             ${lib.optionalString cfg.showDiskMonitor ''
@@ -140,7 +114,7 @@ let
 
             ${lib.optionalString cfg.showTrayer ''
             -- Bandeja del sistema
-            , Run Com "trayer-padding-icon" [] "trayerpad" 10
+            , Run Com "/home/passh/dotfiles/scripts/trayer-padding-icon.sh" [] "trayerpad" 10
             ''}
         ]
 
@@ -148,7 +122,7 @@ let
         -- LAYOUT: Izda (workspaces + fecha) | Dcha (menos importante → más importante)
         , sepChar = "%"
         , alignSep = "}{"
-        , template = "%StdinReader% %date% }{${lib.optionalString cfg.showTrayer " %trayerpad% |"}${lib.optionalString (cfg.alsaMixer != null) " %alsa:default:${cfg.alsaMixer}%"}${lib.optionalString cfg.showWirelessMouse " %mouse%"}${lib.optionalString cfg.showBattery " %battery%"}${lib.optionalString (cfg.wifiInterface != null) " %wifi%"}${lib.optionalString (cfg.networkInterface != null) " %${cfg.networkInterface}%"} <fc=#56b6c2>%docker%</fc>${lib.optionalString cfg.showDiskMonitor " %disks%"}${lib.optionalString (cfg.gpuType != "none") (" " + gpuTemplate.${cfg.gpuType})} %memory% %cpu%"
+        , template = "%date% %StdinReader% }{${lib.optionalString cfg.showTrayer " %trayerpad% |"} %docker% ${lib.optionalString (cfg.alsaMixer != null) "%volume% "}${lib.optionalString cfg.showWirelessMouse "%mouse% "}${lib.optionalString cfg.showBattery "%battery% "}%network% ${lib.optionalString cfg.showDiskMonitor "%disks% "}${lib.optionalString (cfg.gpuType != "none") (gpuTemplate.${cfg.gpuType} + " ")}%memory% %cpu% "
 
     }
   '';
@@ -205,8 +179,8 @@ in {
 
     showTrayer = lib.mkOption {
       type = lib.types.bool;
-      default = true;
-      description = "Show trayer padding (requires trayer-padding-icon script)";
+      default = false;  # Trayer ahora es toggle con Mod+t, no necesita padding
+      description = "Show trayer padding (deprecated, usar Mod+t para toggle)";
     };
 
     alsaMixer = lib.mkOption {

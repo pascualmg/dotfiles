@@ -180,13 +180,12 @@ myStartupHook = do
     spawnOnce "emacs --daemon || emacsclient -e '(kill-emacs)' && emacs --daemon"
     spawnOnce "xfce4-clipman"  -- Gestor de portapapeles
 
-    -- Barra de estado: Taffybar (GTK3 con systray nativo)
-    -- NOTA: Si quieres volver a xmobar, comenta estas líneas y descomenta trayer
-    spawnOnce "systemctl --user start status-notifier-watcher"  -- Necesario para systray
-    spawnOnce "taffybar"
-    -- spawnOnce "trayer --edge top --align right --widthtype request --padding 6 --SetDockType true --SetPartialStrut true --expand true --monitor 0 --transparent true --alpha 0 --tint 0x282c34 --height 28"
+    -- Barra de estado: solo xmobar (trayer se lanza con Mod+t)
+    -- spawnOnce "systemctl --user start status-notifier-watcher"
+    -- spawnOnce "taffybar"
+    -- Trayer se controla con Mod+t (toggle)
 
-    -- Applets para systray (taffybar los muestra automáticamente)
+    -- Applets para systray
     spawnOnce "nm-applet"
     spawnOnce "blueman-applet"
 
@@ -329,6 +328,7 @@ main = do
         -- -----------------------------------------
         -- Utilidades
         -- -----------------------------------------
+        , ("M-t", spawn "/home/passh/dotfiles/scripts/trayer-toggle.sh")  -- Toggle systray
         , ("<Print>", spawn "flameshot gui")     -- Captura de pantalla
         , ("M-c", spawn "xfce4-popup-clipman")   -- Historial clipboard
         , ("M-s", goToSelected def)              -- Selector visual de ventanas

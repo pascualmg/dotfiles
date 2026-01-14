@@ -81,14 +81,15 @@ for disk in $disks; do
     # Para root, mostrar /
     [ "$mount_point" = "/" ] && disk_name="root"
 
-    # Formato ultra-compacto: icono+pct (color indica nivel)
+    # Formato ultra-compacto: icono+pct (todo con color)
     # Icono Nerd Font: 󰋊 (disco duro)
     # Padding a 2 dígitos para evitar desplazamiento
+    # Click abre gnome-disks
     pct_padded=$(printf "%02d" "$used_pct")
     if [ -n "$temp" ]; then
-        output+="<fc=${color}><fn=1>󰋊</fn></fc>${pct_padded}% ${temp}° "
+        output+="<action=\`gnome-disks\`><fc=${color}><fn=1>󰋊</fn>${pct_padded}% ${temp}°</fc></action> "
     else
-        output+="<fc=${color}><fn=1>󰋊</fn></fc>${pct_padded}% "
+        output+="<action=\`gnome-disks\`><fc=${color}><fn=1>󰋊</fn>${pct_padded}%</fc></action> "
     fi
 done
 

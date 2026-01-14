@@ -16,7 +16,7 @@ if [[ -n "$BAT_PATH" && -f "$BAT_PATH" ]]; then
     if [[ -n "$BAT" ]]; then
         COLOR=$(pct_to_color_inverse "$BAT")
         BAT_PAD=$(printf "%02d" "$BAT")
-        echo "<fc=${COLOR}>$(xmobar_icon "󰍽")</fc>${BAT_PAD}%"
+        echo "<fc=${COLOR}><fn=1>󰍽</fn>${BAT_PAD}%</fc>"
         exit 0
     fi
 fi
@@ -25,14 +25,5 @@ fi
 if xinput list 2>/dev/null | grep -qi "Logitech.*Pro\|G Pro"; then
     # Ratón conectado pero sin info de batería (driver no soporta)
     echo "<fc=${COLOR_GREEN}>$(xmobar_icon "󰍽")</fc>"
-else
-    # Sin hidpp_battery ni xinput - verificar receptor USB Logitech
-    # 046d:c54d = Lightspeed USB Receiver
-    if lsusb 2>/dev/null | grep -qi "046d:c54d\|logitech.*receiver"; then
-        # Receptor presente pero sin info batería (driver hidpp no activo)
-        echo "<fc=${COLOR_CYAN}>$(xmobar_icon "󰍽")</fc>"
-    else
-        # No hay receptor conectado
-        echo "<fc=${COLOR_GRAY}>$(xmobar_icon "󰍾")</fc>"
-    fi
 fi
+# Si no está conectado, no mostrar nada

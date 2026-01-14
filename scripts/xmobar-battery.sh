@@ -24,4 +24,5 @@ esac
 COLOR=$(pct_to_color_inverse "$CAPACITY")
 # Padding a 2 dígitos
 CAP_PAD=$(printf "%02d" "$CAPACITY")
-echo "<fc=${COLOR}><fn=1>${ICON}</fn></fc>${CAP_PAD}%"
+# Click abre gnome-power-statistics o power settings
+echo "<action=\`gnome-control-center power\`><fc=${COLOR}><fn=1>${ICON}</fn>${CAP_PAD}%</fc></action>"

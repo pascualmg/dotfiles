@@ -297,7 +297,7 @@
           nixd       # Mas features, usa evaluacion real
 
           # Formateadores
-          nixfmt-classic # Estilo clasico
+          nixfmt # Estilo clasico
           nixpkgs-fmt    # Estilo nixpkgs
 
           # Linters
