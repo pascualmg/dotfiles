@@ -86,6 +86,7 @@
     nerd-fonts.fira-mono
     nerd-fonts.jetbrains-mono
     nerd-fonts.hack
+    nerd-fonts.heavy-data      # Para xmobar (HeavyData Nerd Font)
     nerd-fonts.iosevka
     nerd-fonts.iosevka-term
     nerd-fonts.sauce-code-pro
@@ -129,8 +130,11 @@
     nerd-fonts.ubuntu-sans
     nerd-fonts.victor-mono
     nerd-fonts.zed-mono
-    # Fallbacks
+    # Fallbacks y basicas
     dejavu_fonts
+    liberation_ttf
+    noto-fonts
+    noto-fonts-color-emoji   # Emojis everywhere
   ];
 
   # ===== PROGRAMAS CON CONFIGURACION =====

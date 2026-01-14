@@ -287,19 +287,7 @@
   };
 
   # ===== FONTS =====
-  fonts.packages = with pkgs; [
-    # Nerd Fonts (para alacritty, xmobar, etc)
-    nerd-fonts.hack
-    nerd-fonts.monoid
-    nerd-fonts.jetbrains-mono
-    nerd-fonts.fira-code
-    nerd-fonts.heavy-data
-    # Fuentes básicas
-    dejavu_fonts
-    liberation_ttf
-    noto-fonts
-    noto-fonts-color-emoji
-  ];
+  # Todas las fuentes en modules/common/packages.nix (compartidas)
 
   # ===== SYSTEM PACKAGES (solo específicos de MacBook) =====
   # Los comunes (vim, git, htop, etc.) están en modules/common/packages.nix
