@@ -61,6 +61,10 @@
     # Todas las maquinas usan unstable para consistencia
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
+    # Nixpkgs master - para paquetes bleeding-edge (claude-code, etc)
+    # Usar con pkgsMaster.paquete en los modulos
+    nixpkgs-master.url = "github:NixOS/nixpkgs/master";
+
     # Home Manager - gestion de configuracion de usuario
     # Sigue la misma version de nixpkgs
     # AHORA: Se usa activamente via home-manager.nixosModules.home-manager
@@ -78,13 +82,20 @@
   # ---------------------------------------------------------------------------
   # OUTPUTS - Configuraciones NixOS generadas
   # ---------------------------------------------------------------------------
-  outputs = { self, nixpkgs, home-manager, nixos-hardware, ... }@inputs:
+  outputs = { self, nixpkgs, nixpkgs-master, home-manager, nixos-hardware, ... }@inputs:
     let
       # Sistema comun para todas las maquinas
       system = "x86_64-linux";
 
       # pkgs con unfree habilitado (para home-manager)
       pkgs = import nixpkgs {
+        inherit system;
+        config.allowUnfree = true;
+      };
+
+      # pkgs de master para paquetes bleeding-edge (claude-code, etc)
+      # Usar como: pkgsMaster.claude-code en cualquier modulo
+      pkgsMaster = import nixpkgs-master {
         inherit system;
         config.allowUnfree = true;
       };
@@ -117,6 +128,8 @@
             inherit inputs;
             # Pasar home-manager y nixos-hardware para uso en modulos
             inherit home-manager nixos-hardware;
+            # pkgsMaster para paquetes bleeding-edge
+            inherit pkgsMaster;
           };
 
           modules = [
@@ -157,7 +170,8 @@
                 # Pasar inputs Y hostname a home-manager modules
                 extraSpecialArgs = {
                   inherit inputs;
-                  hostname = hostname;  # NUEVO: permite configs por maquina
+                  inherit pkgsMaster;  # Para paquetes bleeding-edge
+                  hostname = hostname;  # permite configs por maquina
                 };
                 # Configuracion del usuario passh
                 users.passh = import ./modules/home-manager;
@@ -257,6 +271,7 @@
           inherit pkgs;
           extraSpecialArgs = {
             inherit inputs;
+            inherit pkgsMaster;  # Para paquetes bleeding-edge
             hostname = "aurin";  # Default para standalone
           };
           modules = [

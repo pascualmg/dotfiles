@@ -21,7 +21,7 @@
 #   - emacs: migrado a modules/home-manager/programs/emacs.nix (wrapper X11/Wayland)
 # =============================================================================
 
-{ config, pkgs, lib, ... }:
+{ config, pkgs, pkgsMaster, lib, ... }:
 
 {
   # Home Manager basico
@@ -116,7 +116,7 @@
       # Emacs dependencias (emacs binarios via programs/emacs.nix)
       # MIGRATED: emacs-pgtk -> programs/emacs.nix (wrapper inteligente X11/Wayland)
       nodejs_22  # nodejs_24 puede no existir, usar 22 LTS
-      claude-code
+      # claude-code -> ahora via pkgsMaster (ver abajo)
       tdlib
       tree-sitter
       cmake
@@ -231,7 +231,7 @@
       # open-webui  # DISABLED: ctranslate2 build failure in nixpkgs-unstable
 
       # Gaming
-      duckstation
+      # duckstation  # TEMP: hash mismatch in nixpkgs-unstable (2026-01-14)
       prismlauncher
       jdk21
     ] ++ (with pkgs.python3Packages; [
@@ -246,7 +246,10 @@
       pyflakes
       isort
       setuptools
-    ]);
+    ]) ++ [
+      # Paquetes de nixpkgs-master (bleeding-edge)
+      pkgsMaster.claude-code  # 2.1.6 (master) vs 2.1.2 (unstable)
+    ];
 
     sessionVariables = {
       # EDITOR/VISUAL ahora se definen en programs/emacs.nix
