@@ -113,13 +113,12 @@ for disk in $disks; do
     # Para root, mostrar /
     [ "$mount_point" = "/" ] && disk_name="root"
 
-    # Formato ultra-compacto: 💾 usado/total temp barra
-    # La barra ya indica el % visualmente, no hace falta número
-    # Icono y barra con color según uso
+    # Formato ultra-compacto: icono+barra+pct
+    # Icono Nerd Font: 󰋊 (disco duro)
     if [ -n "$temp" ]; then
-        output+="<fc=${color}><fn=1>💾</fn></fc>${used_size}/${total_size} ${temp}° <fc=${color}>${level}</fc> "
+        output+="<fc=${color}><fn=1>󰋊</fn>${level}</fc>${used_pct}% ${temp}° "
     else
-        output+="<fc=${color}><fn=1>💾</fn></fc>${used_size}/${total_size} <fc=${color}>${level}</fc> "
+        output+="<fc=${color}><fn=1>󰋊</fn>${level}</fc>${used_pct}% "
     fi
 done
 

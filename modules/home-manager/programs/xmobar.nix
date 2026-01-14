@@ -98,7 +98,7 @@ let
             ${lib.optionalString (cfg.wifiInterface != null) ''
             -- WiFi (usando comando bash porque Wireless no funciona con algunos dongles USB)
             , Run Com "bash"
-                ["-c", "awk 'NR==3 {printf \"WiFi %.0f%%\", $3}' /proc/net/wireless 2>/dev/null || echo 'WiFi N/A'"]
+                ["-c", "awk 'NR==3 {printf \"<fn=1>󰖩</fn> %.0f%%\", $3}' /proc/net/wireless 2>/dev/null || echo '<fn=1>󰖩</fn> N/A'"]
                 "wifi" 10
             ''}
 
@@ -158,10 +158,10 @@ let
         ]
 
         -- Template
-        -- LAYOUT: Workspaces fijos a la izquierda, monitores a la derecha
+        -- LAYOUT: Izda (workspaces + fecha) | Dcha (menos importante → más importante)
         , sepChar = "%"
         , alignSep = "}{"
-        , template = "%StdinReader% }{ ${lib.optionalString (cfg.gpuType != "none") (gpuTemplate.${cfg.gpuType} + " ")}%cpu% %memory% <fc=#56b6c2>%docker%</fc>${lib.optionalString cfg.showDiskMonitor " %disks%"}${lib.optionalString (cfg.networkInterface != null) " %${cfg.networkInterface}%"}${lib.optionalString (cfg.wifiInterface != null) " %wifi%"}${lib.optionalString cfg.showBattery " %battery%"}${lib.optionalString cfg.showWirelessMouse " %mouse%"}${lib.optionalString (cfg.alsaMixer != null) " %alsa:default:${cfg.alsaMixer}%"} %date%${lib.optionalString cfg.showTrayer " | %trayerpad%"}"
+        , template = "%StdinReader% %date% }{${lib.optionalString cfg.showTrayer " %trayerpad% |"}${lib.optionalString (cfg.alsaMixer != null) " %alsa:default:${cfg.alsaMixer}%"}${lib.optionalString cfg.showWirelessMouse " %mouse%"}${lib.optionalString cfg.showBattery " %battery%"}${lib.optionalString (cfg.wifiInterface != null) " %wifi%"}${lib.optionalString (cfg.networkInterface != null) " %${cfg.networkInterface}%"} <fc=#56b6c2>%docker%</fc>${lib.optionalString cfg.showDiskMonitor " %disks%"}${lib.optionalString (cfg.gpuType != "none") (" " + gpuTemplate.${cfg.gpuType})} %memory% %cpu%"
 
     }
   '';
