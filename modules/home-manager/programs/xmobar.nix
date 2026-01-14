@@ -96,10 +96,8 @@ let
             ''}
 
             ${lib.optionalString (cfg.wifiInterface != null) ''
-            -- WiFi (usando comando bash porque Wireless no funciona con algunos dongles USB)
-            , Run Com "bash"
-                ["-c", "awk 'NR==3 {printf \"<fn=1>󰖩</fn> %.0f%%\", $3}' /proc/net/wireless 2>/dev/null || echo '<fn=1>󰖩</fn> N/A'"]
-                "wifi" 10
+            -- WiFi con color dinámico (script externo)
+            , Run Com "/home/passh/dotfiles/scripts/xmobar-wifi.sh" [] "wifi" 10
             ''}
 
             -- Docker containers
@@ -127,20 +125,9 @@ let
             , Run Com "/home/passh/dotfiles/scripts/xmobar-disks.sh" [] "disks" 60
             ''}
 
-            -- Bateria (solo laptops)
+            -- Bateria con color dinámico (script externo)
             ${lib.optionalString cfg.showBattery ''
-            , Run Battery
-                [ "-t", "<fn=1>\xf240</fn> <acstatus><left>%"
-                , "-L", "20"
-                , "-H", "80"
-                , "-l", "#e06c75"
-                , "-n", "#e5c07b"
-                , "-h", "#98c379"
-                , "--"
-                , "-o", ""
-                , "-O", "<fc=#98c379>+</fc>"
-                , "-i", "<fc=#98c379>=</fc>"
-                ] 50
+            , Run Com "/home/passh/dotfiles/scripts/xmobar-battery.sh" [] "battery" 50
             ''}
 
             -- Raton wireless (Logitech hidpp)

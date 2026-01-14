@@ -15,4 +15,6 @@ else
 fi
 
 COLOR=$(pct_to_color "$USED_PCT")
-echo "<fc=${COLOR}>$(xmobar_icon "󰍛") ${USED_PCT}%</fc>"
+# Padding a 2 dígitos para evitar desplazamiento
+MEM_PAD=$(printf "%02d" "$USED_PCT")
+echo "<fc=${COLOR}>$(xmobar_icon "󰍛")${MEM_PAD}%</fc>"

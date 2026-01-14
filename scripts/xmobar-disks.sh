@@ -113,12 +113,14 @@ for disk in $disks; do
     # Para root, mostrar /
     [ "$mount_point" = "/" ] && disk_name="root"
 
-    # Formato ultra-compacto: icono+barra+pct
+    # Formato ultra-compacto: icono+pct (color indica nivel)
     # Icono Nerd Font: 󰋊 (disco duro)
+    # Padding a 2 dígitos para evitar desplazamiento
+    pct_padded=$(printf "%02d" "$used_pct")
     if [ -n "$temp" ]; then
-        output+="<fc=${color}><fn=1>󰋊</fn>${level}</fc>${used_pct}% ${temp}° "
+        output+="<fc=${color}><fn=1>󰋊</fn></fc>${pct_padded}% ${temp}° "
     else
-        output+="<fc=${color}><fn=1>󰋊</fn>${level}</fc>${used_pct}% "
+        output+="<fc=${color}><fn=1>󰋊</fn></fc>${pct_padded}% "
     fi
 done
 

@@ -21,4 +21,6 @@ else
 fi
 
 COLOR=$(pct_to_color "$CPU")
-echo "<fc=${COLOR}>$(xmobar_icon "󰻠") ${CPU}%</fc>"
+# Padding a 2 dígitos para evitar desplazamiento
+CPU_PAD=$(printf "%02d" "$CPU")
+echo "<fc=${COLOR}>$(xmobar_icon "󰻠")${CPU_PAD}%</fc>"
