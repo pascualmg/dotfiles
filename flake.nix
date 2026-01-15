@@ -51,7 +51,7 @@
 # =============================================================================
 
 {
-  
+
   description = "NixOS configurations for aurin, vespino, and macbook";
 
   # ---------------------------------------------------------------------------
@@ -148,6 +148,7 @@
             # MODULOS COMUNES - compartidos por todas las maquinas
             ./modules/common/packages.nix
             ./modules/common/services.nix
+            ./modules/common/users.nix  # Usuario passh consolidado
 
             # DESKTOP WAYLAND - Hyprland y niri (habilitados por defecto)
             ./modules/desktop/hyprland.nix

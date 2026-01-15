@@ -379,6 +379,143 @@ The user works on Vocento projects at `/home/passh/src/vocento`:
 
 Be aware of this context when optimizing system resources, network, or development tooling.
 
+## CRITICAL: Vocento VPN (Ivanti/Pulse Secure) - THE BIG PROBLEM
+
+### The Problem
+
+Vocento uses **Ivanti VPN** (formerly Pulse Secure) which has clients for Windows, Linux, and Mac - but **NONE work on NixOS**. The proprietary binaries have specific dependencies that are a nightmare to satisfy on NixOS.
+
+### Current Workaround (FRAGILE - NOT REPRODUCIBLE)
+
+The solution involves a **Ubuntu VM acting as a VPN router/bridge**:
+
+```
+NixOS Host (aurin/vespino/macbook)
+    ↓
+Bridge br0 (192.168.53.10/24) ← Nixified ✓
+    ↓
+Ubuntu VM (192.168.53.12) ← MANUAL, FRAGILE
+    ↓
+Ivanti Client (tun0) ← Proprietary binary
+    ↓
+Vocento Infrastructure (10.180.0.0/16, 10.182.0.0/16, etc.)
+```
+
+### What IS Nixified (Safe to Modify with Care)
+
+Located in `/home/passh/dotfiles/nixos-aurin/etc/nixos/configuration.nix`:
+
+**Bridge br0:**
+```nix
+bridges.br0.interfaces = [];  # Empty bridge for VMs
+interfaces.br0.ipv4.addresses = [{ address = "192.168.53.10"; prefixLength = 24; }];
+```
+
+**Static routes via VM (192.168.53.12):**
+```nix
+routes = [
+  { address = "10.180.0.0"; prefixLength = 16; via = "192.168.53.12"; }
+  { address = "10.182.0.0"; prefixLength = 16; via = "192.168.53.12"; }
+  { address = "192.168.196.0"; prefixLength = 24; via = "192.168.53.12"; }
+  { address = "10.200.26.0"; prefixLength = 24; via = "192.168.53.12"; }
+  { address = "10.184.0.0"; prefixLength = 16; via = "192.168.53.12"; }
+  { address = "10.186.0.0"; prefixLength = 16; via = "192.168.53.12"; }
+  { address = "34.175.0.0"; prefixLength = 16; via = "192.168.53.12"; }
+  { address = "34.13.0.0"; prefixLength = 16; via = "192.168.53.12"; }
+];
+```
+
+**NAT for VM subnet:**
+```nix
+nat = {
+  enable = true;
+  internalInterfaces = [ "br0" ];
+  externalInterface = "enp7s0";  # Main NIC
+  extraCommands = ''
+    iptables -t nat -A POSTROUTING -s 192.168.53.0/24 -j MASQUERADE
+  '';
+};
+```
+
+**DNS pointing to VM:**
+```nix
+"resolv.conf" = {
+  text = ''
+    nameserver 192.168.53.12
+    nameserver 8.8.8.8
+    search grupo.vocento
+    options timeout:1 attempts:1 rotate
+  '';
+};
+```
+
+### What is NOT Nixified (THE FRAGILE PART)
+
+**The Ubuntu VM is configured MANUALLY by reverse engineering when it worked:**
+- IP forwarding enabled
+- iptables rules for forwarding between enp1s0 and tun0
+- NAT MASQUERADE for tun0
+- **Critical MSS/MTU clamping for SSL** (without this, HTTPS breaks):
+  ```bash
+  iptables -t mangle -A FORWARD -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --set-mss 1200
+  ```
+- dnsmasq configured with Vocento DNS servers (192.168.201.38, 192.168.201.43)
+- Pulse Secure client installed in `/opt/pulsesecure/`
+
+**CRITICAL FACTS:**
+1. The script `ubuntu-vm-ivanti-configurator.sh` was an ATTEMPT to document the config - **IT WAS NEVER ACTUALLY TESTED**
+2. The real VM was configured by **trial and error reverse engineering**
+3. **If you restart the VM, the configuration is LOST** → must use snapshots
+4. Every new NixOS machine (like the new Mac) requires repeating this manual nightmare
+5. The configuration is **not reproducible** - it's held together by snapshots
+
+### SACRED RULES FOR VPN NETWORKING
+
+**NEVER MODIFY without:**
+1. Backup of the Ubuntu VM snapshot
+2. Snapshot of current NixOS generation
+3. Documented rollback plan
+4. Understanding that you might lose VPN access for hours/days
+
+**Components that MUST stay synchronized:**
+- Bridge br0 IP (192.168.53.10)
+- VM IP (192.168.53.12)
+- Static routes via 192.168.53.12
+- DNS pointing to 192.168.53.12
+- NAT rules for 192.168.53.0/24
+
+### Potential Future Solutions
+
+1. **openconnect --protocol=nc** - Native support for Pulse/Ivanti protocol, would eliminate VM entirely. Needs testing with Vocento server.
+
+2. **Declarative VM with NixOS** - Create reproducible VM image using libvirt/QEMU declaratively
+
+3. **Docker/Podman container** - Package Ivanti client in container (lighter than VM)
+
+4. **pulse-secure-nixos (IMPLEMENTED - READY TO USE)** - Native NixOS package in `~/src/pulse-secure-nixos/`
+   - Uses `buildFHSEnv` to create isolated FHS environment
+   - WebKit 4.0 from nixos-21.11 (libsoup2 compatibility)
+   - Systemd service + DBus integration
+   - **STATUS**: Works! But needs updated .deb (version 22.7.R2 is outdated for Vocento server)
+   - **TO USE**: See `~/src/pulse-secure-nixos/README.md` for integration with dotfiles
+   - **PENDING**: When user gets new .deb, update path in `pulse-secure.nix` and test
+
+### Files Related to VPN
+
+- `/home/passh/dotfiles/nixos-aurin/etc/nixos/configuration.nix` (lines ~182-268 networking)
+- `/home/passh/dotfiles/nixos-aurin/etc/nixos/modules/virtualization.nix`
+- `/home/passh/dotfiles/scripts/scripts/ubuntu-vm-ivanti-configurator.sh` (UNTESTED attempt)
+- `/home/passh/dotfiles/scripts/vm-backupeitor.sh` (backup/restore VMs)
+- `/home/passh/src/pulse-secure-nixos/` - **Native NixOS package (outside dotfiles, ready for integration)**
+
+### When User Mentions VPN Problems
+
+If the user mentions VPN, Ivanti, Pulse Secure, or Vocento connectivity:
+1. **Do NOT touch networking config** without explicit confirmation
+2. Ask if they have a working VM snapshot
+3. Consider that `openconnect --protocol=nc` might be worth trying
+4. Remember this is a **known pain point** that affects every new NixOS installation
+
 ## Your Ultimate Goal
 
 Transform the student from someone who follows instructions into someone who:

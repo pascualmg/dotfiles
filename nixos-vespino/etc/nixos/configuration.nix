@@ -16,6 +16,9 @@
 #   - Syncthing
 #   - libvirt/Docker para VMs
 #
+# Usuario:
+#   - Definido en modules/common/users.nix (compartido)
+#
 # ZONA SAGRADA - VPN VOCENTO:
 #   La configuracion de br0 y rutas a 192.168.53.12 es CRITICA
 #   para acceso a infraestructura Vocento via VM Ubuntu + Ivanti
@@ -40,6 +43,7 @@ in {
     ./hardware-configuration.nix
     ./minecraft.nix
     # home-manager ahora viene del flake (enableHomeManager = true)
+    # Usuario passh definido en modules/common/users.nix (via flake)
   ];
 
   # ===== UNFREE =====
@@ -288,40 +292,22 @@ in {
   # ===== FONTS =====
   fonts.packages = with pkgs; [ powerline-fonts ];  # Fixed: nerdfonts removed (deprecated)
 
-  # ===== USER =====
-  users.users.passh = {
-    isNormalUser = true;
-    description = "passh";
-    extraGroups = [
-      "wheel"
-      "networkmanager"
-      "audio"
-      "pipewire"
-      "video"
-      "docker"
-      "input"
-      "libvirtd"
-      "kvm"
-      "storage"
-      "disk"
-      "plugdev"
-      "davfs2"
-    ];
-    shell = pkgs.fish;
-  };
+  # ===== USER: passh =====
+  # NOTA: Usuario definido en modules/common/users.nix (compartido via flake)
+  # Solo definimos aqui la politica de sudo especifica de vespino
 
   # ===== SERVICES =====
   services = {
     resolved.enable = false;
 
     # ===== LIBINPUT: Raw input para ratones gaming =====
-    # Filosofía HHKB: el hardware manda, no el software
-    # Perfil flat = movimiento 1:1 con el DPI del ratón
+    # Filosofia HHKB: el hardware manda, no el software
+    # Perfil flat = movimiento 1:1 con el DPI del raton
     libinput = {
       enable = true;
       mouse = {
-        accelProfile = "flat";  # Raw input, sin aceleración del sistema
-        accelSpeed = "0";       # Velocidad base (respeta DPI del ratón)
+        accelProfile = "flat";  # Raw input, sin aceleracion del sistema
+        accelSpeed = "0";       # Velocidad base (respeta DPI del raton)
       };
     };
 
@@ -331,7 +317,7 @@ in {
       xkb = {
         layout = "us,es";
         variant = "";
-        # Alt+Shift para cambiar layout, Caps Lock → Escape
+        # Alt+Shift para cambiar layout, Caps Lock -> Escape
         options = "grp:alt_shift_toggle,caps:escape";
       };
       windowManager.xmonad = {
@@ -521,7 +507,7 @@ in {
   security = {
     rtkit.enable = true;
     polkit.enable = true;
-    sudo.wheelNeedsPassword = true;
+    sudo.wheelNeedsPassword = true;  # Vespino: servidor, seguridad con password
     # PKI certificate (conditional - only if file exists)
     pki.certificateFiles =
       if builtins.pathExists /home/passh/src/vocento/abc/container.frontal-docker/configure/ssl/rootcav2.vocento.in.pem

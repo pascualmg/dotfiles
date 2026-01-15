@@ -23,6 +23,9 @@
 #   - xrdp.nix: Remote desktop (disabled)
 #   - virtualization.nix: Docker + libvirt
 #   - xmonad.nix: Window manager + X11 (modulo compartido)
+#
+# Usuario:
+#   - Definido en modules/common/users.nix (compartido)
 # =============================================================================
 
 { config, pkgs, ... }:
@@ -46,10 +49,11 @@
     # Desde: dotfiles/nixos-aurin/etc/nixos/ -> 3 niveles arriba
     ../../../modules/desktop/xmonad.nix
 
-    # Modulo compartido nix-ld (binarios dinámicos: JetBrains Gateway, VSCode Remote, etc.)
+    # Modulo compartido nix-ld (binarios dinamicos: JetBrains Gateway, VSCode Remote, etc.)
     ../../../modules/common/nix-ld.nix
 
     # Home Manager se integra via flake (no usa <home-manager/nixos>)
+    # Usuario passh definido en modules/common/users.nix (via flake)
   ];
 
   # ===========================================================================
@@ -310,26 +314,9 @@
     };
   };
 
-  # ===== USER =====
-  users.users.passh = {
-    isNormalUser = true;
-    description = "passh";
-    extraGroups = [
-      "wheel"
-      "networkmanager"
-      "audio"
-      "video"
-      "docker"
-      "input"
-      "libvirtd"
-      "kvm"
-      "storage"
-      "disk"
-      "plugdev"
-      "render"
-    ];
-    shell = pkgs.fish;
-  };
+  # ===== USER: passh =====
+  # NOTA: Usuario definido en modules/common/users.nix (compartido via flake)
+  # Solo definimos aqui la politica de sudo especifica de aurin
 
   # ===== SERVICES =====
   services = {
@@ -341,7 +328,7 @@
         PasswordAuthentication = true;
         AllowTcpForwarding = true;
         GatewayPorts = "clientspecified";
-        # Gateway abre muchos canales - aumentar límites
+        # Gateway abre muchos canales - aumentar limites
         MaxSessions = 100;
         ClientAliveInterval = 60;
         ClientAliveCountMax = 3;
@@ -450,7 +437,7 @@
   # ===== SECURITY =====
   security = {
     polkit.enable = true;
-    sudo.wheelNeedsPassword = false;
+    sudo.wheelNeedsPassword = false;  # Aurin: workstation, sin password
   };
 
   # ===== SYSTEM PACKAGES =====

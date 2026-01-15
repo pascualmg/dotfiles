@@ -72,6 +72,7 @@
       }
 
       // ===== OUTPUT (HiDPI) =====
+      // scale 2.0 = consistente con XMonad (dpi=227 en X11 también "ralentiza" el cursor)
       output "*" {
           scale 2.0
       }

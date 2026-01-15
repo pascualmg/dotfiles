@@ -21,6 +21,9 @@
 # Modulos locales:
 #   - apple-hardware.nix: Drivers SPI, Touch Bar, Broadcom WiFi, HiDPI
 #
+# Usuario:
+#   - Definido en modules/common/users.nix (compartido)
+#
 # Instalacion:
 #   1. Boot USB NixOS
 #   2. Conectar SSD TB3
@@ -54,6 +57,7 @@
     # - nixos-hardware.nixosModules.common-pc-ssd
     #
     # Home Manager: Se integra via flake.nix enableHomeManager = true
+    # Usuario passh: Definido en modules/common/users.nix (via flake)
   ];
 
   # ===== UNFREE =====
@@ -106,32 +110,20 @@
     };
   };
 
-  # ===== USER =====
-  users.users.passh = {
-    isNormalUser = true;
-    description = "passh";
-    extraGroups = [
-      "wheel"
-      "networkmanager"
-      "audio"
-      "video"
-      "input"
-      "docker"
-      "libvirtd"
-    ];
-    shell = pkgs.fish;
-  };
+  # ===== USER: passh =====
+  # NOTA: Usuario definido en modules/common/users.nix (compartido via flake)
+  # Solo definimos aqui la politica de sudo especifica de macbook
 
   # ===== SERVICES =====
   services = {
     # ===== LIBINPUT: Raw input para ratones gaming =====
-    # Filosofía HHKB: el hardware manda, no el software
-    # Perfil flat = movimiento 1:1 con el DPI del ratón
+    # Filosofia HHKB: el hardware manda, no el software
+    # Perfil flat = movimiento 1:1 con el DPI del raton
     libinput = {
       enable = true;
       mouse = {
-        accelProfile = "flat";  # Raw input, sin aceleración del sistema
-        accelSpeed = "0";       # Velocidad base (respeta DPI del ratón)
+        accelProfile = "flat";  # Raw input, sin aceleracion del sistema
+        accelSpeed = "0";       # Velocidad base (respeta DPI del raton)
       };
     };
 
@@ -149,7 +141,7 @@
       xkb = {
         layout = "us,es";
         variant = "";
-        # Alt+Shift para cambiar layout, Caps Lock → Escape
+        # Alt+Shift para cambiar layout, Caps Lock -> Escape
         options = "grp:alt_shift_toggle,caps:escape";
       };
     };
@@ -157,7 +149,7 @@
     # Display Manager (opcion movida de xserver)
     displayManager.gdm.enable = true;
 
-    # GNOME Desktop (nueva ubicación, fuera de xserver)
+    # GNOME Desktop (nueva ubicacion, fuera de xserver)
     desktopManager.gnome.enable = true;
 
 
@@ -174,13 +166,13 @@
     blueman.enable = true;
 
     # keyd: Remapeador de teclas a nivel kernel (funciona en X11 y Wayland)
-    # Permite usar Fn + fila numérica como F-keys (workaround Touch Bar)
+    # Permite usar Fn + fila numerica como F-keys (workaround Touch Bar)
     keyd = {
       enable = true;
       keyboards = {
-        # Configuración para Apple SPI Keyboard (Spanish ISO)
+        # Configuracion para Apple SPI Keyboard (Spanish ISO)
         apple = {
-          ids = [ "0000:0000" ];  # Apple SPI Keyboard específico
+          ids = [ "0000:0000" ];  # Apple SPI Keyboard especifico
           settings = {
             main = {
               # La tecla Fn del Mac (KEY_FN = scancode 464)
@@ -188,20 +180,20 @@
               "fn" = "layer(fnlayer)";
 
               # Fix swap de teclas en teclado Apple Spanish ISO
-              # La tecla junto al 1 (grave) y la tecla entre Shift-Z (102nd) están intercambiadas
-              # grave produce <> pero debería producir ºª
-              # 102nd produce ºª pero debería producir <>
+              # La tecla junto al 1 (grave) y la tecla entre Shift-Z (102nd) estan intercambiadas
+              # grave produce <> pero deberia producir
+              # 102nd produce pero deberia producir <>
               "grave" = "102nd";
               "102nd" = "grave";
             };
             # Capa activada al mantener Fn pulsado
             "fnlayer" = {
-              # Fn + º (tecla junto al 1 en teclado español ISO) = Escape
-              # En keyd esta tecla se llama "grave" (posición física, no carácter)
+              # Fn + (tecla junto al 1 en teclado espanol ISO) = Escape
+              # En keyd esta tecla se llama "grave" (posicion fisica, no caracter)
               "grave" = "esc";
-              # También la tecla <> (entre Shift izq y Z en ISO) por si acaso
+              # Tambien la tecla <> (entre Shift izq y Z en ISO) por si acaso
               "102nd" = "esc";
-              # Fn + números = F-keys
+              # Fn + numeros = F-keys
               "1" = "f1";
               "2" = "f2";
               "3" = "f3";
@@ -214,7 +206,7 @@
               "0" = "f10";
               "-" = "f11";
               "=" = "f12";
-              # Fn + teclas de navegación
+              # Fn + teclas de navegacion
               "backspace" = "delete";
               "left" = "home";
               "right" = "end";
@@ -263,7 +255,7 @@
   # ===== SECURITY =====
   security = {
     polkit.enable = true;
-    sudo.wheelNeedsPassword = true;  # Seguridad laptop
+    sudo.wheelNeedsPassword = true;  # Macbook: laptop, seguridad con password
   };
 
   # ===== WAYLAND COMPOSITORS =====
@@ -271,7 +263,7 @@
   # Para deshabilitar: desktop.hyprland.enable = false;
 
   # ===== POWER MANAGEMENT =====
-  # Deshabilitar suspensión - el MacBook no se recupera bien
+  # Deshabilitar suspension - el MacBook no se recupera bien
   systemd.targets = {
     sleep.enable = false;
     suspend.enable = false;
@@ -289,10 +281,10 @@
   # ===== FONTS =====
   # Todas las fuentes en modules/common/packages.nix (compartidas)
 
-  # ===== SYSTEM PACKAGES (solo específicos de MacBook) =====
-  # Los comunes (vim, git, htop, etc.) están en modules/common/packages.nix
+  # ===== SYSTEM PACKAGES (solo especificos de MacBook) =====
+  # Los comunes (vim, git, htop, etc.) estan en modules/common/packages.nix
   environment.systemPackages = with pkgs; [
-    # Terminal (versión unstable específica)
+    # Terminal (version unstable especifica)
     alacritty
 
     # Editor: emacs-pgtk instalado via home-manager (passh.nix)
