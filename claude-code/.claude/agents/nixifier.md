@@ -1,1 +1,1 @@
-/home/passh/src/vocento/autoenv/nixifier.md
+/home/passh/src/vocento/autoenv/agents/nixifier.md

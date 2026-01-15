@@ -1,1 +1,1 @@
-/home/passh/src/vocento/autoenv/vocento-software-architect.md
+/home/passh/src/vocento/autoenv/agents/vocento-software-architect.md
