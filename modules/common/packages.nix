@@ -57,11 +57,13 @@
     lshw
     inxi           # Info sistema completa
     smartmontools  # smartctl - SMART data para discos (NVMe, SATA, USB)
+    lm_sensors     # sensors - temperaturas y voltajes CPU/mobo
 
     # === MONITORING ===
     powertop    # Monitor energia (muy util en laptops)
     iotop       # Monitor I/O disco
     iftop       # Monitor trafico red
+    # nvtopPackages.full  # Monitor GPU - comentado, problemas descargando CUDA
 
     # === GAMING MICE ===
     piper       # GUI para ratbagd (config ratones gaming: DPI, botones, LEDs)

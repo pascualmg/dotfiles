@@ -399,6 +399,92 @@ Remember: You are not just a system administrator. You are a **master** guiding 
 - Check current system: `hostnamectl` (will be "aurin" or "vespino")
 - All NixOS configs use absolute paths since cwd resets between bash calls
 
+## XMobar Monitors Pattern
+
+The dotfiles include a complete xmobar setup with custom monitors. All monitors follow a consistent pattern:
+
+### Monitor Format Standard
+```
+<fn=1>ICON</fn>VALUE
+```
+- Use Nerd Font icons via `<fn=1>...</fn>` (additionalFonts in xmobar.nix)
+- Never use emojis - always Nerd Font icons
+- Values padded to 2 digits: `printf "%02d" "$VALUE"`
+
+### Color Gradient System
+All monitors use shared color functions from `scripts/xmobar-colors.sh`:
+
+```bash
+source "${SCRIPT_DIR}/xmobar-colors.sh"
+
+# Normal gradient: 0%=green, 100%=red (for CPU, memory, disk usage)
+COLOR=$(pct_to_color "$PERCENTAGE")
+
+# Inverse gradient: 0%=red, 70%+=green (for battery, wifi, volume)
+COLOR=$(pct_to_color_inverse "$PERCENTAGE")
+```
+
+### Click Actions
+Every monitor should have a click action to open relevant tool:
+```bash
+echo "<action=\`tool-command\`><fc=${COLOR}><fn=1>ICON</fn>${VALUE}</fc></action>"
+```
+
+### Monitor Examples
+
+**Simple monitor (CPU usage):**
+```bash
+COLOR=$(pct_to_color "$CPU")
+CPU_PAD=$(printf "%02d" "$CPU")
+echo "<action=\`xterm -e btop\`><fc=${COLOR}><fn=1>󰻠</fn>${CPU_PAD}%</fc></action>"
+```
+
+**Multi-value monitor (GPU with usage, temp, VRAM, power):**
+```bash
+# Each metric gets its own gradient color
+COLOR_USAGE=$(pct_to_color "$USAGE")
+COLOR_TEMP=$(pct_to_color "$TEMP_PCT")   # 30°C=0%, 90°C=100%
+COLOR_MEM=$(pct_to_color "$MEM_PCT")
+COLOR_POWER=$(pct_to_color "$POWER_PCT")
+
+echo "<action=\`command\`><fc=${COLOR_USAGE}><fn=1>󰢮</fn>${USAGE}%</fc> <fc=${COLOR_TEMP}><fn=1>󰔐</fn>${TEMP}°</fc> <fc=${COLOR_MEM}><fn=1>󰍛</fn>${MEM}G</fc> <fc=${COLOR_POWER}><fn=1>󰚥</fn>${POWER}W</fc></action>"
+```
+
+### Common Nerd Font Icons
+- CPU: 󰻠 (nf-md-chip)
+- Memory: 󰍛 (nf-md-memory)
+- Temperature: 󰔐 (nf-md-thermometer)
+- Disk: 󰋊 (nf-md-harddisk)
+- GPU: 󰢮 (nf-md-expansion_card)
+- Power/Watts: 󰚥 (nf-md-lightning_bolt)
+- WiFi: 󰖩 (nf-md-wifi)
+- Ethernet: 󰈀 (nf-md-ethernet)
+- Battery: 󰁹 󰁿 󰂄 (full, half, charging)
+- Volume: 󰕾 󰖀 󰝟 (high, low, muted)
+- Docker: 󰡨 (nf-md-docker)
+
+### Files Structure
+- `scripts/xmobar-colors.sh` - Shared color functions
+- `scripts/xmobar-cpu.sh` - CPU monitor
+- `scripts/xmobar-memory.sh` - Memory monitor
+- `scripts/xmobar-disks.sh` - Disk monitor (generic NVMe/SATA/USB)
+- `scripts/xmobar-gpu-nvidia.sh` - NVIDIA GPU monitor
+- `scripts/xmobar-gpu-intel.sh` - Intel GPU monitor
+- `scripts/xmobar-network.sh` - Network monitor (auto-detect eth/wifi)
+- `scripts/xmobar-battery.sh` - Battery monitor
+- `scripts/xmobar-volume.sh` - Volume monitor
+- `scripts/xmobar-docker.sh` - Docker containers count
+- `modules/home-manager/programs/xmobar.nix` - XMobar config module
+
+### RAPL Power Monitoring (Intel CPUs)
+To read CPU power consumption without root, add udev rule:
+```nix
+services.udev.extraRules = ''
+  SUBSYSTEM=="powercap", ACTION=="add", RUN+="${pkgs.coreutils}/bin/chmod g+r /sys/class/powercap/intel-rapl/intel-rapl:*/energy_uj"
+  SUBSYSTEM=="powercap", ACTION=="add", RUN+="${pkgs.coreutils}/bin/chgrp wheel /sys/class/powercap/intel-rapl/intel-rapl:*/energy_uj"
+'';
+```
+
 ## Final Wisdom
 
 "The best NixOS configuration is one that is understood, not just copied. The safest change is one that is tested. The wisest teacher is one who ensures the student understands before proceeding."

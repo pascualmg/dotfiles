@@ -26,10 +26,7 @@ let
   # Comando GPU segun tipo
   gpuCommand = {
     nvidia = ''
-      Run Com "bash"
-          ["-c", "nvidia-smi --query-gpu=temperature.gpu,utilization.gpu,memory.used,memory.total,power.draw --format=csv,noheader,nounits | awk -F',' '{printf \"GPU %.0f C %.0f%% %.1f/%.1fGB %.0fW\", $1, $2, $3/1024, $4/1024, $5}'"]
-          "gpu"
-          10
+      Run Com "/home/passh/dotfiles/scripts/xmobar-gpu-nvidia.sh" [] "gpu" 10
     '';
     intel = ''
       Run Com "/home/passh/dotfiles/scripts/xmobar-gpu-intel.sh" [] "gpu" 20
@@ -39,10 +36,13 @@ let
 
   # Template GPU en la barra segun tipo
   gpuTemplate = {
-    nvidia = "<action=`nvidia-settings`><fc=#98c379><fn=1></fn> %gpu%</fc></action>";
-    intel = "%gpu%";  # Script ya incluye formato y color
+    nvidia = "%gpu%";  # Script ya incluye formato, color y click action
+    intel = "%gpu%";   # Script ya incluye formato y color
     none = "";
   };
+
+  # Separador entre grupos de monitores (NixOS icon en gris sutil)
+  nixSep = "<fc=#555555><fn=1>󱄅</fn></fc>";
 
   # Generar el xmobarrc completo
   # NOTA: Usamos sintaxis Pango (no Xft) - funciona correctamente en HiDPI
@@ -122,7 +122,7 @@ let
         -- LAYOUT: Izda (workspaces + fecha) | Dcha (menos importante → más importante)
         , sepChar = "%"
         , alignSep = "}{"
-        , template = "%date% %StdinReader% }{${lib.optionalString cfg.showTrayer " %trayerpad% |"} %docker% ${lib.optionalString (cfg.alsaMixer != null) "%volume% "}${lib.optionalString cfg.showWirelessMouse "%mouse% "}${lib.optionalString cfg.showBattery "%battery% "}%network% ${lib.optionalString cfg.showDiskMonitor "%disks% "}${lib.optionalString (cfg.gpuType != "none") (gpuTemplate.${cfg.gpuType} + " ")}%memory% %cpu% "
+        , template = "%date% %StdinReader% }{${lib.optionalString cfg.showTrayer " %trayerpad% |"} ${nixSep} %docker% ${lib.optionalString (cfg.alsaMixer != null) "%volume% "}${lib.optionalString cfg.showWirelessMouse "%mouse% "}${lib.optionalString cfg.showBattery "%battery% "}%network% ${lib.optionalString cfg.showDiskMonitor "%disks% "}${nixSep} ${lib.optionalString (cfg.gpuType != "none") (gpuTemplate.${cfg.gpuType} + " " + nixSep + " ")}%memory% %cpu% "
 
     }
   '';

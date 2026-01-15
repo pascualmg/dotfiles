@@ -67,4 +67,12 @@
 
   # ===== THERMALD (Solo Intel, deshabilitado si no aplica) =====
   # services.thermald.enable = lib.mkDefault false;  # Habilitar en macbook
+
+  # ===== RAPL (Intel CPU Power Monitoring) =====
+  # Permite a usuarios leer consumo de CPU sin root
+  services.udev.extraRules = ''
+    # Intel RAPL - permitir lectura a grupo wheel
+    SUBSYSTEM=="powercap", ACTION=="add", RUN+="${pkgs.coreutils}/bin/chmod g+r /sys/class/powercap/intel-rapl/intel-rapl:*/energy_uj"
+    SUBSYSTEM=="powercap", ACTION=="add", RUN+="${pkgs.coreutils}/bin/chgrp wheel /sys/class/powercap/intel-rapl/intel-rapl:*/energy_uj"
+  '';
 }
