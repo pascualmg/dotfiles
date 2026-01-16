@@ -17,9 +17,8 @@
     ../core.nix
   ];
 
-  # Override homeDirectory para Nix-on-Droid
-  # (en Android el home es diferente)
-  home.homeDirectory = lib.mkForce "/data/data/com.termux.nix/files/home";
+  # nix-on-droid ya setea username="nix-on-droid" y homeDirectory correctamente
+  # No necesitamos override aqui
 
   # Paquetes adicionales especificos para Android
   # (ligeros, utiles para terminal movil)

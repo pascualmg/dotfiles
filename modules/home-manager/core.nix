@@ -22,7 +22,8 @@
 
   home = {
     stateVersion = "24.05";
-    username = "passh";
+    # mkDefault permite que nix-on-droid override con "nix-on-droid"
+    username = lib.mkDefault "passh";
     homeDirectory = lib.mkDefault "/home/passh";
 
     # =========================================================================
