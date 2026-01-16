@@ -43,7 +43,7 @@
 
   # Terminal styling
   terminal = {
-    font = "${pkgs.nerdfonts.override { fonts = [ "JetBrainsMono" ]; }}/share/fonts/truetype/NerdFonts/JetBrainsMonoNerdFont-Regular.ttf";
+    font = "${pkgs.nerd-fonts.jetbrains-mono}/share/fonts/truetype/NerdFonts/JetBrainsMonoNerdFont-Regular.ttf";
     colors = {
       # Solarized Dark theme
       background = "#002b36";
