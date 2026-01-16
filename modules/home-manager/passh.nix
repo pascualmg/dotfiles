@@ -1,31 +1,23 @@
 # =============================================================================
-# Home Manager Configuration for passh
+# Home Manager Configuration for passh - DESKTOP
 # =============================================================================
-# Este modulo define la configuracion de usuario para home-manager.
+# Este modulo extiende core.nix con configuracion especifica de DESKTOP.
+# Incluye: X11, Wayland, GUI apps, servicios de usuario, etc.
 #
-# NOTA: Este archivo es una COPIA PREPARATORIA del home.nix existente,
-# adaptada para funcionar con el flake. El home.nix original sigue
-# funcionando de forma independiente.
+# ESTRUCTURA:
+#   core.nix   <- Config minima portable (funciona en Android, servers, etc)
+#   passh.nix  <- Este archivo: Desktop-specific (importa core.nix)
 #
-# ESTADO: Preparacion - Activo en flake (homeConfigurations.passh)
-#
-# Cuando se active completamente en NixOS, reemplazara la necesidad de:
-#   1. El import <home-manager/nixos> en configuration.nix
-#   2. El home.nix standalone que usa fetchTarball
-#
-# MIGRACION:
-#   - fetchTarball eliminado (usa nixpkgs del flake)
-#   - Opciones de git actualizadas a nueva sintaxis
-#   - Paquetes problematicos comentados o reemplazados
-#   - xmobar: migrado a modules/home-manager/programs/xmobar.nix
-#   - emacs: migrado a modules/home-manager/programs/emacs.nix (wrapper X11/Wayland)
+# REGLA: Todo lo que requiera GUI, X11, Wayland o systemd user services
+#        va aqui. Lo portable va en core.nix.
 # =============================================================================
 
 { config, pkgs, pkgsMaster, lib, ... }:
 
 {
-  # Home Manager basico
-  programs.home-manager.enable = true;
+  imports = [
+    ./core.nix  # Config comun a todas las plataformas
+  ];
 
   # Desactivamos gestion de configs que manejaremos con stow
   xsession.enable = false;
@@ -37,47 +29,26 @@
   # allowUnfree y permittedInsecurePackages se configuran a nivel del flake/sistema
 
   home = {
-    stateVersion = "24.05";
-    username = "passh";
-    homeDirectory = "/home/passh";
-
     # =========================================================================
-    # PAQUETES
+    # PAQUETES DESKTOP - Requieren GUI o son pesados
     # =========================================================================
-    # NOTA: Usamos pkgs directamente (viene del flake nixpkgs-unstable).
-    # Ya no necesitamos fetchTarball para unstable/master.
-    #
+    # Los paquetes CLI basicos estan en core.nix
     # xmobar se instala via programs/xmobar.nix cuando enable=true
     # emacs se instala via programs/emacs.nix (wrapper inteligente X11/Wayland)
     # =========================================================================
     packages = with pkgs; [
-      # Core utils
+      # Desktop utils (no estan en core)
       killall
       stow
-      git
-      gh
-      ripgrep
-      fd
-      wget
-      curl
-      neovim
-      tree
-      unzip
-      zip
-      gzip
-      file
       lsof
       v4l-utils
       guvcview
       docker-compose
       lazydocker
-      eza
       filezilla
-      direnv
       dysk
 
-      # Shells
-      fish
+      # Shells adicionales
       zsh
       bash
 
@@ -251,17 +222,13 @@
       pkgsMaster.claude-code  # 2.1.6 (master) vs 2.1.2 (unstable)
     ];
 
+    # Session variables adicionales para desktop
+    # (las basicas como EDITOR, ORG_DIRECTORY estan en core.nix)
     sessionVariables = {
-      # EDITOR/VISUAL ahora se definen en programs/emacs.nix
-      # (usa emacsclient con fallback a emacs)
-      ORG_DIRECTORY = "$HOME/org";
-      ORG_ROAM_DIRECTORY = "$HOME/org/roam";
-      # PATH ya no necesita hardcodear emacs-pgtk (el wrapper va primero automaticamente)
       # Telega (Telegram client para Emacs) - evita hardcodear path en doom config
       TDLIB_PREFIX = "${pkgs.tdlib}";
     };
 
-    # Activaciones
     # ==========================================================================
     # STOW ACTIVATION (LEGACY - EN PROCESO DE ELIMINACION)
     # ==========================================================================
@@ -277,93 +244,22 @@
     #
     # PLAN: Cuando xmonad y composer migren, eliminar este bloque completamente.
     # ==========================================================================
-    activation = {
-      linkDotfiles = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
-        echo "Linkeando dotfiles residuales con stow..."
-        cd ${config.home.homeDirectory}/dotfiles
-        # Solo quedan: xmonad (Haskell), composer (PHP), claude-code (local)
-        ${pkgs.stow}/bin/stow -v -R -t ${config.home.homeDirectory} \
-          composer xmonad claude-code
-      '';
-
-      createDirectories = lib.hm.dag.entryAfter [ "linkDotfiles" ] ''
-        echo "Creando estructura de directorios..."
-        mkdir -p $HOME/org/roam
-        mkdir -p $HOME/src
-        chmod 700 $HOME/org
-        echo "Directorios creados correctamente"
-      '';
-    };
+    activation.linkDotfiles = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
+      echo "Linkeando dotfiles residuales con stow..."
+      cd ${config.home.homeDirectory}/dotfiles
+      # Solo quedan: xmonad (Haskell), composer (PHP), claude-code (local)
+      ${pkgs.stow}/bin/stow -v -R -t ${config.home.homeDirectory} \
+        composer xmonad claude-code
+    '';
   };
 
   # =========================================================================
-  # GIT CONFIG
+  # GIT y SSH CONFIG -> Movidos a core.nix
   # =========================================================================
-  # NOTA: Sintaxis actualizada para home-manager reciente
-  # userName -> settings.user.name
-  # userEmail -> settings.user.email
-  # extraConfig -> settings
-  # =========================================================================
-  programs.git = {
-    enable = true;
-    # Nueva sintaxis para home-manager
-    settings = {
-      user = {
-        name = "Pascual Munoz Galian";
-        email = "pmunozg@ces.vocento.com";
-      };
-      init.defaultBranch = "main";
-      pull.rebase = false;
-      color.ui = "auto";
-      credential.helper = "store";
-    };
-    ignores = [
-      ".org-id-locations"
-      "*.org~"
-      ".org-roam.db"
-      ".DS_Store"
-      ".idea"
-      "*~"
-      "\\#*\\#"
-    ];
-  };
 
   # =========================================================================
-  # SSH CONFIG
+  # SERVICIOS DESKTOP
   # =========================================================================
-  # NOTA: No usamos programs.ssh porque crea symlinks al nix store con owner
-  # root, lo cual SSH rechaza por seguridad. En su lugar, usamos home.activation
-  # para crear el archivo con permisos correctos (600, owner=user).
-  # =========================================================================
-  programs.ssh.enable = false;
-
-  home.activation.createSshConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    mkdir -p ~/.ssh
-    chmod 700 ~/.ssh
-    # Eliminar symlink si existe (Home Manager anterior)
-    rm -f ~/.ssh/config 2>/dev/null || true
-    cat > ~/.ssh/config << 'SSHEOF'
-Host *
-  AddKeysToAgent yes
-  ServerAliveInterval 30
-  ServerAliveCountMax 5
-  TCPKeepAlive yes
-
-Host aurin
-  HostName campo.zapto.org
-  Port 2222
-  User passh
-  # JetBrains Gateway necesita muchos canales
-  ControlMaster auto
-  ControlPath ~/.ssh/sockets/%r@%h-%p
-  ControlPersist 600
-SSHEOF
-    mkdir -p ~/.ssh/sockets
-    chmod 700 ~/.ssh/sockets
-    chmod 600 ~/.ssh/config
-  '';
-
-  # Servicios
   services = {
     dunst = {
       enable = true;

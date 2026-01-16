@@ -9,6 +9,7 @@
 #   - aurin:   Workstation produccion (Dual Xeon + RTX 5080)
 #   - vespino: Servidor secundario (Minecraft, NFS, Ollama)
 #   - macbook: Laptop Apple MacBook Pro 13,2 (2016)
+#   - android: Movil con Nix-on-Droid (aarch64)
 #
 # USO CON FLAKES:
 #   # Desde el directorio dotfiles
@@ -77,12 +78,20 @@
     # Usado principalmente por macbook para drivers Apple
     # NOTA: macbook actualmente usa fetchTarball, este input es para migracion futura
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
+
+    # Nix-on-Droid - Nix en Android
+    # Permite usar el mismo flake en el movil
+    nix-on-droid = {
+      url = "github:nix-community/nix-on-droid/release-24.05";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.home-manager.follows = "home-manager";
+    };
   };
 
   # ---------------------------------------------------------------------------
   # OUTPUTS - Configuraciones NixOS generadas
   # ---------------------------------------------------------------------------
-  outputs = { self, nixpkgs, nixpkgs-master, home-manager, nixos-hardware, ... }@inputs:
+  outputs = { self, nixpkgs, nixpkgs-master, home-manager, nixos-hardware, nix-on-droid, ... }@inputs:
     let
       # Sistema comun para todas las maquinas
       system = "x86_64-linux";
@@ -285,6 +294,33 @@
       };
 
       # -----------------------------------------------------------------------
+      # NIX-ON-DROID - Android
+      # -----------------------------------------------------------------------
+      # Configuracion para el movil con Nix-on-Droid.
+      # Usa el mismo flake que el resto de maquinas, compartiendo core.nix.
+      #
+      # Instalacion inicial en Android:
+      #   1. Instalar Nix-on-Droid desde F-Droid o GitHub releases
+      #   2. Clonar dotfiles: git clone <repo> ~/dotfiles
+      #   3. nix-on-droid switch --flake ~/dotfiles
+      #
+      # Actualizaciones posteriores:
+      #   nix-on-droid switch --flake ~/dotfiles
+      # -----------------------------------------------------------------------
+      nixOnDroidConfigurations.default = nix-on-droid.lib.nixOnDroidConfiguration {
+        pkgs = import nixpkgs { system = "aarch64-linux"; };
+        modules = [
+          ./nix-on-droid/nix-on-droid.nix
+          {
+            home-manager = {
+              useGlobalPkgs = true;
+              config = ./modules/home-manager/machines/android.nix;
+            };
+          }
+        ];
+      };
+
+      # -----------------------------------------------------------------------
       # DESARROLLO - Shells y herramientas
       # -----------------------------------------------------------------------
 
@@ -319,12 +355,15 @@
           echo "  nix flake update         - Actualizar lock"
           echo ""
           echo "Rebuild NixOS:"
-          echo "  sudo nixos-rebuild switch --flake .#aurin"
+          echo "  sudo nixos-rebuild switch --flake .#aurin --impure"
           echo "  sudo nixos-rebuild switch --flake .#macbook"
-          echo "  sudo nixos-rebuild switch --flake .#vespino --impure  # aun usa channels"
+          echo "  sudo nixos-rebuild switch --flake .#vespino --impure"
           echo ""
           echo "Home Manager standalone:"
           echo "  home-manager switch --flake .#passh"
+          echo ""
+          echo "Nix-on-Droid (Android):"
+          echo "  nix-on-droid switch --flake ~/dotfiles"
           echo ""
         '';
       };
