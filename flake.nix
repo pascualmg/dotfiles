@@ -314,6 +314,7 @@
           {
             home-manager = {
               useGlobalPkgs = true;
+              backupFileExtension = "backup";
               config = ./modules/home-manager/machines/android.nix;
             };
           }
