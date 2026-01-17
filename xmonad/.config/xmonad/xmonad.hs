@@ -52,7 +52,8 @@ import Graphics.X11.ExtraTypes.XF86     -- Teclas multimedia (volumen, brillo)
 -- Comando para dmenu (lanzador de aplicaciones)
 -- El flag -i hace que sea case-insensitive
 myDmenuCommand :: String
-myDmenuCommand = "dmenu_run -i"
+myDmenuCommand = "dmenu_run -i -fn 'Hurmit Nerd Font:size=22' -nb '#282c34' -nf '#abb2bf' -sb '#61afef' -sf '#282c34'"
+-- Flags: -i (case insensitive), -fn (fuente grande), -nb/-nf (colores normal), -sb/-sf (colores seleccion)
 
 -- -----------------------------------------------------------------------------
 -- SCRATCHPADS

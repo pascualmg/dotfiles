@@ -1,3 +1,8 @@
+## IMPORTANTE para Claude
+- **SIEMPRE ejecutar `hostname` antes de recomendar comandos de nixos-rebuild** - puede ser aurin, macbook o vespino
+- El comando correcto es: `sudo nixos-rebuild switch --flake ~/dotfiles#<hostname> --impure`
+
+## Preferencias
 - uso mucho el editor emacs doom , aunque principalmente intellij para los proyectos en php
 - para ejecutar test y demas stuff , siempre nix develop --command bash -c 'comando'
 - teclados: HHKB original con Hasu controller + HHKB Hybrid (BT + USB-C) - fan de Topre switches
