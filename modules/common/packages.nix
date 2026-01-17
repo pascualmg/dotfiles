@@ -14,10 +14,7 @@
 { config, pkgs, lib, inputs, ... }:
 
 {
-  # Importar modulo de nix-index-database (DB precompilada)
-  imports = [
-    inputs.nix-index-database.nixosModules.nix-index
-  ];
+  # NOTA: nix-index-database se importa en flake.nix (no duplicar aquí)
 
   # ===== PERMITIR PAQUETES UNFREE =====
   nixpkgs.config.allowUnfree = true;

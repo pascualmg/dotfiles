@@ -34,13 +34,9 @@
 
 { config, pkgs, lib, ... }:
 
-let
-  # Definicion del canal unstable (para paquetes especificos)
-  unstable = import (fetchTarball
-    "https://github.com/nixos/nixpkgs/archive/nixos-unstable.tar.gz") {
-      config = config.nixpkgs.config;
-    };
-in {
+{
+  # NOTA: pkgs ya viene de nixpkgs-unstable via flake.nix
+  # No necesitamos fetchTarball adicional
   imports = [
     ./hardware-configuration.nix
     ./minecraft.nix
@@ -328,7 +324,7 @@ in {
     # DISABLED: Bug en nixpkgs-unstable (ctranslate2 build failure)
     open-webui = {
       enable = false;  # Temporarily disabled
-      package = unstable.open-webui;
+      package = pkgs.open-webui;
       port = 3000;
       host = "0.0.0.0";
       environment = {

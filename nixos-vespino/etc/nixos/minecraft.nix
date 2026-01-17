@@ -6,7 +6,7 @@
 # Versión: 1.2 - Limpio y sin redundancias
 # Compatible: NixOS 24.05+
 
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, pkgsMaster, ... }:
 
 {
   # ================================================================
@@ -21,17 +21,11 @@
     openFirewall = true; # true=abre puertos automáticamente, false=manual
 
     # ---- VERSIÓN DE MINECRAFT - DESDE MASTER ----
-    # Usa master para tener la versión más reciente (1.21.6+)
-    package = let
-      master = import (fetchTarball
-        "https://github.com/NixOS/nixpkgs/archive/master.tar.gz") {
-          config = config.nixpkgs.config;
-        };
-    in master.minecraft-server; # Minecraft desde master (última versión)
+    # Usa pkgsMaster del flake para tener la versión más reciente
+    package = pkgsMaster.minecraft-server;
 
-    # Alternativas si master no funciona:
+    # Alternativas:
     # package = pkgs.minecraft-server;         # Versión estable (puede ser antigua)
-    # package = pkgs.minecraft-server_1_21;    # Versión específica si existe
 
     # ---- OPTIMIZACIÓN MEMORIA Y RENDIMIENTO ----
     # JVM = Java Virtual Machine (motor que ejecuta Minecraft)
