@@ -3,7 +3,7 @@
 #+DATE: 2025-11-22
 #+STARTUP: overview
 
-* TL;DR - Setup Rápido
+* TL;DR - Setup Rapido
 
 #+BEGIN_SRC bash
 # Clonar dotfiles
@@ -11,7 +11,7 @@ git clone <repo> ~/dotfiles
 cd ~/dotfiles
 
 # Aplicar configs importantes
-stow -v home-manager  # Home Manager (gestión de paquetes)
+stow -v home-manager  # Home Manager (gestion de paquetes)
 stow -v fish          # Shell
 stow -v xmonad        # Window manager
 stow -v xmobar        # Status bar
@@ -29,42 +29,42 @@ sudo nixos-rebuild switch
 
 #+BEGIN_SRC text
 dotfiles/
-├── flake.nix         ★ Entry point NixOS (multi-máquina)
-├── modules/          ★ Módulos NixOS compartidos
-│   ├── common/       ★ Paquetes y servicios comunes
-│   ├── desktop/      ★ XMonad, Hyprland, GNOME
-│   └── home-manager/ ★ Configs de usuario (fish, alacritty, etc.)
-├── nixos-aurin/      ★ Config NixOS Aurin (workstation)
-├── nixos-macbook/    ★ Config NixOS MacBook Pro
-├── nixos-vespino/    ★ Config NixOS Vespino (servidor)
-├── xmonad/           ★ XMonad config (stow)
-├── xmobar/           • Legacy (migrado a home-manager)
-├── picom/            • Legacy (migrado a home-manager)
-├── fish/             • Legacy (migrado a home-manager)
-├── alacritty/        • Legacy (migrado a home-manager)
-├── claude-code/      ★ Config Claude Code CLI
-└── README.org          Este archivo
+|-- flake.nix         * Entry point NixOS (multi-maquina)
+|-- modules/          * Modulos NixOS compartidos
+|   |-- common/       * Paquetes y servicios comunes
+|   |-- desktop/      * XMonad, Hyprland, GNOME
+|   `-- home-manager/ * Configs de usuario (fish, alacritty, etc.)
+|-- nixos-aurin/      * Config NixOS Aurin (workstation)
+|-- nixos-macbook/    * Config NixOS MacBook Pro
+|-- nixos-vespino/    * Config NixOS Vespino (servidor)
+|-- xmonad/           * XMonad config (stow)
+|-- xmobar/           . Legacy (migrado a home-manager)
+|-- picom/            . Legacy (migrado a home-manager)
+|-- fish/             . Legacy (migrado a home-manager)
+|-- alacritty/        . Legacy (migrado a home-manager)
+|-- claude-code/      * Config Claude Code CLI
+`-- README.org          Este archivo
 #+END_SRC
 
-*Leyenda:* =★ Activo= | =• Legacy/migrado=
+*Leyenda:* =* Activo= | =. Legacy/migrado=
 
-** Arquitectura de Módulos NixOS
+** Arquitectura de Modulos NixOS
 
-Filosofía: *módulos compartidos* con *opciones configurables* por máquina.
+Filosofia: *modulos compartidos* con *opciones configurables* por maquina.
 
 #+BEGIN_SRC text
 modules/
-├── common/
-│   ├── packages.nix      # Paquetes compartidos (todas las máquinas)
-│   └── services.nix      # Servicios comunes
-├── desktop/
-│   ├── xmonad.nix        # XMonad + X11 + Picom + libinput
-│   ├── hyprland.nix      # Wayland (experimental)
-│   └── gnome.nix         # GNOME Desktop
-└── home-manager/
-    ├── default.nix       # Entry point
-    ├── passh.nix         # Config usuario passh
-    └── programs/         # Configs por programa
+|-- common/
+|   |-- packages.nix      # Paquetes compartidos (todas las maquinas)
+|   `-- services.nix      # Servicios comunes
+|-- desktop/
+|   |-- xmonad.nix        # XMonad + X11 + Picom + libinput
+|   |-- hyprland.nix      # Wayland (experimental)
+|   `-- gnome.nix         # GNOME Desktop
+`-- home-manager/
+    |-- default.nix       # Entry point
+    |-- passh.nix         # Config usuario passh
+    `-- programs/         # Configs por programa
 #+END_SRC
 
 *Ejemplo - XMonad compartido:*
@@ -77,7 +77,7 @@ options.desktop.xmonad = {
   refreshRate = lib.mkOption { ... };
 };
 
-# En nixos-aurin/configuration.nix - usa el módulo
+# En nixos-aurin/configuration.nix - usa el modulo
 imports = [ ../../../modules/desktop/xmonad.nix ];
 desktop.xmonad = {
   enable = true;
@@ -87,23 +87,23 @@ desktop.xmonad = {
 };
 #+END_SRC
 
-*Hardware de Input - Filosofía HHKB:*
-El módulo =desktop/xmonad.nix= incluye =libinput= con perfil =flat= (raw input).
-El hardware manda, no el software. Ratones gaming usan su DPI sin aceleración del sistema.
+*Hardware de Input - Filosofia HHKB:*
+El modulo =desktop/xmonad.nix= incluye =libinput= con perfil =flat= (raw input).
+El hardware manda, no el software. Ratones gaming usan su DPI sin aceleracion del sistema.
 
 * Configuraciones Principales
 
-** Home Manager (~/.config/home-manager/home.nix) ★
+** Home Manager (~/.config/home-manager/home.nix) *
 
-*Gestiona:* Instalación de paquetes user-level con Nix
+*Gestiona:* Instalacion de paquetes user-level con Nix
 
-*Características:*
+*Caracteristicas:*
 - Paquetes desde =stable=, =unstable= y =master=
-- Desactiva gestión de configs (usamos stow)
+- Desactiva gestion de configs (usamos stow)
 - 200+ paquetes instalados
 
 *Paquetes destacados:*
-| Categoría       | Paquetes                                      |
+| Categoria       | Paquetes                                      |
 |-----------------+-----------------------------------------------|
 | Shells          | fish, zsh, bash                               |
 | Editores        | emacs (unstable), neovim, doom-emacs          |
@@ -128,23 +128,23 @@ stow -R home-manager
 home-manager switch
 #+END_SRC
 
-** NixOS Aurin (/etc/nixos/configuration.nix) ★
+** NixOS Aurin (/etc/nixos/configuration.nix) *
 
-*Ver documentación completa:* [[file:nixos-aurin/README.org][nixos-aurin/README.org]]
+*Ver documentacion completa:* [[file:nixos-aurin/README.org][nixos-aurin/README.org]]
 
 *Sistema:* Dual Xeon E5-2699v3 + RTX 5080 + FiiO K7 + 128GB RAM
 
-*Características principales:*
+*Caracteristicas principales:*
 - NVIDIA RTX 5080 (drivers open-source beta)
 - PipeWire optimizado para FiiO K7 DAC/AMP
 - Sunshine streaming server (NVENC)
-- Virtualización KVM/QEMU + Docker
+- Virtualizacion KVM/QEMU + Docker
 - Ollama + Open WebUI (AI local)
 - Dual NIC + bridge para VMs
 - NUMA optimizations para dual socket
 
 *Scripts del sistema:*
-| Comando          | Descripción                      |
+| Comando          | Descripcion                      |
 |------------------+----------------------------------|
 | =aurin-info=     | Info completa del sistema        |
 | =fiio-k7-test=   | Test DAC/AMP FiiO K7             |
@@ -153,19 +153,19 @@ home-manager switch
 | =numa-info=      | Info NUMA dual socket            |
 | =temp-monitor=   | Monitor temperaturas             |
 
-** XMonad (~/.config/xmonad/xmonad.hs) ★
+** XMonad (~/.config/xmonad/xmonad.hs) *
 
 *Tiling window manager* escrito en Haskell
 
-*Características:*
+*Caracteristicas:*
 - Layouts: Tall, ThreeCol, Grid, MultiCol
 - Scratchpads: terminal, emacs, jetbrains-toolbox
 - Grid selector (M-g)
-- Integración con xmobar
+- Integracion con xmobar
 - Keybindings personalizados
 
 *Keybindings importantes:*
-| Tecla               | Acción                              |
+| Tecla               | Accion                              |
 |---------------------+-------------------------------------|
 | =M-p=               | Dmenu (launcher)                    |
 | =M-g=               | Grid selector                       |
@@ -199,11 +199,11 @@ M-q
 xmonad --recompile && xmonad --restart
 #+END_SRC
 
-** Picom (~/.config/picom/picom.conf) ★
+** Picom (~/.config/picom/picom.conf) *
 
 *Compositor X11* para transparencias, sombras, animaciones, blur
 
-*Características:*
+*Caracteristicas:*
 - Backend: GLX (optimizado para RTX 5080)
 - VSync: enabled (120Hz)
 - Refresh rate: 120
@@ -211,7 +211,7 @@ xmonad --recompile && xmonad --restart
 - Sombras suaves en ventanas
 - No borders cuando fullscreen
 
-*Configuración importante:*
+*Configuracion importante:*
 #+BEGIN_SRC conf
 backend = "glx";
 vsync = true;
@@ -225,7 +225,7 @@ killall picom
 picom &
 #+END_SRC
 
-** Fish Shell (~/.config/fish/config.fish) ★
+** Fish Shell (~/.config/fish/config.fish) *
 
 *Shell moderno* con autocompletado y syntax highlighting
 
@@ -251,19 +251,19 @@ chsh -s $(which fish)
 fish
 #+END_SRC
 
-** Alacritty (~/.config/alacritty/) ★
+** Alacritty (~/.config/alacritty/) *
 
 *Terminal emulator* GPU-accelerated
 
-*Configuración:* Ver =~/.config/alacritty/alacritty.yml=
+*Configuracion:* Ver =~/.config/alacritty/alacritty.yml=
 
 *Features:*
 - Renderizado GPU (OpenGL)
 - Scrollback history
 - True color support
-- Integración con tmux/byobu
+- Integracion con tmux/byobu
 
-** XMobar (~/.config/xmobar/) ★
+** XMobar (~/.config/xmobar/) *
 
 *Status bar* para XMonad
 
@@ -279,47 +279,47 @@ killall xmobar
 xmobar &
 #+END_SRC
 
-** Scripts (~/scripts/) •
+** Scripts (~/scripts/) .
 
-*Scripts útiles del sistema*
+*Scripts utiles del sistema*
 
-| Script                            | Descripción                    |
+| Script                            | Descripcion                    |
 |-----------------------------------+--------------------------------|
 | =ubuntu-vm-ivanti-configurator.sh= | Configurador VM Ubuntu Ivanti  |
 | =hdmon.sh=                        | Monitor discos duros?          |
 | =vm-backupeitor.sh=               | Backup VMs?                    |
 
-*Nota:* Puede que algunos estén obsoletos o sean específicos de otro setup
+*Nota:* Puede que algunos esten obsoletos o sean especificos de otro setup
 
-** Wallpapers (~/wallpapers/) •
+** Wallpapers (~/wallpapers/) .
 
 Fondos de pantalla
 
-*Gestión:*
+*Gestion:*
 - Nitrogen (GUI)
 - O directamente con =feh=
 
-** Shell (bashrc/zshrc) •
+** Shell (bashrc/zshrc) .
 
 *Posiblemente legacy* - Fish es el shell principal
 
 Contiene:
-- =.bashrc= - Configuración Bash
-- =.zshrc= - Configuración Zsh
+- =.bashrc= - Configuracion Bash
+- =.zshrc= - Configuracion Zsh
 
-*¿Usar?* Probablemente no si usas Fish, pero mantienen compatibilidad
+*Usar?* Probablemente no si usas Fish, pero mantienen compatibilidad
 
-** Composer (~/.config/composer/) •
+** Composer (~/.config/composer/) .
 
 *PHP Composer* config
 
 Probablemente para desarrollo PHP (tienes php83 en home.nix)
 
-* Guía Stow - Gestión de Dotfiles
+* Guia Stow - Gestion de Dotfiles
 
-** ¿Qué es Stow?
+** Que es Stow?
 
-GNU Stow crea *enlaces simbólicos* desde tu dotfiles repo a tu $HOME
+GNU Stow crea *enlaces simbolicos* desde tu dotfiles repo a tu $HOME
 
 ** Comandos Esenciales
 
@@ -335,7 +335,7 @@ stow -D PAQUETE
 # Recrear enlaces (cuando cambias cosas)
 stow -R PAQUETE
 
-# Ver qué va a hacer sin ejecutar
+# Ver que va a hacer sin ejecutar
 stow -n PAQUETE
 
 # Verbose (siempre recomendado)
@@ -344,14 +344,14 @@ stow -v PAQUETE
 
 ** Workflows Comunes
 
-*** Activar configuración por primera vez:
+*** Activar configuracion por primera vez:
 #+BEGIN_SRC bash
 cd ~/dotfiles
 stow -v xmonad
 stow -v fish
 #+END_SRC
 
-*** Actualizar configuración existente:
+*** Actualizar configuracion existente:
 #+BEGIN_SRC bash
 # Editar archivo en dotfiles
 vim ~/dotfiles/fish/.config/fish/config.fish
@@ -375,7 +375,7 @@ sudo nixos-rebuild switch
 
 | Flag     | Significado  | Uso                              |
 |----------+--------------+----------------------------------|
-| =-v=     | Verbose      | Ver qué hace stow                |
+| =-v=     | Verbose      | Ver que hace stow                |
 | =-R=     | Restow       | Quitar y recrear enlaces         |
 | =-D=     | Delete       | Solo quitar enlaces              |
 | =-t DIR= | Target       | Directorio donde crear enlaces   |
@@ -385,8 +385,8 @@ sudo nixos-rebuild switch
 
 - *Nunca uses =sudo stow=* para archivos de usuario (home)
 - *Siempre usa =sudo stow -t /=* para archivos del sistema (/etc)
-- *Usa =-R=* cuando dudes, es más seguro
-- *Usa =-v=* siempre para ver qué hace
+- *Usa =-R=* cuando dudes, es mas seguro
+- *Usa =-v=* siempre para ver que hace
 - *Usa =-n=* para testing antes de ejecutar
 - *Git tu dotfiles* para backup/sync
 
@@ -394,7 +394,7 @@ sudo nixos-rebuild switch
 
 *** "Conflicts with existing target"
 #+BEGIN_SRC bash
-# Ver qué conflicta
+# Ver que conflicta
 stow -v -n PAQUETE
 
 # Quitar archivo manual (backup primero)
@@ -418,7 +418,7 @@ stow PAQUETE
 # Ver todos los symlinks en home
 find ~ -maxdepth 3 -type l -ls | grep dotfiles
 
-# Ver específico
+# Ver especifico
 ls -la ~/.config/fish/config.fish
 #+END_SRC
 
@@ -436,7 +436,7 @@ git add .
 git commit -m "Update xmonad keybindings"
 git push
 
-# En otra máquina
+# En otra maquina
 git pull
 stow -R xmonad  # Recrear enlaces
 #+END_SRC
@@ -446,7 +446,7 @@ stow -R xmonad  # Recrear enlaces
 Las credenciales de git se almacenan permanentemente gracias a =credential.helper = store=
 configurado en =modules/home-manager/passh.nix=.
 
-*Ubicación:* =~/.git-credentials=
+*Ubicacion:* =~/.git-credentials=
 
 *Formato del archivo:*
 #+BEGIN_SRC text
@@ -454,19 +454,19 @@ https://usuario:password@bitbucket.vocento.com
 https://usuario:token@github.com
 #+END_SRC
 
-*Primera vez:* Git pedirá credenciales una vez y las guardará automáticamente.
+*Primera vez:* Git pedira credenciales una vez y las guardara automaticamente.
 
 *Regenerar credenciales:*
 #+BEGIN_SRC bash
 # Borrar credenciales existentes
 rm ~/.git-credentials
 
-# El próximo git push/pull pedirá credenciales de nuevo
+# El proximo git push/pull pedira credenciales de nuevo
 #+END_SRC
 
 *Seguridad:* El archivo tiene permisos =600= (solo el usuario puede leer/escribir).
 
-* Comandos Más Usados
+* Comandos Mas Usados
 
 #+BEGIN_SRC bash
 # Activar config (con verbose)
@@ -484,7 +484,7 @@ home-manager switch
 stow -v -n PAQUETE
 #+END_SRC
 
-* Setup Completo Nueva Máquina
+* Setup Completo Nueva Maquina
 
 #+BEGIN_SRC bash
 # 1. Clonar dotfiles
@@ -509,7 +509,7 @@ sudo nixos-rebuild switch
 # 5. Recargar shell
 fish
 
-# 6. Reiniciar sesión X (logout/login) o:
+# 6. Reiniciar sesion X (logout/login) o:
 xmonad --recompile && xmonad --restart
 #+END_SRC
 
@@ -526,13 +526,13 @@ xmonad --recompile && xmonad --restart
 # Ver channels
 nix-channel --list
 
-# Debería mostrar:
+# Deberia mostrar:
 # home-manager https://github.com/nix-community/home-manager/archive/release-25.05.tar.gz
 #+END_SRC
 
 ** Direnv
 
-Tienes =direnv= instalado. Usa =.envrc= en proyectos para cargar variables automáticamente:
+Tienes =direnv= instalado. Usa =.envrc= en proyectos para cargar variables automaticamente:
 
 #+BEGIN_SRC bash
 # En directorio proyecto
@@ -546,28 +546,28 @@ direnv allow
 
 | Componente         | Estado | Notas                                          |
 |--------------------+--------+------------------------------------------------|
-| Audio (CS8409)     | ✅ OK  | Driver snd-hda-macbookpro (davidjo)            |
-| WiFi (BCM43602)    | ❌ NO  | Driver wl abandonado 2019, usar USB dongle     |
-| Touch Bar (T1)     | ❌ NO  | Chip T1 en recovery mode, workaround con keyd  |
-| Webcam FaceTime HD | ❌ NO  | Conectada via T1, requiere reset del T1        |
-| Teclado/Trackpad   | ✅ OK  | Drivers applespi + keyd (fix ISO swap)         |
-| Pantalla HiDPI     | ✅ OK  | 168 DPI, scaling 2x en GNOME                   |
-| Batería            | ✅ OK  | ACPI estándar                                  |
-| F-keys (Fn+número) | ✅ OK  | keyd: Fn+1=F1, Fn+º=Esc, etc.                  |
+| Audio (CS8409)     | OK     | Driver snd-hda-macbookpro (davidjo)            |
+| WiFi (BCM43602)    | NO     | Driver wl abandonado 2019, usar USB dongle     |
+| Touch Bar (T1)     | NO     | Chip T1 en recovery mode, workaround con keyd  |
+| Webcam FaceTime HD | NO     | Conectada via T1, requiere reset del T1        |
+| Teclado/Trackpad   | OK     | Drivers applespi + keyd (fix ISO swap)         |
+| Pantalla HiDPI     | OK     | 168 DPI, scaling 2x en GNOME                   |
+| Bateria            | OK     | ACPI estandar                                  |
+| F-keys (Fn+numero) | OK     | keyd: Fn+1=F1, Fn+=Esc, etc.                   |
 
-** Audio CS8409 - Solución
+** Audio CS8409 - Solucion
 
 El MacBook Pro 2016 usa un chip Cirrus Logic CS8409 como bridge HDA.
 El driver del kernel solo soporta Dell (subsystem IDs diferentes).
 
-*Solución implementada:*
-- Módulo custom =snd-hda-macbookpro= compilado desde [[https://github.com/davidjo/snd_hda_macbookpro][davidjo/snd_hda_macbookpro]]
-- Parchea el driver del kernel para añadir soporte Apple (GPIO init)
+*Solucion implementada:*
+- Modulo custom =snd-hda-macbookpro= compilado desde [[https://github.com/davidjo/snd_hda_macbookpro][davidjo/snd_hda_macbookpro]]
+- Parchea el driver del kernel para anadir soporte Apple (GPIO init)
 - Config en =nixos-macbook/etc/nixos/modules/snd-hda-macbookpro.nix=
 
 *Verificar funcionamiento:*
 #+BEGIN_SRC bash
-# Diagnóstico completo
+# Diagnostico completo
 audio-diag
 
 # GPIO debe mostrar enable=1 para IO[0-3]
@@ -577,26 +577,26 @@ cat /proc/asound/card0/codec#0 | grep -A 10 "^GPIO:"
 speaker-test -c 2 -t wav
 #+END_SRC
 
-** WiFi BCM43602 - Sin solución
+** WiFi BCM43602 - Sin solucion
 
 El chip Broadcom BCM43602 interno requiere el driver =wl= (broadcom-sta).
 
 *Estado del driver:*
-- El módulo *compila* correctamente (mantenido por RPMFusion/Debian)
+- El modulo *compila* correctamente (mantenido por RPMFusion/Debian)
 - Pero *falla en runtime* con kernel 6.x: =wl driver failed with code 1=
 - Error: =NULL ndev->ieee80211ptr, unable to deref wl=
 - Causa: APIs internas del kernel incompatibles con el driver propietario
 
-*Conclusión:* El driver está muerto a nivel funcional, no solo de mantenimiento.
-No hay solución posible sin que Broadcom libere código o alguien haga ingeniería inversa.
+*Conclusion:* El driver esta muerto a nivel funcional, no solo de mantenimiento.
+No hay solucion posible sin que Broadcom libere codigo o alguien haga ingenieria inversa.
 
 *Alternativa funcional:* USB WiFi dongle con chip Realtek (RTL8xxxu)
 - Ejemplo: TP-Link TL-WN725N o similar
 - Funciona out-of-the-box con driver =rtl8xxxu= del kernel
 
-** Touch Bar T1 - Sin solución
+** Touch Bar T1 - Sin solucion
 
-El chip T1 (Touch Bar + Touch ID + *FaceTime HD Camera*) está en "Recovery Mode" permanente.
+El chip T1 (Touch Bar + Touch ID + *FaceTime HD Camera*) esta en "Recovery Mode" permanente.
 
 *Dispositivos conectados al T1:*
 - Touch Bar (OLED strip)
@@ -606,17 +606,17 @@ El chip T1 (Touch Bar + Touch ID + *FaceTime HD Camera*) está en "Recovery Mode
 
 *Problema:*
 - El T1 aparece como =05ac:1281= (DFU/Recovery) en lugar de =05ac:8600= (iBridge)
-- El firmware está corrupto o nunca fue inicializado
+- El firmware esta corrupto o nunca fue inicializado
 - Los drivers Linux (apple-ibridge, tiny-dfr, facetimehd) requieren el T1 en modo normal
-- Sin T1 funcional, la cámara no es visible para el sistema (no hay =/dev/video*=)
+- Sin T1 funcional, la camara no es visible para el sistema (no hay =/dev/video*=)
 
-*Única solución:*
+*Unica solucion:*
 - Conectar a un Mac con macOS
 - Usar Apple Configurator 2 para restaurar el firmware del T1
 - Sin acceso a macOS = sin Touch Bar
 
 *Workaround con keyd:*
-- =Fn + º= (tecla junto al 1) = Escape
+- =Fn + = (tecla junto al 1) = Escape
 - =Fn + 1-0= = F1-F10
 - =Fn + -= = F11, =Fn + == = F12
 - =Fn + Backspace= = Delete
@@ -626,9 +626,9 @@ Configurado en =services.keyd= en configuration.nix.
 
 ** Teclado Spanish ISO - Fix teclas swapeadas
 
-El teclado Apple SPI tiene las teclas =º ª= y =< >= intercambiadas respecto al layout físico.
+El teclado Apple SPI tiene las teclas = a= y =< >= intercambiadas respecto al layout fisico.
 
-*Solución:* keyd remapea las teclas a nivel kernel:
+*Solucion:* keyd remapea las teclas a nivel kernel:
 #+BEGIN_SRC nix
 "grave" = "102nd";  # Swap tecla junto al 1
 "102nd" = "grave";  # Swap tecla entre Shift y Z
@@ -636,24 +636,186 @@ El teclado Apple SPI tiene las teclas =º ª= y =< >= intercambiadas respecto al
 
 Esto funciona tanto en X11 (XMonad) como en Wayland (GNOME) porque keyd opera a nivel evdev.
 
+* CPU Frequency Scaling: Por que tu CPU no siempre va a tope
+
+Imagina que tu coche tuviera solo dos opciones: 0 km/h o 200 km/h. Seria un
+desastre: consumiria gasolina como loco y el motor se fundiria. Por eso los
+coches tienen marchas. Tu CPU funciona igual.
+
+** El problema: rendimiento vs consumo vs temperatura
+
+Tu procesador puede funcionar a diferentes frecuencias:
+- *Frecuencia alta* = mas rendimiento, pero mas calor y consumo
+- *Frecuencia baja* = menos rendimiento, pero silencioso y eficiente
+
+La pregunta es: *quien decide cuando subir o bajar?*
+
+En Linux, esto se llama *CPU Frequency Scaling*, y hay dos partes:
+1. *Driver*: el que sabe COMO cambiar la frecuencia (habla con el hardware)
+2. *Governor*: el que decide CUANDO cambiarla (la politica)
+
+** Los drivers: cada CPU habla su idioma
+
+| Driver        | Para que CPUs                      | Notas                                   |
+|---------------+------------------------------------+-----------------------------------------|
+| intel_pstate  | Intel modernos (2013+)             | El kernel lo carga solo, muy eficiente  |
+| amd-pstate    | AMD Ryzen (Zen 2+)                 | Igual que intel_pstate pero para AMD    |
+| acpi-cpufreq  | CPUs antiguos o servidores         | Generico, funciona casi siempre         |
+
+*El problema:* No todos los CPUs cargan su driver automaticamente.
+
+- Los Intel de escritorio/laptop modernos: =intel_pstate= se carga solo
+- Los AMD Ryzen modernos: =amd-pstate= se carga solo
+- Los Xeon servidor y AMD FX antiguos: necesitan =acpi-cpufreq= manualmente
+
+Por eso en este repo, =modules/common/boot.nix= carga =acpi-cpufreq= para todos.
+Si tu CPU ya usa otro driver, simplemente se ignora.
+
+** Los governors: quien manda aqui?
+
+| Governor     | Que hace                                        | Cuando usarlo               |
+|--------------+-------------------------------------------------+-----------------------------|
+| performance  | Siempre al maximo                               | Compilando, gaming, benchs  |
+| powersave    | Siempre al minimo                               | Bateria, silencio total     |
+| schedutil    | El kernel decide segun carga (inteligente)      | Uso normal (recomendado)    |
+| ondemand     | Sube rapido con carga, baja lento               | Alternativa a schedutil     |
+| conservative | Sube/baja gradualmente                          | Servidores, estabilidad     |
+
+*Ojo:* =intel_pstate= solo permite =performance= y =powersave=. El resto de
+governors solo funcionan con =acpi-cpufreq=.
+
+** Como esta configurado en cada maquina
+
+*** Aurin - La bestia de 72 hilos
+
+Aurin tiene dos Xeon E5-2699v3, que son CPUs de *servidor*. Curiosidad: aunque
+son Intel, el kernel NO carga =intel_pstate= automaticamente para Xeons.
+Por que? Porque en servidores se prefiere el control fino de =acpi-cpufreq=.
+
+#+BEGIN_SRC bash
+# En aurin veras esto:
+$ cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_driver
+acpi-cpufreq
+
+$ cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors
+conservative ondemand userspace powersave performance schedutil
+#+END_SRC
+
+Con 72 hilos y =schedutil=, el sistema sube/baja la frecuencia de cada core
+independientemente. Muy eficiente para workloads variados.
+
+*** Vespino - El veterano AMD FX
+
+Vespino tiene un AMD FX-8350, un procesador de 2012 (arquitectura Bulldozer).
+Estos CPUs son anteriores a =amd-pstate=, asi que usan =acpi-cpufreq=.
+
+Antes de añadir el modulo en =boot.nix=, vespino no tenia *ningun* driver de
+frecuencia cargado. El resultado? El script de xmobar mostraba "?.?" porque
+no encontraba =/sys/devices/system/cpu/cpu0/cpufreq/=.
+
+Ahora con =acpi-cpufreq= cargado, tiene todos los governors disponibles.
+
+*** MacBook - El unico con intel_pstate
+
+El MacBook Pro tiene un Intel Skylake, y este SI carga =intel_pstate= solo.
+La diferencia es que solo tiene dos governors: =performance= y =powersave=.
+
+#+BEGIN_SRC bash
+# En macbook veras esto:
+$ cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_driver
+intel_pstate
+
+$ cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors
+performance powersave
+# Solo dos! No hay schedutil ni ondemand
+#+END_SRC
+
+Por defecto usa =powersave= (es un laptop, prioriza bateria).
+
+** La configuracion en NixOS
+
+Todo esto se configura en dos archivos:
+
+*** 1. Cargar el driver (modules/common/boot.nix)
+
+#+BEGIN_SRC nix
+# Una linea que soluciona el problema para CPUs antiguos
+boot.kernelModules = [ "acpi-cpufreq" ];
+#+END_SRC
+
+Si tu CPU ya usa =intel_pstate= o =amd-pstate=, esta linea no hace nada
+(los drivers nativos tienen prioridad). Solo ayuda a los que lo necesitan.
+
+*** 2. GUI para cambiar governor (modules/common/cpupower-gui.nix)
+
+=cpupower-gui= es una app grafica para cambiar el governor sin terminal.
+El modulo configura:
+- El paquete
+- Polkit para no pedir password (si estas en grupo wheel)
+- El servicio D-Bus necesario
+
+** Uso diario: el monitor en xmobar
+
+En xmobar veras algo como: =󰾅 2.3GHz auto=
+
+| Color  | Governor        | Significado                    |
+|--------+-----------------+--------------------------------|
+| Rojo   | performance     | Al maximo, cuidado con el calor |
+| Verde  | powersave       | Ahorrando energia               |
+| Cyan   | schedutil/auto  | El kernel decide (normal)       |
+| Gris   | none            | Sin cpufreq (fallback a /proc)  |
+
+*Click en el monitor* abre =cpupower-gui= para cambiar el governor.
+
+** Comandos utiles
+
+#+BEGIN_SRC bash
+# Ver que tienes
+cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_driver
+cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+
+# Cambiar governor (temporal, hasta reboot)
+sudo cpupower frequency-set -g performance   # Al maximo
+sudo cpupower frequency-set -g powersave     # Al minimo
+sudo cpupower frequency-set -g schedutil     # Automatico
+
+# O simplemente abre la GUI
+cpupower-gui
+#+END_SRC
+
+** Bonus: ver consumo en watts (RAPL)
+
+Solo CPUs Intel pueden reportar consumo real en watts via RAPL.
+
+#+BEGIN_SRC nix
+# En configuration.nix - dar acceso a RAPL sin root
+services.udev.extraRules = ''
+  SUBSYSTEM=="powercap", ACTION=="add", RUN+="${pkgs.coreutils}/bin/chmod g+r /sys/class/powercap/intel-rapl/intel-rapl:*/energy_uj"
+  SUBSYSTEM=="powercap", ACTION=="add", RUN+="${pkgs.coreutils}/bin/chgrp wheel /sys/class/powercap/intel-rapl/intel-rapl:*/energy_uj"
+'';
+#+END_SRC
+
+Solo disponible en CPUs Intel (Aurin y MacBook). El script =xmobar-cpu.sh= muestra
+watts si RAPL esta disponible.
+
 * Doom Emacs: Tree-Sitter y Syntax Highlighting en NixOS
 
-** Qué es Tree-Sitter
+** Que es Tree-Sitter
 
-Tree-sitter es un sistema de parseo incremental que genera árboles de sintaxis abstracta (AST)
-para código fuente. A diferencia del syntax highlighting tradicional basado en expresiones
+Tree-sitter es un sistema de parseo incremental que genera arboles de sintaxis abstracta (AST)
+para codigo fuente. A diferencia del syntax highlighting tradicional basado en expresiones
 regulares, tree-sitter:
 
-- *Parsea el código completo* como lo haría un compilador
+- *Parsea el codigo completo* como lo haria un compilador
 - *Es incremental*: solo reparsea las partes que cambian
-- *Entiende la estructura* del código, no solo patrones de texto
-- *Es más rápido* para archivos grandes
-- *Proporciona highlighting más preciso* (distingue variables locales de globales, etc.)
+- *Entiende la estructura* del codigo, no solo patrones de texto
+- *Es mas rapido* para archivos grandes
+- *Proporciona highlighting mas preciso* (distingue variables locales de globales, etc.)
 
 ** Tree-sitter en Emacs
 
 Emacs 29+ incluye soporte nativo para tree-sitter (=treesit=), pero necesita *grammars compilados*
-para cada lenguaje. Estos grammars son bibliotecas dinámicas (.so en Linux, .dylib en macOS).
+para cada lenguaje. Estos grammars son bibliotecas dinamicas (.so en Linux, .dylib en macOS).
 
 *** El Problema en NixOS
 
@@ -662,11 +824,11 @@ Esto falla o se congela en NixOS porque:
 
 1. El compilador de C (gcc/clang) puede no estar en el PATH de Emacs
 2. Las rutas de bibliotecas del sistema son diferentes en NixOS
-3. El sandbox de Nix complica la compilación dinámica
+3. El sandbox de Nix complica la compilacion dinamica
 
 ** Opciones Disponibles
 
-*** Opción 1: Deshabilitar Tree-sitter (Recomendado)
+*** Opcion 1: Deshabilitar Tree-sitter (Recomendado)
 
 Si el syntax highlighting tradicional es suficiente, simplemente quita los flags =+tree-sitter=.
 
@@ -681,7 +843,7 @@ tree-sitter
 (nix +lsp +tree-sitter)
 (php +lsp +tree-sitter)
 
-;; DESPUÉS (sin tree-sitter)
+;; DESPUES (sin tree-sitter)
 :tools
 ;;tree-sitter  ; Comentado o eliminado
 
@@ -696,9 +858,9 @@ tree-sitter
 # Reiniciar Emacs
 #+END_SRC
 
-*Pros:* Sin configuración adicional, funciona inmediatamente, LSP ya proporciona el 90% de los beneficios.
+*Pros:* Sin configuracion adicional, funciona inmediatamente, LSP ya proporciona el 90% de los beneficios.
 
-*** Opción 2: Instalar Grammars via NixOS
+*** Opcion 2: Instalar Grammars via NixOS
 
 NixOS puede preinstalar los grammars compilados. En =modules/home-manager/passh.nix=:
 
@@ -726,8 +888,8 @@ Y en =~/.config/doom/config.el=:
 
 #+BEGIN_SRC emacs-lisp
 ;; M-x eval-expression RET
-(treesit-available-p)              ; Debería retornar t
-(treesit-language-available-p 'nix) ; Ver si grammar de nix está
+(treesit-available-p)              ; Deberia retornar t
+(treesit-language-available-p 'nix) ; Ver si grammar de nix esta
 #+END_SRC
 
 *Modo activo:* Sin tree-sitter usa =nix-mode=, con tree-sitter usa =nix-ts-mode= (sufijo =-ts-=).
@@ -752,14 +914,14 @@ nix search nixpkgs tree-sitter-grammars
 ** El Problema
 
 Para desarrollo necesitamos hosts internos (staging, dev, etc.) que no pueden
-estar en un repo público. El archivo está en un repo de trabajo externo.
+estar en un repo publico. El archivo esta en un repo de trabajo externo.
 
-** Por qué requiere --impure
+** Por que requiere --impure
 
 En NixOS Flakes, =builtins.pathExists= para paths externos al flake SIEMPRE
-devuelve =false= en evaluación pura. Por eso usamos =--impure=.
+devuelve =false= en evaluacion pura. Por eso usamos =--impure=.
 
-** Solución Actual
+** Solucion Actual
 
 #+BEGIN_SRC bash
 # Aurin (con hosts de trabajo)
@@ -772,36 +934,36 @@ sudo nixos-rebuild switch --flake ~/dotfiles#macbook --impure
 
 ** Opciones Futuras (cuando haga falta)
 
-| Opción | Puro? | Complejidad | Notas |
+| Opcion | Puro? | Complejidad | Notas |
 |--------|-------|-------------|-------|
 | =--impure= (actual) | No | Baja | Simple, funciona |
-| sops-nix | Sí | Media | Encripta secretos en repo |
-| Repo privado input | Sí | Media | Flake input con SSH |
+| sops-nix | Si | Media | Encripta secretos en repo |
+| Repo privado input | Si | Media | Flake input con SSH |
 
 Para implementar sops-nix: [[https://github.com/Mic92/sops-nix][sops-nix GitHub]]
 
 * TODO Tareas Pendientes
 
 - [ ] Revisar y limpiar configs obsoletas (shell/, composer/)
-- [ ] Documentar scripts útiles en scripts/
+- [ ] Documentar scripts utiles en scripts/
 - [ ] Migrar xmonad a home-manager (si merece la pena)
 - [ ] Considerar sops-nix para secretos
 
-* Roadmap: Migración Stow → Home Manager
+* Roadmap: Migracion Stow -> Home Manager
 
 ** Contexto
 
-Con la adopción de NixOS Flakes para múltiples máquinas (aurin, macbook), GNU Stow
+Con la adopcion de NixOS Flakes para multiples maquinas (aurin, macbook), GNU Stow
 se vuelve redundante. Home Manager integrado con el flake ofrece:
 
 - *Configs per-machine declarativas* (ej: xmobar con diferentes DPI/fonts)
 - *Un solo comando* =nixos-rebuild switch= aplica sistema + usuario
 - *Reproducibilidad total* - Todo versionado en el flake
-- *Rollback automático* - Generaciones anteriores disponibles
+- *Rollback automatico* - Generaciones anteriores disponibles
 
 ** Estado Actual (Anti-pattern)
 
-En =modules/home-manager/passh.nix= línea ~253 hay un hack que usa stow dentro de home-manager:
+En =modules/home-manager/passh.nix= linea ~253 hay un hack que usa stow dentro de home-manager:
 
 #+BEGIN_SRC nix
 activation.linkDotfiles = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
@@ -816,30 +978,30 @@ Esto debe eliminarse gradualmente migrando cada config a home-manager nativo.
 
 #+BEGIN_SRC text
 modules/home-manager/
-├── default.nix           # Entry point, recibe hostname
-├── common.nix            # Configs compartidas (paquetes base)
-├── programs/
-│   ├── xmobar.nix        # Xmobar con opciones parametrizables
-│   ├── xmonad.nix        # XMonad config
-│   ├── alacritty.nix     # Terminal
-│   └── fish.nix          # Shell (usa programs.fish nativo)
-└── machines/
-    ├── aurin.nix         # fontSize=14, dpi=96, nvidia, interfaces de red
-    └── macbook.nix       # fontSize=22, dpi=168, intel, HiDPI
+|-- default.nix           # Entry point, recibe hostname
+|-- common.nix            # Configs compartidas (paquetes base)
+|-- programs/
+|   |-- xmobar.nix        # Xmobar con opciones parametrizables
+|   |-- xmonad.nix        # XMonad config
+|   |-- alacritty.nix     # Terminal
+|   `-- fish.nix          # Shell (usa programs.fish nativo)
+`-- machines/
+    |-- aurin.nix         # fontSize=14, dpi=96, nvidia, interfaces de red
+    `-- macbook.nix       # fontSize=22, dpi=168, intel, HiDPI
 #+END_SRC
 
 ** Pasar hostname al flake
 
-En =flake.nix=, función =mkNixosConfig=:
+En =flake.nix=, funcion =mkNixosConfig=:
 
 #+BEGIN_SRC nix
 home-manager.extraSpecialArgs = {
   inherit inputs;
-  hostname = hostname;  # Añadir esto
+  hostname = hostname;  # Anadir esto
 };
 #+END_SRC
 
-** Patrón para configs per-machine
+** Patron para configs per-machine
 
 #+BEGIN_SRC nix
 # modules/home-manager/programs/xmobar.nix
@@ -866,7 +1028,7 @@ in {
 }
 #+END_SRC
 
-Luego en cada máquina:
+Luego en cada maquina:
 
 #+BEGIN_SRC nix
 # machines/macbook.nix
@@ -882,43 +1044,43 @@ Luego en cada máquina:
 }
 #+END_SRC
 
-** Orden de Migración Recomendado
+** Orden de Migracion Recomendado
 
-1. [X] *xmobar* - ✅ COMPLETADO (2026-01-04)
-   - Módulo parametrizable en =modules/home-manager/programs/xmobar.nix=
+1. [X] *xmobar* - COMPLETADO (2026-01-04)
+   - Modulo parametrizable en =modules/home-manager/programs/xmobar.nix=
    - Configs per-machine en =modules/home-manager/machines/{aurin,macbook}.nix=
    - Opciones: fontSize, gpuType, networkInterface, wifiInterface, showBattery, showTrayer, alsaMixer
 
-2. [X] *alacritty* - ✅ COMPLETADO (2026-01-04)
-   - Módulo en =modules/home-manager/programs/alacritty.nix=
+2. [X] *alacritty* - COMPLETADO (2026-01-04)
+   - Modulo en =modules/home-manager/programs/alacritty.nix=
    - Usa =programs.alacritty= nativo de home-manager
    - Opciones: fontSize (14 aurin, 18 macbook), theme (dark/light)
    - Tema Spacemacs inline
 
-3. [X] *picom* - ✅ COMPLETADO (2026-01-04)
-   - Módulo en =modules/home-manager/programs/picom.nix=
-   - Opción: backend (egl para NVIDIA, xrender para Intel)
+3. [X] *picom* - COMPLETADO (2026-01-04)
+   - Modulo en =modules/home-manager/programs/picom.nix=
+   - Opcion: backend (egl para NVIDIA, xrender para Intel)
    - Config completa inline (shadows, blur, animations)
 
-4. [X] *fish* - ✅ COMPLETADO (2026-01-04)
-   - Módulo en =modules/home-manager/programs/fish.nix=
+4. [X] *fish* - COMPLETADO (2026-01-04)
+   - Modulo en =modules/home-manager/programs/fish.nix=
    - Usa =programs.fish= nativo de home-manager
    - Aliases: git shortcuts, eza/ls, nixos helpers
    - Abbreviations: docker, nix
 
 5. [ ] *xmonad* - Pendiente (config Haskell compleja)
    - Actualmente gestionado via stow
-   - Requiere análisis de cómo parametrizar Haskell
+   - Requiere analisis de como parametrizar Haskell
 
 6. [ ] *composer* - Pendiente (bajo riesgo, simple)
-   - PHP tool, config estático
+   - PHP tool, config estatico
    - Baja prioridad
 
-7. [X] Reducir bloque =activation.linkDotfiles= - ✅ PARCIALMENTE
+7. [X] Reducir bloque =activation.linkDotfiles= - PARCIALMENTE
    - Solo quedan: xmonad, composer, claude-code
-   - Documentado estado en passh.nix líneas 255-276
+   - Documentado estado en passh.nix lineas 255-276
 
-8. [ ] Eliminar carpetas stow vacías (cuando todo migre)
+8. [ ] Eliminar carpetas stow vacias (cuando todo migre)
 
 ** Referencias
 
@@ -927,14 +1089,14 @@ Luego en cada máquina:
 
 * Estructura Recomendada para Nuevas Configs
 
-Al añadir nueva configuración:
+Al anadir nueva configuracion:
 
 #+BEGIN_SRC text
 dotfiles/
-└── nueva-app/
-    └── .config/
-        └── nueva-app/
-            └── config.conf
+`-- nueva-app/
+    `-- .config/
+        `-- nueva-app/
+            `-- config.conf
 #+END_SRC
 
 Luego:
@@ -942,7 +1104,7 @@ Luego:
 stow nueva-app
 #+END_SRC
 
-Esto crea: =~/.config/nueva-app/config.conf= → =~/dotfiles/nueva-app/.config/nueva-app/config.conf=
+Esto crea: =~/.config/nueva-app/config.conf= -> =~/dotfiles/nueva-app/.config/nueva-app/config.conf=
 
 * Referencias
 
@@ -956,11 +1118,11 @@ Esto crea: =~/.config/nueva-app/config.conf= → =~/dotfiles/nueva-app/.config/n
 
 ---
 
-*Última actualización:* 2026-01-05
+*Ultima actualizacion:* 2026-01-17
 *Sistemas:* Aurin (NixOS 25.05), MacBook Pro 13,2 (NixOS Flakes), Vespino (pendiente migrar)
 *Shell principal:* Fish
 *Window Manager:* XMonad
 *Terminal:* Alacritty
 
-*Documentación adicional:*
-- [[file:docs/MACBOOK-INSTALL-GUIDE.org][Guía instalación MacBook]] - Paso a paso para instalar NixOS en MacBook Pro 2016
+*Documentacion adicional:*
+- [[file:docs/MACBOOK-INSTALL-GUIDE.org][Guia instalacion MacBook]] - Paso a paso para instalar NixOS en MacBook Pro 2016
