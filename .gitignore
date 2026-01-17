@@ -18,5 +18,9 @@ result-*
 claude-code/.claude/settings.local.json
 
 # Carpetas stow vacías/locales (configs ya están en home-manager)
-alacritty/
+# alacritty: ignorar todo excepto themes/custom (temas editables)
+alacritty/*
+!alacritty/themes
+alacritty/themes/*
+!alacritty/themes/custom
 fish/

@@ -79,6 +79,12 @@
     # NOTA: macbook actualmente usa fetchTarball, este input es para migracion futura
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
 
+    # Alacritty themes - repo oficial de temas para hot-reload
+    alacritty-themes = {
+      url = "github:alacritty/alacritty-theme";
+      flake = false;
+    };
+
     # Nix-on-Droid - Nix en Android
     # Permite usar el mismo flake en el movil
     nix-on-droid = {
@@ -99,7 +105,7 @@
   # ---------------------------------------------------------------------------
   # OUTPUTS - Configuraciones NixOS generadas
   # ---------------------------------------------------------------------------
-  outputs = { self, nixpkgs, nixpkgs-master, home-manager, nixos-hardware, nix-on-droid, nix-index-database, ... }@inputs:
+  outputs = { self, nixpkgs, nixpkgs-master, home-manager, nixos-hardware, alacritty-themes, nix-on-droid, nix-index-database, ... }@inputs:
     let
       # Sistema comun para todas las maquinas
       system = "x86_64-linux";
@@ -145,6 +151,8 @@
             inherit inputs;
             # Pasar home-manager y nixos-hardware para uso en modulos
             inherit home-manager nixos-hardware;
+            # Alacritty themes para hot-reload
+            inherit alacritty-themes;
             # pkgsMaster para paquetes bleeding-edge
             inherit pkgsMaster;
           };
@@ -216,6 +224,7 @@
                 extraSpecialArgs = {
                   inherit inputs;
                   inherit pkgsMaster;  # Para paquetes bleeding-edge
+                  inherit alacritty-themes;  # Temas para hot-reload
                   hostname = hostname;  # permite configs por maquina
                 };
                 # Configuracion del usuario passh
@@ -317,6 +326,7 @@
           extraSpecialArgs = {
             inherit inputs;
             inherit pkgsMaster;  # Para paquetes bleeding-edge
+            inherit alacritty-themes;  # Temas para hot-reload
             hostname = "aurin";  # Default para standalone
           };
           modules = [

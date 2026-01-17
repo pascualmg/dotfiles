@@ -52,7 +52,7 @@
   # Alacritty configurado para macbook HiDPI
   dotfiles.alacritty = {
     fontSize = 11;              # Con Xft.dpi=227, 11 se ve bien
-    theme = "dark";             # Spacemacs Dark
+    # defaultTheme = "spacemacs-dark";  # default
   };
 
   # Picom configurado para macbook

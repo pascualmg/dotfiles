@@ -1,0 +1,57 @@
+# Commodore CRT Phosphor Green Theme
+# Inspired by vintage CRT monitors (P1 phosphor)
+# Commodore PC 10 III vibes
+
+[colors.primary]
+background = "#0a100a"
+foreground = "#33cc33"
+
+[colors.cursor]
+text = "#0a100a"
+cursor = "#39ff14"
+
+[colors.vi_mode_cursor]
+text = "#0a100a"
+cursor = "#7fff00"
+
+[colors.selection]
+text = "#0a100a"
+background = "#2d5a2d"
+
+[colors.search.matches]
+foreground = "#0a100a"
+background = "#39ff14"
+
+[colors.search.focused_match]
+foreground = "#0a100a"
+background = "#7fff00"
+
+[colors.normal]
+black   = "#0d1a0d"
+red     = "#1f6b1f"
+green   = "#33cc33"
+yellow  = "#5faf00"
+blue    = "#2d8659"
+magenta = "#4a9c4a"
+cyan    = "#3cb371"
+white   = "#33cc33"
+
+[colors.bright]
+black   = "#1a3318"
+red     = "#2e8b2e"
+green   = "#39ff14"
+yellow  = "#7fff00"
+blue    = "#3cb371"
+magenta = "#66cdaa"
+cyan    = "#00fa9a"
+white   = "#39ff14"
+
+[colors.dim]
+black   = "#0a0f0a"
+red     = "#143614"
+green   = "#228b22"
+yellow  = "#3d6b3d"
+blue    = "#1f5a3f"
+magenta = "#2f6b4f"
+cyan    = "#2d5a4a"
+white   = "#228b22"

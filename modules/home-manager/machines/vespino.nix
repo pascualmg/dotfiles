@@ -26,7 +26,7 @@
   # Alacritty configurado para vespino
   dotfiles.alacritty = {
     fontSize = 14;
-    theme = "dark";
+    # defaultTheme = "spacemacs-dark";  # default
   };
 
   # Picom configurado para vespino

@@ -27,7 +27,7 @@
   # Alacritty configurado para aurin
   dotfiles.alacritty = {
     fontSize = 14;              # 96 DPI - tamano normal
-    theme = "dark";             # Spacemacs Dark (default)
+    # defaultTheme = "spacemacs-dark";  # default, no hace falta
   };
 
   # Picom configurado para aurin

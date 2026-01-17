@@ -1,0 +1,61 @@
+# Spacemacs Light Theme for Alacritty
+# Based on official Spacemacs Emacs theme colors
+# https://github.com/nashamri/spacemacs-theme
+#
+# Colors extracted from spacemacs-theme.el (Doom Emacs)
+# NOTA: Usamos el rosa #6c3163 como "red" para verlo más en el uso diario
+
+[colors.primary]
+background = "#fbf8ef"      # bg1
+foreground = "#655370"      # base
+
+[colors.cursor]
+text = "#fbf8ef"
+cursor = "#100a14"          # cursor (dark)
+
+[colors.vi_mode_cursor]
+text = "#fbf8ef"
+cursor = "#6c3163"          # func (rosa light)
+
+[colors.selection]
+text = "CellForeground"
+background = "#d3d3e7"      # act2
+
+[colors.search.matches]
+foreground = "#fbf8ef"
+background = "#ba2f59"      # mat
+
+[colors.search.focused_match]
+foreground = "#fbf8ef"
+background = "#b1951d"      # yellow
+
+# ANSI colors - rosa como red para mayor visibilidad
+[colors.normal]
+black   = "#efeae9"         # bg2
+red     = "#6c3163"         # func - ROSA característico light
+green   = "#67b11d"         # green
+yellow  = "#b1951d"         # yellow
+blue    = "#3a81c3"         # blue light
+magenta = "#a31db1"         # magenta
+cyan    = "#2d9574"         # aqua
+white   = "#655370"         # base
+
+[colors.bright]
+black   = "#a094a2"         # base-dim
+red     = "#6c4173"         # comp light
+green   = "#42ae2c"         # suc light
+yellow  = "#da8b55"         # meta
+blue    = "#715ab1"         # var light
+magenta = "#8700af"         # magenta bright
+cyan    = "#21b8c7"         # cyan light
+white   = "#100a14"         # dark for contrast
+
+[colors.dim]
+black   = "#d2ceda"         # bg4
+red     = "#4e3163"         # rosa dim
+green   = "#1f6b4d"         # green dim
+yellow  = "#8d7516"         # yellow dim
+blue    = "#3366a3"         # blue dim
+magenta = "#800080"         # magenta dim
+cyan    = "#22715a"         # cyan dim
+white   = "#a094a2"         # base-dim
