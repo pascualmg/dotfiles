@@ -954,26 +954,33 @@ El teclado Apple SPI tiene las teclas = a= y =< >= intercambiadas respecto al la
 
 Esto funciona tanto en X11 (XMonad) como en Wayland (GNOME) porque keyd opera a nivel evdev.
 
-** Problema Conocido: xmobar y fuentes HiDPI
+** Solucion: xmobar y fuentes HiDPI
 
-*Estado:* SIN RESOLVER
+*Estado:* RESUELTO
 
-En pantalla Retina (2560x1600, Xft.dpi=227), el parametro =size=X= en la
-especificacion de fuente xft NO cambia el tamano visual en xmobar.
+El problema era usar sintaxis *Xft* (=xft:Font:size=X=) que no escala bien en HiDPI.
 
-| Probado                                  | Resultado   |
-|------------------------------------------+-------------|
-| =xft:Monoid Nerd Font:size=54:bold=      | No cambia   |
-| =pixelsize=64= en vez de =size=          | No cambia   |
-| Config minimalista (solo =Run Date=)     | SI funciona |
+*Solucion:* Usar sintaxis *Pango* que SI respeta el DPI del sistema:
 
-*Hipotesis:* Algo en el config completo de xmobar interfiere (templates con
-=<fn=1>=, StdinReader, o interaccion Xft.dpi/xmobar).
+#+BEGIN_SRC haskell
+-- ANTES (Xft - NO funciona en HiDPI):
+font = "xft:Monoid Nerd Font:size=16:bold"
 
-*Workaround actual:* GNOME con GDK_SCALE=2 funciona bien. xmonad en Retina
-usa fuentes diminutas pero legibles.
+-- DESPUES (Pango - funciona perfectamente):
+font = "HeavyData Nerd Font 16"
+#+END_SRC
 
-*Alternativas a investigar:* polybar, lemonbar, eww.
+El modulo =modules/home-manager/programs/xmobar.nix= usa Pango y calcula
+automaticamente la altura de la barra segun el =fontSize=:
+
+#+BEGIN_SRC nix
+# En machines/macbook.nix
+dotfiles.xmobar = {
+  fontSize = 22;  # Pango escala con DPI automaticamente
+};
+#+END_SRC
+
+La formula: =TopH = fontSize * 1.8= ajusta la altura de barra proporcionalmente.
 
 * CPU Frequency Scaling: Por que tu CPU no siempre va a tope
 
