@@ -540,6 +540,324 @@ echo "use nix" > .envrc
 direnv allow
 #+END_SRC
 
+* Ejecutar Programas sin Instalar: nix-index, comma y mas
+
+Esta es probablemente la feature mas util de NixOS para el dia a dia.
+
+** El Problema: "command not found"
+
+Imagina este escenario clasico:
+
+#+BEGIN_SRC bash
+$ cowsay "hola"
+bash: cowsay: command not found
+#+END_SRC
+
+En sistemas tradicionales (Ubuntu, Debian), tendrias que:
+1. Buscar en Google que paquete contiene =cowsay=
+2. Instalar el paquete con =apt install cowsay=
+3. Ahora si, ejecutar =cowsay=
+
+Esto es tedioso. Y en NixOS, donde no usamos =apt=, la solucion historica era
+aun mas engorrosa. Pero hoy tenemos herramientas *mucho mejores*.
+
+** La Solucion Moderna: comma (,)
+
+#+BEGIN_SRC bash
+# En vez de instalar nada, simplemente:
+$ , cowsay "hola"
+ ______
+< hola >
+ ------
+        \   ^__^
+         \  (oo)\_______
+            (__)\       )\/\
+                ||----w |
+                ||     ||
+#+END_SRC
+
+*Si, es literal una coma seguida del comando.* comma busca automaticamente
+que paquete contiene el binario, lo descarga temporalmente, y lo ejecuta.
+No queda instalado. Magia.
+
+** Historia: Como Llegamos Aqui
+
+*** Era 1: command-not-found de Ubuntu
+
+Ubuntu popularizo un sistema ingenioso: cuando escribias un comando que no
+existia, te sugeria que paquete instalar. NixOS intento copiarlo con
+=programs.command-not-found.enable = true=, pero la base de datos estaba
+frecuentemente rota o desactualizada.
+
+*** Era 2: nix-index (hazlo tu mismo)
+
+Alguien penso: "Y si generamos nuestra propia base de datos indexando TODO nixpkgs?"
+
+#+BEGIN_SRC bash
+$ nix-index  # ADVERTENCIA: tarda 30-60 minutos!
+#+END_SRC
+
+Funcionaba, pero nadie quiere esperar una hora cada vez que necesita actualizar.
+
+*** Era 3: nix-index-database (la comunidad al rescate)
+
+La comunidad penso: "Por que cada usuario genera el mismo indice? Hagamoslo
+una vez y compartamoslo."
+
+#+BEGIN_SRC text
+                  ANTES                         AHORA
+                  -----                         -----
+Usuario A:  nix-index (60 min)        Descarga DB precompilada (30 seg)
+Usuario B:  nix-index (60 min)        Descarga DB precompilada (30 seg)
+Usuario C:  nix-index (60 min)        Descarga DB precompilada (30 seg)
+#+END_SRC
+
+*** Era 4: comma (el atajo definitivo)
+
+Y finalmente, comma une todo: busca en la DB + descarga + ejecuta, en un comando.
+
+** Las Diferentes Formas de Ejecutar Programas
+
+*** Metodo 1: =, comando= (comma) - USO DIARIO
+
+#+BEGIN_SRC bash
+$ , cowsay "el metodo mas facil"
+$ , ffmpeg -i video.mp4 -c:v libx264 output.mp4
+$ , ncdu /home  # analizar disco sin instalar ncdu
+#+END_SRC
+
+Busqueda automatica, cero friccion. *Este es el que usaras el 90% del tiempo.*
+
+*** Metodo 2: =nix shell nixpkgs#= - Shell interactivo
+
+#+BEGIN_SRC bash
+$ nix shell nixpkgs#cowsay nixpkgs#lolcat
+[shell]$ cowsay "tengo ambos disponibles" | lolcat
+[shell]$ exit
+#+END_SRC
+
+Util cuando necesitas varios programas juntos en un shell temporal.
+
+*** Metodo 3: =nix run nixpkgs#= - Ejecutar una vez
+
+#+BEGIN_SRC bash
+$ nix run nixpkgs#cowsay -- "ejecuto y termino"
+$  # Ya volviste a tu shell normal
+#+END_SRC
+
+Similar a comma pero especificas el paquete exacto.
+
+*** Metodo 4: =nix-shell -p= - Legacy pero funciona
+
+#+BEGIN_SRC bash
+$ nix-shell -p python3 python3Packages.requests
+[nix-shell]$ python3 script.py
+[nix-shell]$ exit
+#+END_SRC
+
+El metodo antiguo (pre-flakes). Todavia util para scripts con shebangs.
+
+** Cuando Usar Cual
+
+#+BEGIN_SRC text
+Quiero ejecutar un programa que no tengo instalado
+                    |
+                    v
+        Se que paquete es? ----No----> Usa: , comando
+                    |
+                   Si
+                    |
+                    v
+        Necesito shell interactivo? --No--> nix run nixpkgs#pkg
+                    |
+                   Si
+                    |
+                    v
+              nix shell nixpkgs#pkg
+#+END_SRC
+
+| Metodo              | Flakes | Interactivo | Busqueda | Caso de Uso        |
+|---------------------+--------+-------------+----------+--------------------|
+| =, comando=         | Si     | No          | Auto     | *USO DIARIO*       |
+| =nix shell nixpkgs#= | Si     | Si          | Manual   | Shell temporal     |
+| =nix run nixpkgs#=  | Si     | No          | Manual   | Ejecutar una vez   |
+| =nix-shell -p=      | No     | Si          | Manual   | Scripts, legacy    |
+
+** Buscar Paquetes con nix-locate
+
+#+BEGIN_SRC bash
+# Que paquete tiene el comando 'rg'?
+$ nix-locate bin/rg
+ripgrep.out        /nix/store/...-ripgrep-14.1/bin/rg
+
+# Que paquete tiene libcurl?
+$ nix-locate 'lib/libcurl.so'
+curl.out           /nix/store/...-curl-8.5/lib/libcurl.so
+#+END_SRC
+
+** Configuracion en Este Repo
+
+En el =flake.nix=, nix-index-database esta como input:
+
+#+BEGIN_SRC nix
+inputs = {
+  nix-index-database = {
+    url = "github:nix-community/nix-index-database";
+    inputs.nixpkgs.follows = "nixpkgs";
+  };
+};
+#+END_SRC
+
+Y se habilita para todas las maquinas:
+
+#+BEGIN_SRC nix
+programs.nix-index-database.comma.enable = true;
+#+END_SRC
+
+La base de datos se actualiza automaticamente cuando haces =nix flake update=.
+
+** Ejemplos Practicos de Uso Diario
+
+#+BEGIN_SRC bash
+# Probar un programa antes de instalarlo
+$ , neofetch
+
+# Convertir video (sin tener ffmpeg instalado)
+$ , ffmpeg -i input.mp4 -c:v libx265 output.mp4
+
+# Analizar uso de disco
+$ , ncdu /home
+
+# Generar QR code
+$ , qrencode -o qr.png "https://example.com"
+
+# Ver arbol de procesos
+$ , pstree
+
+# Benchmark rapido
+$ , hyperfine 'sleep 0.1' 'sleep 0.2'
+#+END_SRC
+
+** Scripts Reproducibles con Dependencias
+
+Puedes crear scripts que traen sus propias dependencias:
+
+#+BEGIN_SRC bash
+#!/usr/bin/env nix-shell
+#!nix-shell -i bash -p cowsay lolcat
+
+# Este script se auto-provee cowsay y lolcat
+cowsay "Mis dependencias vienen conmigo" | lolcat
+#+END_SRC
+
+O con flakes (mas moderno):
+
+#+BEGIN_SRC bash
+#!/usr/bin/env -S nix shell nixpkgs#cowsay nixpkgs#lolcat --command bash
+
+cowsay "Version con flakes" | lolcat
+#+END_SRC
+
+** Troubleshooting
+
+*** nix-locate no encuentra nada
+
+#+BEGIN_SRC bash
+# Actualizar la base de datos
+$ nix flake update nix-index-database ~/dotfiles
+$ sudo nixos-rebuild switch --flake ~/dotfiles#aurin
+#+END_SRC
+
+*** comma pregunta multiples opciones
+
+#+BEGIN_SRC bash
+$ , python
+Multiple packages provide 'python':
+  1) python2
+  2) python3
+Select [1-3]:
+#+END_SRC
+
+Solucion: especifica el paquete exacto con =, python3 script.py=
+
+* Multiples Versiones de nixpkgs: pkgs vs pkgsMaster
+
+A veces necesitas un paquete mas nuevo de lo que hay en nixpkgs-unstable.
+Este repo usa un sistema multi-channel para resolver eso.
+
+** El Problema
+
+#+BEGIN_SRC text
+nixpkgs-master  -->  claude-code 2.1.6  (commits de hoy)
+     |
+     | ~2-7 dias de propagacion
+     v
+nixpkgs-unstable --> claude-code 2.1.2  (lo que tienes normalmente)
+#+END_SRC
+
+Los paquetes fluyen: master -> unstable -> stable. Puede tardar dias o semanas.
+
+** La Solucion: Dos Fuentes de Paquetes
+
+En =flake.nix= tenemos dos inputs de nixpkgs:
+
+#+BEGIN_SRC nix
+inputs = {
+  nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  nixpkgs-master.url = "github:NixOS/nixpkgs/master";  # Bleeding edge
+};
+#+END_SRC
+
+Y exponemos ambos a todos los modulos:
+
+#+BEGIN_SRC nix
+# En el flake
+pkgs = import nixpkgs { ... };          # 99% de paquetes
+pkgsMaster = import nixpkgs-master { ... };  # Paquetes nuevos
+
+specialArgs = { inherit pkgsMaster; };  # Disponible en todos los modulos
+#+END_SRC
+
+** Uso en Practica
+
+#+BEGIN_SRC nix
+# En cualquier modulo (configuration.nix, passh.nix, etc.)
+{ pkgs, pkgsMaster, ... }:
+{
+  home.packages = with pkgs; [
+    firefox        # De unstable (estable, testeado)
+    git
+    python3
+  ] ++ [
+    pkgsMaster.claude-code    # De master (bleeding edge)
+    pkgsMaster.jetbrains-toolbox
+  ];
+}
+#+END_SRC
+
+** Cuando Usar Cada Uno
+
+| Fuente      | Usar para                              | Riesgo      |
+|-------------+----------------------------------------+-------------|
+| =pkgs=      | 99% de paquetes, uso normal            | Bajo        |
+| =pkgsMaster= | Paquetes que necesitas YA (nuevos)     | Medio-alto  |
+
+*Nota:* =pkgsMaster= puede tener paquetes rotos ya que no han pasado todos los tests.
+Usalo solo cuando realmente necesites la ultima version.
+
+** Actualizar Independientemente
+
+#+BEGIN_SRC bash
+# Actualizar solo master (para paquetes nuevos)
+nix flake lock --update-input nixpkgs-master ~/dotfiles
+
+# Actualizar solo unstable (actualizacion normal)
+nix flake lock --update-input nixpkgs ~/dotfiles
+
+# Actualizar todo
+nix flake update ~/dotfiles
+#+END_SRC
+
 * NixOS MacBook Pro 13,2 (2016)
 
 ** Hardware Status
@@ -635,6 +953,27 @@ El teclado Apple SPI tiene las teclas = a= y =< >= intercambiadas respecto al la
 #+END_SRC
 
 Esto funciona tanto en X11 (XMonad) como en Wayland (GNOME) porque keyd opera a nivel evdev.
+
+** Problema Conocido: xmobar y fuentes HiDPI
+
+*Estado:* SIN RESOLVER
+
+En pantalla Retina (2560x1600, Xft.dpi=227), el parametro =size=X= en la
+especificacion de fuente xft NO cambia el tamano visual en xmobar.
+
+| Probado                                  | Resultado   |
+|------------------------------------------+-------------|
+| =xft:Monoid Nerd Font:size=54:bold=      | No cambia   |
+| =pixelsize=64= en vez de =size=          | No cambia   |
+| Config minimalista (solo =Run Date=)     | SI funciona |
+
+*Hipotesis:* Algo en el config completo de xmobar interfiere (templates con
+=<fn=1>=, StdinReader, o interaccion Xft.dpi/xmobar).
+
+*Workaround actual:* GNOME con GDK_SCALE=2 funciona bien. xmonad en Retina
+usa fuentes diminutas pero legibles.
+
+*Alternativas a investigar:* polybar, lemonbar, eww.
 
 * CPU Frequency Scaling: Por que tu CPU no siempre va a tope
 
