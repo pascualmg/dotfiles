@@ -42,7 +42,7 @@ import XMonad.Layout.NoBorders          -- Quitar bordes (fullscreen)
 import XMonad.Layout.ToggleLayouts (toggleLayouts, ToggleLayout(..))  -- Toggle fullscreen
 import XMonad.Layout.Grid               -- Layout grid
 import XMonad.Layout.Column             -- Layout una columna
-import XMonad.Actions.CopyWindow (copyToAll, killAllOtherCopies)  -- Ventanas sticky
+import XMonad.Actions.CopyWindow (copyToAll, killAllOtherCopies, wsContainingCopies)  -- Ventanas sticky
 import Graphics.X11.ExtraTypes.XF86     -- Teclas multimedia (volumen, brillo)
 
 -- -----------------------------------------------------------------------------
@@ -229,6 +229,14 @@ nextWS' = do
         Just i | i < length sorted - 1 -> windows $ W.greedyView (sorted !! (i + 1))  -- Si no es el último, ir al siguiente
         _ -> return ()                            -- Si es el último, no hacer nada
 
+-- Toggle sticky: si la ventana tiene copias, las quita; si no, la copia a todos
+toggleSticky :: X ()
+toggleSticky = do
+    copies <- wsContainingCopies
+    if null copies
+        then windows copyToAll
+        else killAllOtherCopies
+
 -- =============================================================================
 -- MAIN
 -- =============================================================================
@@ -330,7 +338,7 @@ main = do
         , ("M-a", namedScratchpadAction myScratchPads "terminal")   -- Terminal flotante
         , ("M-e", namedScratchpadAction myScratchPads "doom")       -- Emacs
         , ("M-j", namedScratchpadAction myScratchPads "toolbox")    -- JetBrains Toolbox
-        , ("M-v", namedScratchpadAction myScratchPads "vpn-vocento") -- VPN
+        , ("M-v", toggleSticky)                                       -- Toggle sticky (ventana en todos los workspaces)
 
         -- -----------------------------------------
         -- Utilidades
