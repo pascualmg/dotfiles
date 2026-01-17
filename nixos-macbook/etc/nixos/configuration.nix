@@ -57,9 +57,9 @@
     # Driver de audio CS8409 para MacBook (reemplaza el del kernel)
     ./modules/snd-hda-macbookpro.nix
 
-    # Modulo compartido XMonad
-    # Path: dotfiles/modules/desktop/xmonad.nix
-    ../../../modules/desktop/xmonad.nix
+    # NOTA: NO importar modules/desktop/xmonad.nix en macbook
+    # Ese módulo añade XFCE, picom, y variables X11 que conflictúan con GDM+GNOME
+    # XMonad se configura directamente abajo de forma compatible con GNOME
 
     # nixos-hardware profiles: Se importan via flake.nix extraModules
     # - nixos-hardware.nixosModules.apple-macbook-pro
@@ -70,23 +70,13 @@
   ];
 
   # ===========================================================================
-  # XMONAD CONFIG (modulo compartido)
+  # XMONAD CONFIG (configuración directa, sin módulo compartido)
   # ===========================================================================
-  # Configuracion especifica del display Retina MacBook
-  desktop.xmonad = {
-    enable = true;
-
-    # Macbook Retina setup (monitor externo detectado automaticamente)
-    displaySetupCommand = ''
-      # HiDPI: escalar interfaz
-      ${pkgs.xorg.xrandr}/bin/xrandr --dpi 192
-    '';
-
-    # Intel usa backend xrender (mas compatible que glx)
-    picomBackend = "xrender";
-
-    refreshRate = 60;
-  };
+  # El módulo compartido xmonad.nix conflictúa con GDM+GNOME por:
+  # - picom (conflicto con Mutter)
+  # - XFCE fallback (añade sesiones que confunden a GDM)
+  # - Variables X11 forzadas
+  # Aquí solo habilitamos xmonad de forma mínima y compatible
 
   # ===========================================================================
   # OVERRIDES de modulos comunes (valores especificos de macbook)
@@ -123,10 +113,27 @@
       PasswordAuthentication = true;
     };
 
-    # X11 Desktop con GNOME como alternativa a XMonad
-    xserver.enable = true;
+    # X11 Desktop con GNOME + XMonad
+    xserver = {
+      enable = true;
+
+      # XMonad como window manager alternativo (seleccionable en GDM)
+      windowManager.xmonad = {
+        enable = true;
+        enableContribAndExtras = true;
+      };
+
+      # Keyboard layout
+      xkb = {
+        layout = "us,es";
+        options = "grp:alt_shift_toggle,caps:escape";
+      };
+    };
+
+    # GDM + GNOME (sesión por defecto)
     displayManager.gdm.enable = true;
     desktopManager.gnome.enable = true;
+    # NO usar defaultSession - el set-session script rompe GDM
 
     # keyd: Remapeador de teclas a nivel kernel (funciona en X11 y Wayland)
     # Permite usar Fn + fila numerica como F-keys (workaround Touch Bar)

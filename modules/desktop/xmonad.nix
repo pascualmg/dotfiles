@@ -89,10 +89,13 @@
           # (No usar builtins.readFile - es impuro y falla en flakes puros)
         };
 
-        desktopManager.xfce.enable = true;
+        # NOTA: NO habilitar xfce aquí - causa conflicto con GNOME en macbook
+        # desktopManager.xfce.enable = true;
 
         # Display setup (específico por máquina)
-        displayManager = {
+        # NOTA: Solo aplica si hay displaySetupCommand definido
+        # GDM no soporta bien setupCommands (crea wrapper que falla)
+        displayManager = lib.mkIf (config.desktop.xmonad.displaySetupCommand != "") {
           setupCommands = ''
             ${config.desktop.xmonad.displaySetupCommand}
             ${pkgs.xorg.xset}/bin/xset r rate 350 50
@@ -100,9 +103,9 @@
         };
       };
 
-      displayManager = {
-        defaultSession = "none+xmonad";
-      };
+      # NOTA: NO usar displayManager.defaultSession
+      # El set-session script que genera rompe GDM en macbook
+      # Los usuarios pueden elegir sesión manualmente en GDM
 
       # Picom compositor
       picom = {
