@@ -8,7 +8,7 @@
 # Hardware:
 #   - CPU: Intel/AMD (con soporte KVM)
 #   - GPU: NVIDIA (drivers propietarios stable)
-#   - Red: enp10s0 (192.168.2.125) + br0 (192.168.53.10) para VPN
+#   - Red: enp10s0 (DHCP) + br0 (192.168.53.10) para VPN
 #
 # Servicios principales:
 #   - Minecraft server (ver minecraft.nix)
@@ -172,13 +172,14 @@ in {
 
     # Interfaces de red
     interfaces = {
-      # Interface principal - acceso a internet
+      # Interface principal - acceso a internet (DHCP para flexibilidad campo/piso)
       enp10s0 = {
-        useDHCP = false;
-        ipv4.addresses = [{
-          address = "192.168.2.125";
-          prefixLength = 24;
-        }];
+        useDHCP = true;
+        # IP estática comentada - usar si se necesita IP fija
+        # ipv4.addresses = [{
+        #   address = "192.168.2.125";
+        #   prefixLength = 24;
+        # }];
       };
 
       # Bridge para VMs - gateway VPN
@@ -205,10 +206,11 @@ in {
 
     bridges = { br0.interfaces = [ ]; };
 
-    defaultGateway = {
-      address = "192.168.2.1";
-      interface = "enp10s0";
-    };
+    # Gateway via DHCP - comentado para flexibilidad campo/piso
+    # defaultGateway = {
+    #   address = "192.168.2.1";
+    #   interface = "enp10s0";
+    # };
 
     networkmanager = {
       enable = true;
@@ -306,7 +308,7 @@ in {
     # Ollama AI
     ollama = {
       enable = true;
-      package = unstable.ollama-cuda;
+      package = pkgs.ollama;  # Cache binario (evita compilar CUDA)
       environmentVariables = {
         CUDA_VISIBLE_DEVICES = "0";
         CUDA_LAUNCH_BLOCKING = "0";

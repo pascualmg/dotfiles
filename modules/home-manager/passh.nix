@@ -165,7 +165,7 @@
       bat
 
       # IDEs
-      jetbrains-toolbox
+      pkgsMaster.jetbrains-toolbox
 
       # Office/Communication
       slack
