@@ -45,9 +45,9 @@
 # vespino aun usa <home-manager/nixos> channel (requiere --impure)
 #
 # ESTADO:
-#   aurin:   ✅ Migrado (configuration-pure.nix + enableHomeManager=true)
-#   macbook: ✅ Migrado
-#   vespino: ⏳ Pendiente de migracion
+#   aurin:   Migrado (configuration-pure.nix + enableHomeManager=true)
+#   macbook: Migrado
+#   vespino: Pendiente de migracion
 # =============================================================================
 
 {
@@ -86,12 +86,20 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.home-manager.follows = "home-manager";
     };
+
+    # nix-index-database - Base de datos precompilada para nix-index
+    # Proporciona command-not-found mejorado sin necesidad de generar indice
+    # Se actualiza semanalmente automaticamente
+    nix-index-database = {
+      url = "github:nix-community/nix-index-database";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   # ---------------------------------------------------------------------------
   # OUTPUTS - Configuraciones NixOS generadas
   # ---------------------------------------------------------------------------
-  outputs = { self, nixpkgs, nixpkgs-master, home-manager, nixos-hardware, nix-on-droid, ... }@inputs:
+  outputs = { self, nixpkgs, nixpkgs-master, home-manager, nixos-hardware, nix-on-droid, nix-index-database, ... }@inputs:
     let
       # Sistema comun para todas las maquinas
       system = "x86_64-linux";
@@ -145,14 +153,36 @@
             # Configuracion principal de la maquina
             configPath
 
-            # MODULOS COMUNES - compartidos por todas las maquinas
-            ./modules/common/packages.nix
-            ./modules/common/services.nix
-            ./modules/common/users.nix  # Usuario passh consolidado
+            # =================================================================
+            # MODULOS COMUNES - compartidos por TODAS las maquinas
+            # =================================================================
+            # Cada modulo tiene una responsabilidad unica (Single Responsibility)
+            # Los valores por defecto se pueden sobreescribir en cada maquina
+            # usando lib.mkForce o las opciones expuestas por cada modulo
 
+            # --- Base del sistema ---
+            ./modules/common/locale.nix       # Timezone Europe/Madrid, locale es_ES/en_US
+            ./modules/common/console.nix      # Configuracion TTY (fuente terminus)
+            ./modules/common/boot.nix         # systemd-boot base
+            ./modules/common/nix-settings.nix # Flakes, auto-optimise, GC
+            ./modules/common/security.nix     # Polkit, RTKit
+
+            # --- Paquetes y servicios ---
+            ./modules/common/packages.nix     # Paquetes sistema (vim, git, alacritty, etc.)
+            ./modules/common/services.nix     # Servicios (SSH, Avahi, Bluetooth, PipeWire)
+            ./modules/common/users.nix        # Usuario passh consolidado
+            ./modules/common/cpupower-gui.nix # GUI para gestionar frecuencias CPU
+            ./modules/common/nix-ld.nix       # Ejecutar binarios dinamicos (JetBrains, VSCode)
+
+            # =================================================================
             # DESKTOP WAYLAND - Hyprland y niri (habilitados por defecto)
+            # =================================================================
             ./modules/desktop/hyprland.nix
             ./modules/desktop/niri.nix
+
+            # NIX-INDEX-DATABASE - Base de datos precompilada para command-not-found
+            # Proporciona la opcion programs.nix-index-database.comma.enable
+            nix-index-database.nixosModules.nix-index
 
             # Modulo para compatibilidad: registra el flake en el sistema
             {
@@ -168,8 +198,9 @@
                 then "flake-${self.shortRev}"
                 else "flake-dirty";
 
-              # Asegurar que nix tiene flakes habilitados
-              nix.settings.experimental-features = [ "nix-command" "flakes" ];
+              # Usar la base de datos precompilada de nix-index-database
+              # Esto evita tener que correr `nix-index` manualmente (~30 min)
+              programs.nix-index-database.comma.enable = true;
             }
           ]
           # Home Manager del flake (cuando se active)

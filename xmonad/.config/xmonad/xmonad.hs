@@ -277,7 +277,7 @@ main = do
             , ppVisible         = xmobarColor "#61afef" ""
             , ppHidden          = xmobarColor "#c678dd" "" . wrap "*" ""
             , ppHiddenNoWindows = xmobarColor "#666666" ""
-            , ppTitle           = xmobarColor "#abb2bf" "" . shorten 160
+            , ppTitle           = xmobarColor "#abb2bf" "" . shorten 60  -- Reducido para MacBook
             , ppSep             = "<fc=#666666> | </fc>"
             , ppUrgent          = xmobarColor "#e06c75" "" . wrap "!" "!"
             }
@@ -304,6 +304,12 @@ main = do
         , ("<XF86AudioRaiseVolume>", spawn "pactl set-sink-volume @DEFAULT_SINK@ +2%")
         , ("<XF86AudioMute>", spawn "pactl set-sink-mute @DEFAULT_SINK@ toggle")
         , ("<XF86AudioMicMute>", spawn "pactl set-source-mute @DEFAULT_SOURCE@ toggle")
+
+        -- -----------------------------------------
+        -- Brillo (Shift + teclas volumen)
+        -- -----------------------------------------
+        , ("S-<XF86AudioLowerVolume>", spawn "brightnessctl set 5%-")
+        , ("S-<XF86AudioRaiseVolume>", spawn "brightnessctl set +5%")
 
         -- -----------------------------------------
         -- Aplicaciones

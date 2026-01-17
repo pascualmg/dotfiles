@@ -1,19 +1,32 @@
 # =============================================================================
 # MODULO COMPARTIDO: Paquetes Comunes del Sistema
 # =============================================================================
-# Paquetes que AMBAS máquinas (aurin + macbook) necesitan a nivel de sistema
+# Paquetes que TODAS las maquinas (aurin, macbook, vespino) necesitan
 #
 # NOTA: Paquetes de usuario van en modules/home-manager/passh.nix
+#
+# CONSOLIDADO DE:
+#   - aurin: alacritty, nixd
+#   - macbook: alacritty, nil, nixd, blueman, home-manager
+#   - vespino: alacritty, vim, git, curl, etc (ya estaban aqui)
 # =============================================================================
 
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, inputs, ... }:
 
 {
+  # Importar modulo de nix-index-database (DB precompilada)
+  imports = [
+    inputs.nix-index-database.nixosModules.nix-index
+  ];
+
   # ===== PERMITIR PAQUETES UNFREE =====
   nixpkgs.config.allowUnfree = true;
 
   # ===== PAQUETES DEL SISTEMA =====
   environment.systemPackages = with pkgs; [
+    # === TERMINAL ===
+    alacritty   # Terminal emulator (GPU-accelerated)
+
     # === BASICOS ===
     vim
     wget
@@ -39,12 +52,19 @@
     tmux        # Clasico, siempre util
     byobu       # Wrapper tmux con mejoras
 
+    # === NIX LSP (para IDEs/editores) ===
+    nil         # Nix LSP - ligero, basico
+    nixd        # Nix LSP - mas features, usa evaluacion real
+
     # === NETWORK ===
     networkmanager
     networkmanagerapplet
 
     # === DESKTOP/SYSTRAY ===
     trayer          # System tray para xmobar
+
+    # === BLUETOOTH ===
+    blueman     # Bluetooth manager GUI (para XMonad/tiling WMs)
 
     # === FILESYSTEM ===
     ntfs3g
@@ -84,6 +104,7 @@
     direnv
     nix-direnv
     neofetch    # Info sistema bonita
+    home-manager  # CLI de Home Manager (para troubleshooting)
   ];
 
   # ===== FUENTES =====
@@ -150,6 +171,22 @@
   programs.git.enable = true;
   programs.vim.enable = true;
   programs.vim.defaultEditor = true;
+
+  # ===== NIX-INDEX (command-not-found mejorado) =====
+  # Cuando escribes un comando que no existe, sugiere el paquete de nixpkgs
+  # Ejemplo: "cowsay" -> "nix shell nixpkgs#cowsay"
+  #
+  # CONECTADO: El modulo nix-index-database (importado arriba) proporciona
+  # la DB precompilada - se actualiza semanalmente, no hay que generar nada
+  programs.nix-index = {
+    enable = true;
+    enableBashIntegration = true;   # Integra con bash
+    enableFishIntegration = true;   # Integra con fish (shell principal)
+  };
+
+  # Comma (,) - ejecutar paquetes sin instalar
+  # Ejemplo: ", cowsay hola" ejecuta cowsay sin instalarlo
+  programs.command-not-found.enable = false;  # Desactivar el basico, usamos nix-index
 
   # ===== SHELLS =====
   programs.fish.enable = true;

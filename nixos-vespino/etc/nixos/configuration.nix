@@ -1,8 +1,9 @@
 # =============================================================================
-# NixOS Vespino - Configuracion Limpia
+# NixOS Vespino - Servidor Secundario / Testing Ground
 # =============================================================================
 # Maquina secundaria - servidor Minecraft, NFS, Ollama
 # Limpiado: 2026-01-01 (eliminado RustDesk, servicios VM guest innecesarios)
+# Refactorizado: 2026-01-17 (movido comun a modules/common/*)
 #
 # Hardware:
 #   - CPU: Intel/AMD (con soporte KVM)
@@ -16,6 +17,12 @@
 #   - Syncthing
 #   - libvirt/Docker para VMs
 #
+# Modulos compartidos (via flake.nix):
+#   - modules/common/*: locale, console, boot, packages, services, users, etc.
+#   - modules/desktop/xmonad.nix: Window manager + X11
+#   - modules/desktop/hyprland.nix: Wayland compositor
+#   - modules/desktop/niri.nix: Wayland compositor
+#
 # Usuario:
 #   - Definido en modules/common/users.nix (compartido)
 #
@@ -25,45 +32,60 @@
 #   NO MODIFICAR sin plan de rollback
 # =============================================================================
 
-{ config, pkgs, ... }:
+{ config, pkgs, lib, ... }:
 
 let
-  # Definicion del canal unstable
+  # Definicion del canal unstable (para paquetes especificos)
   unstable = import (fetchTarball
     "https://github.com/nixos/nixpkgs/archive/nixos-unstable.tar.gz") {
       config = config.nixpkgs.config;
     };
-  master = import
-    (fetchTarball "https://github.com/nixos/nixpkgs/archive/master.tar.gz") {
-      config = config.nixpkgs.config;
-    };
-
 in {
   imports = [
     ./hardware-configuration.nix
     ./minecraft.nix
+
+    # Modulo compartido XMonad
+    # Path: dotfiles/modules/desktop/xmonad.nix
+    ../../../modules/desktop/xmonad.nix
+
     # home-manager ahora viene del flake (enableHomeManager = true)
     # Usuario passh definido en modules/common/users.nix (via flake)
   ];
 
-  # ===== UNFREE =====
-  nixpkgs.config.allowUnfree = true;
+  # ===========================================================================
+  # XMONAD CONFIG (modulo compartido)
+  # ===========================================================================
+  desktop.xmonad = {
+    enable = true;
 
-  # ===== PROGRAMS =====
-  programs = {
-    nix-ld.enable = true;
-    nix-ld.libraries = with pkgs; [
-      # Add any missing dynamic libraries for unpackaged programs here
-    ];
-    fish.enable = true;
-    gamemode.enable = true;
-    tmux.enable = true;
+    displaySetupCommand = ''
+      ${pkgs.xorg.xrandr}/bin/xrandr --output DP-0 --mode 5120x1440 --rate 120 --primary --dpi 96
+    '';
+
+    picomBackend = "glx";
+    refreshRate = 120;
   };
 
-  # ===== HARDWARE =====
+  # ===========================================================================
+  # OVERRIDES de modulos comunes (valores especificos de vespino)
+  # ===========================================================================
+
+  # GC menos agresivo - servidor puede acumular mas generaciones
+  common.nix.gcDays = 60;
+  nix.gc.automatic = false;  # Manual en servidor
+
+  # ===========================================================================
+  # CONFIGURACION ESPECIFICA DE VESPINO
+  # ===========================================================================
+
+  # ===== PROGRAMS =====
+  programs.gamemode.enable = true;
+  programs.tmux.enable = true;
+
+  # ===== HARDWARE (NVIDIA) =====
   hardware = {
     enableAllFirmware = true;
-    # Actualizado de hardware.opengl (deprecated) a hardware.graphics
     graphics = {
       enable = true;
       enable32Bit = true;
@@ -77,7 +99,7 @@ in {
     };
   };
 
-  # ===== ENVIRONMENT VARIABLES =====
+  # ===== ENVIRONMENT VARIABLES (NVIDIA) =====
   environment.sessionVariables = {
     LIBVA_DRIVER_NAME = "nvidia";
     __GLX_VENDOR_LIBRARY_NAME = "nvidia";
@@ -87,11 +109,8 @@ in {
     LIBVIRT_DEFAULT_URI = "qemu:///system";
   };
 
-  # ===== BOOT =====
+  # ===== BOOT (KVM/IOMMU para VMs) =====
   boot = {
-    loader.systemd-boot.enable = true;
-    loader.efi.canTouchEfiVariables = true;
-
     # Modulos para virtualizacion (vespino es HOST de VMs)
     kernelModules = [
       "kvm-amd"
@@ -255,10 +274,7 @@ in {
   virtualisation = {
     libvirtd = {
       enable = true;
-      qemu = {
-        # ovmf.enable = true;  # REMOVED: OVMF now available by default
-        runAsRoot = true;
-      };
+      qemu.runAsRoot = true;
       onBoot = "ignore";
       onShutdown = "shutdown";
       allowedBridges = [ "br0" "virbr0" ];
@@ -272,66 +288,11 @@ in {
     };
   };
 
-  # ===== TIMEZONE & LOCALE =====
-  time.timeZone = "Europe/Madrid";
-  i18n = {
-    defaultLocale = "en_US.UTF-8";
-    extraLocaleSettings = {
-      LC_ADDRESS = "es_ES.UTF-8";
-      LC_IDENTIFICATION = "es_ES.UTF-8";
-      LC_MEASUREMENT = "es_ES.UTF-8";
-      LC_MONETARY = "es_ES.UTF-8";
-      LC_NAME = "es_ES.UTF-8";
-      LC_NUMERIC = "es_ES.UTF-8";
-      LC_PAPER = "es_ES.UTF-8";
-      LC_TELEPHONE = "es_ES.UTF-8";
-      LC_TIME = "es_ES.UTF-8";
-    };
-  };
-
-  # ===== FONTS =====
-  fonts.packages = with pkgs; [ powerline-fonts ];  # Fixed: nerdfonts removed (deprecated)
-
-  # ===== USER: passh =====
-  # NOTA: Usuario definido en modules/common/users.nix (compartido via flake)
-  # Solo definimos aqui la politica de sudo especifica de vespino
-
-  # ===== SERVICES =====
+  # ===== SERVICES (especificos de vespino) =====
   services = {
     resolved.enable = false;
 
-    # ===== LIBINPUT: Raw input para ratones gaming =====
-    # Filosofia HHKB: el hardware manda, no el software
-    # Perfil flat = movimiento 1:1 con el DPI del raton
-    libinput = {
-      enable = true;
-      mouse = {
-        accelProfile = "flat";  # Raw input, sin aceleracion del sistema
-        accelSpeed = "0";       # Velocidad base (respeta DPI del raton)
-      };
-    };
-
-    xserver = {
-      enable = true;
-      videoDrivers = [ "nvidia" ];
-      xkb = {
-        layout = "us,es";
-        variant = "";
-        # Alt+Shift para cambiar layout, Caps Lock -> Escape
-        options = "grp:alt_shift_toggle,caps:escape";
-      };
-      windowManager.xmonad = {
-        enable = true;
-        enableContribAndExtras = true;
-      };
-      desktopManager.xfce.enable = true;
-      displayManager = {
-        setupCommands = ''
-          ${pkgs.xorg.xrandr}/bin/xrandr --output DP-0 --mode 5120x1440 --rate 120 --primary --dpi 96
-          ${pkgs.xorg.xset}/bin/xset r rate 350 50
-        '';
-      };
-    };
+    xserver.videoDrivers = [ "nvidia" ];
 
     # NFS Server
     nfs.server = {
@@ -345,7 +306,7 @@ in {
     # Ollama AI
     ollama = {
       enable = true;
-      package = unstable.ollama-cuda;  # Fixed: acceleration = "cuda" deprecated
+      package = unstable.ollama-cuda;
       environmentVariables = {
         CUDA_VISIBLE_DEVICES = "0";
         CUDA_LAUNCH_BLOCKING = "0";
@@ -363,7 +324,6 @@ in {
 
     # Open WebUI
     # DISABLED: Bug en nixpkgs-unstable (ctranslate2 build failure)
-    # Habilitar cuando se arregle en upstream
     open-webui = {
       enable = false;  # Temporarily disabled
       package = unstable.open-webui;
@@ -375,20 +335,13 @@ in {
       };
     };
 
-    # PipeWire Audio
-    pipewire = {
-      enable = true;
-      alsa.enable = true;
-      alsa.support32Bit = true;
-      pulse.enable = true;
-      jack.enable = true;
-      extraConfig.pipewire = {
-        "context.properties" = {
-          "default.clock.rate" = 48000;
-          "default.clock.quantum" = 1024;
-          "default.clock.min-quantum" = 32;
-          "default.clock.max-quantum" = 8192;
-        };
+    # PipeWire Audio (override del modulo comun con config especifica)
+    pipewire.extraConfig.pipewire = {
+      "context.properties" = {
+        "default.clock.rate" = 48000;
+        "default.clock.quantum" = 1024;
+        "default.clock.min-quantum" = 32;
+        "default.clock.max-quantum" = 8192;
       };
     };
 
@@ -429,36 +382,29 @@ in {
       };
     };
 
-    # SSH
-    openssh = {
-      enable = true;
-      settings = {
-        PermitRootLogin = "no";
-        PasswordAuthentication = true;
-      };
+    # SSH (override del modulo comun)
+    openssh.settings = {
+      PermitRootLogin = "no";
+      PasswordAuthentication = true;
     };
   };
 
-  # ===== SYSTEM PACKAGES =====
-  environment.systemPackages = with pkgs; [
-    # Terminal y utilidades
-    unstable.alacritty
-    home-manager
-    byobu
-    zellij  # Modern terminal multiplexer (Rust)
-    wget
-    git
-    curl
-    vim
-    tree
-    unzip
-    zip
+  # ===== SECURITY =====
+  security.sudo.wheelNeedsPassword = true;  # Servidor, con password
+  # PKI certificate (conditional - only if file exists)
+  security.pki.certificateFiles =
+    if builtins.pathExists /home/passh/src/vocento/abc/container.frontal-docker/configure/ssl/rootcav2.vocento.in.pem
+    then [ /home/passh/src/vocento/abc/container.frontal-docker/configure/ssl/rootcav2.vocento.in.pem ]
+    else [];
 
+  # ===== SYSTEM PACKAGES (solo especificos de vespino) =====
+  # Los paquetes comunes estan en modules/common/packages.nix
+  environment.systemPackages = with pkgs; [
     # NVIDIA y graficos
     nvidia-vaapi-driver
     nvtopPackages.full
     vulkan-tools
-    mesa-demos  # Fixed: glxinfo renamed
+    mesa-demos
 
     # X11
     xorg.setxkbmap
@@ -468,12 +414,7 @@ in {
     dunst
     libnotify
 
-    # Hardware info
-    pciutils
-    usbutils
-    neofetch
-
-    # Editores: emacs-pgtk instalado via home-manager (passh.nix)
+    # Editores
     tree-sitter
     xclip
 
@@ -486,47 +427,18 @@ in {
     pulsemixer
     pavucontrol
 
-    # LSP Nix
-    nil
-
     # Virtualizacion
-    virt-manager
     virt-viewer
     qemu
     OVMF
     spice-gtk
     spice-protocol
-    virtio-win  # Fixed: win-virtio renamed
+    virtio-win
     swtpm
     bridge-utils
     dnsmasq
     iptables
   ];
-
-  # ===== SECURITY =====
-  security = {
-    rtkit.enable = true;
-    polkit.enable = true;
-    sudo.wheelNeedsPassword = true;  # Vespino: servidor, seguridad con password
-    # PKI certificate (conditional - only if file exists)
-    pki.certificateFiles =
-      if builtins.pathExists /home/passh/src/vocento/abc/container.frontal-docker/configure/ssl/rootcav2.vocento.in.pem
-      then [ /home/passh/src/vocento/abc/container.frontal-docker/configure/ssl/rootcav2.vocento.in.pem ]
-      else [];
-  };
-
-  # ===== NIX SETTINGS =====
-  nix = {
-    settings = {
-      auto-optimise-store = true;
-      experimental-features = [ "nix-command" "flakes" ];
-    };
-    gc = {
-      automatic = false;
-      dates = "monthly";
-      options = "--delete-older-than 60d";
-    };
-  };
 
   system.stateVersion = "24.05";
 }

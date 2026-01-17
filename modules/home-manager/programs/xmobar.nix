@@ -74,8 +74,11 @@ let
         , commands = [
             ${lib.optionalString (cfg.gpuType != "none") (gpuCommand.${cfg.gpuType})}
 
-            -- CPU con color dinámico (script externo)
-            ${lib.optionalString (cfg.gpuType != "none") ","}Run Com "/home/passh/dotfiles/scripts/xmobar-cpu.sh" [] "cpu" 20
+            -- CPU frecuencia y governor (click abre cpupower-gui)
+            ${lib.optionalString (cfg.gpuType != "none") ","}Run Com "/home/passh/dotfiles/scripts/xmobar-cpu-freq.sh" [] "cpufreq" 20
+
+            -- CPU uso, temperatura y consumo (script externo)
+            , Run Com "/home/passh/dotfiles/scripts/xmobar-cpu.sh" [] "cpu" 20
 
             -- Memoria con color dinámico (script externo)
             , Run Com "/home/passh/dotfiles/scripts/xmobar-memory.sh" [] "memory" 20
@@ -122,7 +125,7 @@ let
         -- LAYOUT: Izda (workspaces + fecha) | Dcha (menos importante → más importante)
         , sepChar = "%"
         , alignSep = "}{"
-        , template = "%date% %StdinReader% }{${lib.optionalString cfg.showTrayer " %trayerpad% |"} ${nixSep} %docker% ${lib.optionalString (cfg.alsaMixer != null) "%volume% "}${lib.optionalString cfg.showWirelessMouse "%mouse% "}${lib.optionalString cfg.showBattery "%battery% "}%network% ${lib.optionalString cfg.showDiskMonitor "%disks% "}${nixSep} ${lib.optionalString (cfg.gpuType != "none") (gpuTemplate.${cfg.gpuType} + " " + nixSep + " ")}%memory% %cpu% "
+        , template = "%date% %StdinReader% }{${lib.optionalString cfg.showTrayer " %trayerpad% |"} ${nixSep} %docker% ${lib.optionalString (cfg.alsaMixer != null) "%volume% "}${lib.optionalString cfg.showWirelessMouse "%mouse% "}${lib.optionalString cfg.showBattery "%battery% "}%network% ${lib.optionalString cfg.showDiskMonitor "%disks% "}${nixSep} ${lib.optionalString (cfg.gpuType != "none") (gpuTemplate.${cfg.gpuType} + " " + nixSep + " ")}%memory% %cpufreq% %cpu% "
 
     }
   '';

@@ -15,30 +15,35 @@
 #   - Audio: FiiO K7 DAC/AMP
 #   - Display: 5120x1440@120Hz
 #
-# Modulos:
+# Modulos locales (hardware especifico):
 #   - nvidia-rtx5080.nix: GPU drivers y CUDA
 #   - audio-fiio-k7.nix: PipeWire + FiiO K7
 #   - sunshine.nix: Streaming server
 #   - printing.nix: HP M148dw + Avahi
 #   - xrdp.nix: Remote desktop (disabled)
 #   - virtualization.nix: Docker + libvirt
-#   - xmonad.nix: Window manager + X11 (modulo compartido)
+#
+# Modulos compartidos (via flake.nix):
+#   - modules/common/*: locale, console, boot, packages, services, users, etc.
+#   - modules/desktop/xmonad.nix: Window manager + X11
+#   - modules/desktop/hyprland.nix: Wayland compositor
+#   - modules/desktop/niri.nix: Wayland compositor
 #
 # Usuario:
 #   - Definido en modules/common/users.nix (compartido)
 # =============================================================================
 
-{ config, pkgs, ... }:
+{ config, pkgs, lib, ... }:
 
 {
   imports = [
     ./hardware-configuration.nix
 
-    # Modulos hardware
+    # Modulos hardware (especificos de aurin)
     ./modules/nvidia-rtx5080.nix
     ./modules/audio-fiio-k7.nix
 
-    # Modulos servicios
+    # Modulos servicios (especificos de aurin)
     ./modules/sunshine.nix
     ./modules/printing.nix
     # ./modules/xrdp.nix  # Desactivado - no se usa
@@ -48,9 +53,6 @@
     # Path: dotfiles/modules/desktop/xmonad.nix
     # Desde: dotfiles/nixos-aurin/etc/nixos/ -> 3 niveles arriba
     ../../../modules/desktop/xmonad.nix
-
-    # Modulo compartido nix-ld (binarios dinamicos: JetBrains Gateway, VSCode Remote, etc.)
-    ../../../modules/common/nix-ld.nix
 
     # Home Manager se integra via flake (no usa <home-manager/nixos>)
     # Usuario passh definido en modules/common/users.nix (via flake)
@@ -74,44 +76,24 @@
     refreshRate = 120;
   };
 
-  # ===== UNFREE =====
-  nixpkgs.config.allowUnfree = true;
+  # ===========================================================================
+  # OVERRIDES de modulos comunes (valores especificos de aurin)
+  # ===========================================================================
+
+  # Nix settings: 72 jobs para Dual Xeon
+  common.nix.maxJobs = 72;
+  common.nix.gcDays = 8;  # GC mas agresivo, tenemos mucho disco
+
+  # ===========================================================================
+  # CONFIGURACION ESPECIFICA DE AURIN
+  # ===========================================================================
+  # Todo lo que sigue es UNICO de aurin y NO debe estar en modulos comunes
 
   # ===== HARDWARE =====
   hardware.enableAllFirmware = true;
 
-  # ===== CONSOLE =====
-  console = {
-    earlySetup = true;
-    font = "ter-p20n";
-    packages = [
-      pkgs.terminus_font
-      pkgs.kbd
-      pkgs.powerline-fonts
-    ];
-    keyMap = "us";
-    useXkbConfig = false;
-  };
-
-  # ===== FONTS =====
-  fonts.packages = with pkgs; [
-    nerd-fonts.symbols-only  # Requerido por Doom Emacs (nerd-icons)
-    nerd-fonts.hack
-    nerd-fonts.jetbrains-mono
-    nerd-fonts.fira-code
-    dejavu_fonts
-    liberation_ttf
-    noto-fonts
-    noto-fonts-color-emoji
-  ];
-
-  # ===== BOOT =====
+  # ===== BOOT (parametros especificos Dual Xeon + NVIDIA) =====
   boot = {
-    loader = {
-      systemd-boot.enable = true;
-      efi.canTouchEfiVariables = true;
-    };
-
     kernelParams = [
       # Desactivar ASPEED (BMC integrado en placa servidor)
       "ast.modeset=0"
@@ -170,16 +152,15 @@
     };
   };
 
-  # ===== ENVIRONMENT VARIABLES =====
+  # ===== ENVIRONMENT VARIABLES (Dual Xeon) =====
   environment.sessionVariables = {
-    # Dual Xeon optimization
     OMP_NUM_THREADS = "72";
     MKL_NUM_THREADS = "72";
     OMP_PLACES = "cores";
     OMP_PROC_BIND = "close";
   };
 
-  # ===== NETWORKING =====
+  # ===== NETWORKING (especifico aurin: br0, VPN routes, etc.) =====
   networking = {
     hostName = "aurin";
     useHostResolvConf = false;
@@ -268,7 +249,7 @@
     };
   };
 
-  # ===== ETC =====
+  # ===== ETC (especifico aurin: DNS via VM) =====
   environment.etc = {
     hosts.mode = "0644";
     "nsswitch.conf" = {
@@ -297,28 +278,7 @@
     };
   };
 
-  # ===== TIMEZONE & LOCALE =====
-  time.timeZone = "Europe/Madrid";
-  i18n = {
-    defaultLocale = "en_US.UTF-8";
-    extraLocaleSettings = {
-      LC_ADDRESS = "es_ES.UTF-8";
-      LC_IDENTIFICATION = "es_ES.UTF-8";
-      LC_MEASUREMENT = "es_ES.UTF-8";
-      LC_MONETARY = "es_ES.UTF-8";
-      LC_NAME = "es_ES.UTF-8";
-      LC_NUMERIC = "es_ES.UTF-8";
-      LC_PAPER = "es_ES.UTF-8";
-      LC_TELEPHONE = "es_ES.UTF-8";
-      LC_TIME = "es_ES.UTF-8";
-    };
-  };
-
-  # ===== USER: passh =====
-  # NOTA: Usuario definido en modules/common/users.nix (compartido via flake)
-  # Solo definimos aqui la politica de sudo especifica de aurin
-
-  # ===== SERVICES =====
+  # ===== SERVICES (especificos de aurin) =====
   services = {
     # SSH (con TCP forwarding para JetBrains Gateway)
     openssh = {
@@ -434,28 +394,12 @@
     resolved.enable = false;
   };
 
-  # ===== SECURITY =====
-  security = {
-    polkit.enable = true;
-    sudo.wheelNeedsPassword = false;  # Aurin: workstation, sin password
-  };
+  # ===== SECURITY (aurin: workstation, sudo sin password) =====
+  security.sudo.wheelNeedsPassword = false;
 
-  # ===== SYSTEM PACKAGES =====
+  # ===== SYSTEM PACKAGES (solo especificos de aurin) =====
+  # Los paquetes comunes estan en modules/common/packages.nix
   environment.systemPackages = with pkgs; [
-    # Terminal
-    alacritty
-    byobu
-    tmux
-    zellij  # Modern terminal multiplexer (Rust)
-
-    # System monitoring
-    iotop
-    iftop
-    powertop
-    hwinfo
-    inxi
-    dmidecode
-
     # NUMA tools (Dual Xeon)
     numactl
 
@@ -470,14 +414,10 @@
 
     # CPU management
     cpufrequtils
-    cpupower-gui
     schedtool
     util-linux
 
-    # LSP Nix
-    nixd
-
-    # Scripts
+    # Scripts especificos de aurin
     (writeShellScriptBin "temp-monitor" ''
       #!/bin/bash
       watch -n 1 'sensors | grep -E "(Core|Package|temp)" | sort'
@@ -560,41 +500,22 @@
     '')
   ];
 
-  # ===== NIX SETTINGS =====
-  nix = {
-    settings = {
-      auto-optimise-store = true;
-      experimental-features = [ "nix-command" "flakes" ];
-      max-jobs = 72;
-      cores = 36;
-    };
-    gc = {
-      automatic = true;
-      dates = "weekly";
-      options = "--delete-older-than 8d";
-    };
-  };
-
-  # ===== PROGRAMS =====
-  programs = {
-    fish.enable = true;
-
-    steam = {
-      enable = true;
-      remotePlay.openFirewall = true;
-      dedicatedServer.openFirewall = true;
-      extraCompatPackages = with pkgs; [ proton-ge-bin ];
-      package = pkgs.steam.override {
-        extraPkgs = pkgs: with pkgs; [
-          libGL libGLU vulkan-loader vulkan-tools mesa
-          nvidia-vaapi-driver libva libva-utils
-          xorg.libX11 xorg.libXcursor xorg.libXrandr xorg.libXi
-          xorg.libXext xorg.libXfixes xorg.libXrender xorg.libXScrnSaver
-          xorg.libXcomposite xorg.libXdamage xorg.libXtst
-          nss nspr at-spi2-atk at-spi2-core dbus cups libdrm
-          expat libxkbcommon alsa-lib pango cairo gdk-pixbuf gtk3
-        ];
-      };
+  # ===== PROGRAMS (especificos de aurin) =====
+  programs.steam = {
+    enable = true;
+    remotePlay.openFirewall = true;
+    dedicatedServer.openFirewall = true;
+    extraCompatPackages = with pkgs; [ proton-ge-bin ];
+    package = pkgs.steam.override {
+      extraPkgs = pkgs: with pkgs; [
+        libGL libGLU vulkan-loader vulkan-tools mesa
+        nvidia-vaapi-driver libva libva-utils
+        xorg.libX11 xorg.libXcursor xorg.libXrandr xorg.libXi
+        xorg.libXext xorg.libXfixes xorg.libXrender xorg.libXScrnSaver
+        xorg.libXcomposite xorg.libXdamage xorg.libXtst
+        nss nspr at-spi2-atk at-spi2-core dbus cups libdrm
+        expat libxkbcommon alsa-lib pango cairo gdk-pixbuf gtk3
+      ];
     };
   };
 

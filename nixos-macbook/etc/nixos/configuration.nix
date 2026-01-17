@@ -14,12 +14,19 @@
 #   - WiFi: Broadcom BCM43602
 #   - Ports: 4x Thunderbolt 3 (USB-C)
 #
-# Perfiles nixos-hardware usados:
+# Perfiles nixos-hardware usados (via flake.nix extraModules):
 #   - apple-macbook-pro: Base Apple (mbpfan, facetimehd, Intel CPU/GPU, laptop)
 #   - common-pc-ssd: Optimizaciones SSD (fstrim)
 #
 # Modulos locales:
 #   - apple-hardware.nix: Drivers SPI, Touch Bar, Broadcom WiFi, HiDPI
+#   - snd-hda-macbookpro.nix: Driver audio CS8409
+#
+# Modulos compartidos (via flake.nix):
+#   - modules/common/*: locale, console, boot, packages, services, users, etc.
+#   - modules/desktop/xmonad.nix: Window manager + X11
+#   - modules/desktop/hyprland.nix: Wayland compositor
+#   - modules/desktop/niri.nix: Wayland compositor
 #
 # Usuario:
 #   - Definido en modules/common/users.nix (compartido)
@@ -50,7 +57,9 @@
     # Driver de audio CS8409 para MacBook (reemplaza el del kernel)
     ./modules/snd-hda-macbookpro.nix
 
-    # Desktop Wayland (Hyprland, niri): importados via flake.nix modulos comunes
+    # Modulo compartido XMonad
+    # Path: dotfiles/modules/desktop/xmonad.nix
+    ../../../modules/desktop/xmonad.nix
 
     # nixos-hardware profiles: Se importan via flake.nix extraModules
     # - nixos-hardware.nixosModules.apple-macbook-pro
@@ -60,26 +69,39 @@
     # Usuario passh: Definido en modules/common/users.nix (via flake)
   ];
 
-  # ===== UNFREE =====
-  # Necesario para algunos drivers y firmware
-  nixpkgs.config.allowUnfree = true;
+  # ===========================================================================
+  # XMONAD CONFIG (modulo compartido)
+  # ===========================================================================
+  # Configuracion especifica del display Retina MacBook
+  desktop.xmonad = {
+    enable = true;
+
+    # Macbook Retina setup (monitor externo detectado automaticamente)
+    displaySetupCommand = ''
+      # HiDPI: escalar interfaz
+      ${pkgs.xorg.xrandr}/bin/xrandr --dpi 192
+    '';
+
+    # Intel usa backend xrender (mas compatible que glx)
+    picomBackend = "xrender";
+
+    refreshRate = 60;
+  };
+
+  # ===========================================================================
+  # OVERRIDES de modulos comunes (valores especificos de macbook)
+  # ===========================================================================
+
+  # Console: HiDPI necesita fuente grande
+  common.console.fontSize = "hidpi";
 
   # WiFi BCM43602: Driver wl (broadcom_sta) NO FUNCIONA en kernel 6.x
   # Compila pero falla en runtime. Usar USB WiFi dongle en su lugar.
 
-  # ===== CONSOLE =====
-  console = {
-    earlySetup = true;
-    font = "ter-p32n";  # Font grande para HiDPI
-    packages = [ pkgs.terminus_font ];
-    keyMap = "us";
-  };
-
-  # ===== BOOT =====
-  boot.loader = {
-    systemd-boot.enable = true;
-    efi.canTouchEfiVariables = true;
-  };
+  # ===========================================================================
+  # CONFIGURACION ESPECIFICA DE MACBOOK
+  # ===========================================================================
+  # Todo lo que sigue es UNICO de macbook y NO debe estar en modulos comunes
 
   # ===== NETWORKING =====
   networking = {
@@ -93,77 +115,18 @@
     };
   };
 
-  # ===== TIMEZONE & LOCALE =====
-  time.timeZone = "Europe/Madrid";
-  i18n = {
-    defaultLocale = "en_US.UTF-8";
-    extraLocaleSettings = {
-      LC_ADDRESS = "es_ES.UTF-8";
-      LC_IDENTIFICATION = "es_ES.UTF-8";
-      LC_MEASUREMENT = "es_ES.UTF-8";
-      LC_MONETARY = "es_ES.UTF-8";
-      LC_NAME = "es_ES.UTF-8";
-      LC_NUMERIC = "es_ES.UTF-8";
-      LC_PAPER = "es_ES.UTF-8";
-      LC_TELEPHONE = "es_ES.UTF-8";
-      LC_TIME = "es_ES.UTF-8";
-    };
-  };
-
-  # ===== USER: passh =====
-  # NOTA: Usuario definido en modules/common/users.nix (compartido via flake)
-  # Solo definimos aqui la politica de sudo especifica de macbook
-
-  # ===== SERVICES =====
+  # ===== SERVICES (especificos de macbook) =====
   services = {
-    # ===== LIBINPUT: Raw input para ratones gaming =====
-    # Filosofia HHKB: el hardware manda, no el software
-    # Perfil flat = movimiento 1:1 con el DPI del raton
-    libinput = {
-      enable = true;
-      mouse = {
-        accelProfile = "flat";  # Raw input, sin aceleracion del sistema
-        accelSpeed = "0";       # Velocidad base (respeta DPI del raton)
-      };
+    # SSH (settings conservadores para laptop)
+    openssh.settings = {
+      PermitRootLogin = "no";
+      PasswordAuthentication = true;
     };
 
-    # X11 Desktop
-    xserver = {
-      enable = true;
-
-      # Window Manager
-      windowManager.xmonad = {
-        enable = true;
-        enableContribAndExtras = true;
-      };
-
-      # Keyboard layout - US por defecto (HHKB), ES como alternativa
-      xkb = {
-        layout = "us,es";
-        variant = "";
-        # Alt+Shift para cambiar layout, Caps Lock -> Escape
-        options = "grp:alt_shift_toggle,caps:escape";
-      };
-    };
-
-    # Display Manager (opcion movida de xserver)
+    # X11 Desktop con GNOME como alternativa a XMonad
+    xserver.enable = true;
     displayManager.gdm.enable = true;
-
-    # GNOME Desktop (nueva ubicacion, fuera de xserver)
     desktopManager.gnome.enable = true;
-
-
-    # SSH
-    openssh = {
-      enable = true;
-      settings = {
-        PermitRootLogin = "no";
-        PasswordAuthentication = true;
-      };
-    };
-
-    # Bluetooth manager (GUI para XMonad)
-    blueman.enable = true;
 
     # keyd: Remapeador de teclas a nivel kernel (funciona en X11 y Wayland)
     # Permite usar Fn + fila numerica como F-keys (workaround Touch Bar)
@@ -218,49 +181,30 @@
       };
     };
 
-    # Printing (opcional)
-    # printing.enable = true;
-
-    # Syncthing (opcional - sincronizar org con otros hosts)
+    # Syncthing (comentado - habilitar si se quiere sync con otros hosts)
     # syncthing = {
     #   enable = true;
     #   user = "passh";
     #   dataDir = "/home/passh";
     #   openDefaultPorts = true;
     # };
-  };
 
-  # ===== PROGRAMS =====
-  programs = {
-    fish.enable = true;
-    git.enable = true;
-
-    # nix-ld para binarios dinamicos
-    nix-ld = {
-      enable = true;
-      libraries = with pkgs; [ ];
+    # lid close: no suspender (el MacBook no se recupera bien)
+    logind.settings.Login = {
+      HandleLidSwitch = "ignore";
+      HandleLidSwitchExternalPower = "ignore";
+      HandleLidSwitchDocked = "ignore";
     };
   };
 
-  # ===== VIRTUALIZATION (opcional) =====
-  virtualisation = {
-    docker = {
-      enable = true;
-      autoPrune.enable = true;
-    };
-
-    # libvirtd.enable = true;  # Descomentar si necesitas VMs
+  # ===== VIRTUALIZATION (Docker para desarrollo) =====
+  virtualisation.docker = {
+    enable = true;
+    autoPrune.enable = true;
   };
 
-  # ===== SECURITY =====
-  security = {
-    polkit.enable = true;
-    sudo.wheelNeedsPassword = true;  # Macbook: laptop, seguridad con password
-  };
-
-  # ===== WAYLAND COMPOSITORS =====
-  # Hyprland y niri: habilitados por defecto via flake.nix
-  # Para deshabilitar: desktop.hyprland.enable = false;
+  # ===== SECURITY (macbook: laptop, seguridad con password) =====
+  security.sudo.wheelNeedsPassword = true;
 
   # ===== POWER MANAGEMENT =====
   # Deshabilitar suspension - el MacBook no se recupera bien
@@ -271,50 +215,11 @@
     hybrid-sleep.enable = false;
   };
 
-  # Deshabilitar suspend en lid close
-  services.logind.settings.Login = {
-    HandleLidSwitch = "ignore";
-    HandleLidSwitchExternalPower = "ignore";
-    HandleLidSwitchDocked = "ignore";
-  };
-
-  # ===== FONTS =====
-  # Todas las fuentes en modules/common/packages.nix (compartidas)
-
   # ===== SYSTEM PACKAGES (solo especificos de MacBook) =====
-  # Los comunes (vim, git, htop, etc.) estan en modules/common/packages.nix
+  # Los paquetes comunes estan en modules/common/packages.nix
   environment.systemPackages = with pkgs; [
-    # Terminal (version unstable especifica)
-    alacritty
-
-    # Editor: emacs-pgtk instalado via home-manager (passh.nix)
-
-    # Power management GUI (solo laptops - cambiar governor en caliente)
-    cpupower-gui
-
-    # Bluetooth GUI (para XMonad)
-    blueman
-
-    # LSP Nix
-    nil
-    nixd
-
-    # Home Manager
-    home-manager
+    # Nada especifico por ahora - todo viene de modulos comunes
   ];
-
-  # ===== NIX SETTINGS =====
-  nix = {
-    settings = {
-      auto-optimise-store = true;
-      experimental-features = [ "nix-command" "flakes" ];
-    };
-    gc = {
-      automatic = true;
-      dates = "weekly";
-      options = "--delete-older-than 14d";
-    };
-  };
 
   system.stateVersion = "24.11";
 }
