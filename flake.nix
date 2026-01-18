@@ -243,6 +243,70 @@
           ] else [])
           ++ extraModules;
         };
+
+      # =========================================================================
+      # NUEVA ARQUITECTURA: mkSystem (Clone-First)
+      # =========================================================================
+      # Filosofia: Todas las maquinas son CLONES IDENTICOS.
+      # Solo cambia: hostname, hardware-configuration.nix, y modulos hardware.
+      #
+      # Uso:
+      #   macbook-new = mkSystem {
+      #     hostname = "macbook";
+      #     hardware = [ ./hardware/apple/macbook-pro-13-2.nix ];
+      #   };
+      # =========================================================================
+      mkSystem = {
+        hostname,
+        hardware ? [],
+        extra ? [],  # Modulos adicionales opt-in (ej: vocento-vpn.nix)
+      }: nixpkgs.lib.nixosSystem {
+        inherit system;
+
+        specialArgs = {
+          inherit inputs;
+          inherit home-manager nixos-hardware;
+          inherit alacritty-themes;
+          inherit pkgsMaster;
+        };
+
+        modules = [
+          # ===== BASE UNIFICADA (igual para TODAS las maquinas) =====
+          ./modules/base
+
+          # ===== HOST SPECIFIC =====
+          ./hosts/${hostname}/hardware-configuration.nix
+          ./hosts/${hostname}
+
+          # ===== HOSTNAME =====
+          { networking.hostName = hostname; }
+
+          # ===== NIX-INDEX DATABASE =====
+          nix-index-database.nixosModules.nix-index
+          {
+            system.configurationRevision =
+              if self ? rev then self.rev else "dirty";
+            system.nixos.label =
+              if self ? shortRev then "flake-${self.shortRev}" else "flake-dirty";
+            programs.nix-index-database.comma.enable = true;
+          }
+
+          # ===== HOME MANAGER =====
+          home-manager.nixosModules.home-manager
+          {
+            home-manager = {
+              useGlobalPkgs = true;
+              useUserPackages = true;
+              extraSpecialArgs = {
+                inherit inputs pkgsMaster alacritty-themes;
+                hostname = hostname;
+              };
+              users.passh = import ./modules/home-manager;
+              backupFileExtension = "backup";
+            };
+          }
+        ] ++ hardware ++ extra;
+      };
     in
     {
       # -----------------------------------------------------------------------
@@ -311,6 +375,26 @@
           extraModules = [
             nixos-hardware.nixosModules.apple-macbook-pro
             nixos-hardware.nixosModules.common-pc-ssd
+          ];
+        };
+
+        # ---------------------------------------------------------------------
+        # MACBOOK-NEW - Nueva arquitectura Clone-First (TESTING)
+        # ---------------------------------------------------------------------
+        # Usa la nueva estructura modules/base/ + hardware/ + hosts/
+        #
+        # Uso para testing:
+        #   sudo nixos-rebuild test --flake ~/dotfiles#macbook-new
+        #
+        # Cuando funcione, reemplazara a 'macbook'
+        # ---------------------------------------------------------------------
+        macbook-new = mkSystem {
+          hostname = "macbook";
+          hardware = [
+            nixos-hardware.nixosModules.apple-macbook-pro
+            nixos-hardware.nixosModules.common-pc-ssd
+            ./hardware/apple/macbook-pro-13-2.nix
+            ./hardware/apple/snd-hda-macbookpro.nix
           ];
         };
       };
