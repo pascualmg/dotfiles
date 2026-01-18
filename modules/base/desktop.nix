@@ -25,6 +25,7 @@
   # ===== DISPLAY MANAGER: GDM =====
   # GDM funciona con GNOME, XMonad, Hyprland, Niri
   services.displayManager.gdm.enable = true;
+  services.displayManager.defaultSession = "none+xmonad";  # XMonad por defecto en todas
 
   # ===== DESKTOP ENVIRONMENT: GNOME =====
   services.desktopManager.gnome.enable = true;

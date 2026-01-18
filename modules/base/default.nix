@@ -34,5 +34,9 @@
     # ===== WAYLAND COMPOSITORS =====
     ../desktop/hyprland.nix
     ../desktop/niri.nix
+
+    # ===== VIRTUALIZACION =====
+    # Docker + libvirt/QEMU para TODAS las maquinas
+    ./virtualization.nix
   ];
 }

@@ -377,6 +377,22 @@
             ./hardware/apple/snd-hda-macbookpro.nix
           ];
         };
+
+        # ---------------------------------------------------------------------
+        # VESPINO-NEW - Testing clone-first architecture
+        # ---------------------------------------------------------------------
+        # ARQUITECTURA CLONE-FIRST (migrando 2026-01-19)
+        # Hardware: AMD CPU + NVIDIA RTX 2060
+        #
+        # Uso para testear:
+        #   ssh vespino "sudo nixos-rebuild test --flake ~/dotfiles#vespino-new --impure"
+        # ---------------------------------------------------------------------
+        vespino-new = mkSystem {
+          hostname = "vespino";
+          hardware = [
+            ./hardware/nvidia/legacy.nix
+          ];
+        };
       };
 
       # -----------------------------------------------------------------------
