@@ -362,33 +362,13 @@
         # ---------------------------------------------------------------------
         # MACBOOK - Laptop Apple MacBook Pro 13,2 (2016)
         # ---------------------------------------------------------------------
-        # Hardware: Intel Skylake, Touch Bar, SSD externo Thunderbolt
-        # Rol: Uso movil, desarrollo ligero
+        # ARQUITECTURA CLONE-FIRST (migrado 2026-01-18)
+        # Usa modules/base/ + hardware/ + hosts/
         #
         # Uso:
         #   sudo nixos-rebuild switch --flake ~/dotfiles#macbook
         # ---------------------------------------------------------------------
-        macbook = mkNixosConfig {
-          hostname = "macbook";
-          configPath = ./nixos-macbook/etc/nixos/configuration.nix;
-          enableHomeManager = true;
-          extraModules = [
-            nixos-hardware.nixosModules.apple-macbook-pro
-            nixos-hardware.nixosModules.common-pc-ssd
-          ];
-        };
-
-        # ---------------------------------------------------------------------
-        # MACBOOK-NEW - Nueva arquitectura Clone-First (TESTING)
-        # ---------------------------------------------------------------------
-        # Usa la nueva estructura modules/base/ + hardware/ + hosts/
-        #
-        # Uso para testing:
-        #   sudo nixos-rebuild test --flake ~/dotfiles#macbook-new
-        #
-        # Cuando funcione, reemplazara a 'macbook'
-        # ---------------------------------------------------------------------
-        macbook-new = mkSystem {
+        macbook = mkSystem {
           hostname = "macbook";
           hardware = [
             nixos-hardware.nixosModules.apple-macbook-pro
