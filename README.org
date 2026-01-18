@@ -982,6 +982,204 @@ dotfiles.xmobar = {
 
 La formula: =TopH = fontSize * 1.8= ajusta la altura de barra proporcionalmente.
 
+** Display Managers: GDM vs LightDM - Problema de unificacion
+
+*Estado:* PENDIENTE DE DECISION (analisis 2026-01-18)
+
+*** El problema
+
+El modulo compartido =modules/desktop/xmonad.nix= fue disenado originalmente para aurin
+(LightDM + XMonad puro). Al intentar usarlo en macbook con GDM + GNOME, surgieron
+*cuatro conflictos criticos*:
+
+| # | Conflicto | Causa | Impacto |
+|---+-----------+-------+---------|
+| 1 | Picom duplicado | NixOS services + home-manager | Doble compositor, warnings |
+| 2 | Variables X11 forzadas | =XDG_SESSION_TYPE=x11= hardcoded | Rompe sesiones Wayland |
+| 3 | setupCommands incompatible | GDM 49 ignora DisplaySetupCommands | xrandr nunca se ejecuta |
+| 4 | Picom vs Mutter | Picom corre cuando Mutter ya es compositor | Conflicto de compositing |
+
+*** Estado actual de las maquinas
+
+| Maquina | DM | WM/DE | Picom | Estado |
+|---------+----+-------+-------+--------|
+| aurin | LightDM | XMonad | home-manager | OK (produccion) |
+| vespino | LightDM | XMonad | home-manager | OK |
+| macbook | GDM | GNOME + XMonad | NixOS service | Conflictos |
+
+*** Analisis tecnico
+
+**** Por que LightDM funciona y GDM no
+
+LightDM:
+- =display-setup-script= se ejecuta ANTES de crear la sesion X
+- El script de xrandr configura monitores antes de XMonad
+- Sin compositor integrado, Picom es necesario
+- Compatible con =XDG_SESSION_TYPE=x11=
+
+GDM 49+:
+- =DisplaySetupCommands= fue removido por problemas de seguridad
+- Solo soporta Wayland como sesion nativa
+- Cuando lanza X11, ya es "demasiado tarde" para setup scripts
+- GNOME usa Mutter como compositor (Picom es redundante y conflictivo)
+
+**** El problema de las variables XDG_SESSION_TYPE
+
+El modulo xmonad.nix fuerza:
+
+#+BEGIN_SRC nix
+displayManager.sessionCommands = ''
+  export XDG_SESSION_TYPE=x11
+  export GDK_BACKEND=x11
+'';
+#+END_SRC
+
+Esto:
+- En aurin (solo X11): Correcto
+- En macbook (GNOME Wayland + XMonad X11): Rompe GNOME
+
+**** La duplicacion de Picom
+
+Actualmente hay DOS configuraciones de Picom:
+
+#+BEGIN_SRC nix
+# 1. NixOS service (modules/desktop/xmonad.nix)
+services.picom = {
+  enable = true;
+  backend = cfg.picomBackend;
+};
+
+# 2. Home-manager (modules/home-manager/programs/picom.nix)
+services.picom = {
+  enable = true;
+  # Config completa con blur, animations, etc.
+};
+#+END_SRC
+
+Cuando ambos estan activos, puede haber conflictos sutiles.
+
+**** Picom vs Mutter
+
+GNOME usa Mutter como window manager Y compositor. Ejecutar Picom encima de Mutter:
+- Es redundante (doble compositing)
+- Puede causar tearing o artefactos visuales
+- Desperdicia recursos (dos procesos haciendo lo mismo)
+
+*** Soluciones posibles
+
+**** Opcion A: Refactorizar xmonad.nix con opciones granulares
+
+Anadir opciones para controlar cada aspecto:
+
+#+BEGIN_SRC nix
+options.desktop.xmonad = {
+  enable = lib.mkEnableOption "XMonad";
+  enablePicom = lib.mkOption { default = true; };
+  forceX11Session = lib.mkOption { default = true; };
+  displaySetupCommand = lib.mkOption { default = ""; };
+};
+#+END_SRC
+
+*Pros:*
+- Mantiene un solo modulo
+- Flexibilidad total por maquina
+- Cambio incremental
+
+*Contras:*
+- Complejidad adicional en el modulo
+- Muchas combinaciones a testear
+- El modulo ya tiene bastantes opciones
+
+**** Opcion B: Crear modulo display-manager.nix centralizado
+
+Nuevo modulo que abstraiga Display Manager y compositor:
+
+#+BEGIN_SRC nix
+# modules/desktop/display-manager.nix
+options.desktop.displayManager = {
+  type = lib.mkOption {
+    type = lib.types.enum [ "lightdm" "gdm" "none" ];
+  };
+  compositor = lib.mkOption {
+    type = lib.types.enum [ "picom" "mutter" "none" ];
+  };
+  forceX11 = lib.mkOption { default = false; };
+};
+#+END_SRC
+
+*Pros:*
+- Separacion clara de responsabilidades
+- Reutilizable para futuros DEs
+- Facil de razonar
+
+*Contras:*
+- Mas archivos que mantener
+- Refactor mas grande
+- Puede introducir bugs durante migracion
+
+**** Opcion C: Limpiar duplicacion de Picom primero (RECOMENDADA)
+
+Paso minimo de bajo riesgo:
+1. Eliminar =services.picom= de xmonad.nix (NixOS level)
+2. Mantener solo home-manager picom
+3. Anadir opcion =enablePicom= al modulo xmobar para maquinas sin X11 compositor
+
+#+BEGIN_SRC nix
+# En machines/macbook.nix
+dotfiles.picom.enable = false;  # GNOME usa Mutter
+#+END_SRC
+
+*Pros:*
+- Cambio pequeno y seguro
+- Elimina la duplicacion inmediatamente
+- Base para futuras mejoras
+- Facil rollback si algo falla
+
+*Contras:*
+- No resuelve el problema de setupCommands
+- No resuelve variables X11 forzadas
+- Solucion parcial
+
+*** Recomendacion
+
+1. *NO migrar aurin a GDM* - Mantener LightDM + XMonad puro. Aurin es produccion critica.
+
+2. *Orden de pruebas:* vespino (testing) -> macbook (semi-produccion) -> aurin (nunca sin necesidad)
+
+3. *Empezar por Opcion C* (limpiar picom) como primer paso de bajo riesgo:
+   - Probar en vespino primero
+   - Si funciona, aplicar a macbook
+   - Luego evaluar si vale la pena Opcion A o B
+
+4. *Para macbook con GNOME:* Considerar NO importar xmonad.nix en absoluto cuando se use GNOME, y solo importarlo para sesiones XMonad puras.
+
+*** Comandos utiles para debugging
+
+#+BEGIN_SRC bash
+# Ver que Display Manager esta activo
+systemctl status display-manager
+
+# Ver sesiones disponibles
+ls /usr/share/xsessions/
+ls /usr/share/wayland-sessions/
+
+# Ver variables de sesion
+echo $XDG_SESSION_TYPE
+echo $XDG_CURRENT_DESKTOP
+
+# Ver si picom esta corriendo
+pgrep -a picom
+
+# Ver compositor activo
+echo $WAYLAND_DISPLAY  # Si tiene valor, estas en Wayland
+#+END_SRC
+
+*** Referencias
+
+- [[https://gitlab.gnome.org/GNOME/gdm/-/issues/][GDM Issues - GNOME GitLab]]
+- [[https://wiki.archlinux.org/title/GDM][ArchWiki GDM]]
+- [[https://nixos.wiki/wiki/XMonad][NixOS Wiki XMonad]]
+
 * CPU Frequency Scaling: Por que tu CPU no siempre va a tope
 
 Imagina que tu coche tuviera solo dos opciones: 0 km/h o 200 km/h. Seria un
@@ -1464,7 +1662,7 @@ Esto crea: =~/.config/nueva-app/config.conf= -> =~/dotfiles/nueva-app/.config/nu
 
 ---
 
-*Ultima actualizacion:* 2026-01-17
+*Ultima actualizacion:* 2026-01-18
 *Sistemas:* Aurin (NixOS 25.05), MacBook Pro 13,2 (NixOS Flakes), Vespino (pendiente migrar)
 *Shell principal:* Fish
 *Window Manager:* XMonad
