@@ -9,7 +9,7 @@
 # Uso: nix-on-droid switch --flake ~/dotfiles
 # =============================================================================
 
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, pkgsMasterArm, ... }:
 
 {
   # Solo importamos el core (sin desktop stuff)
@@ -29,6 +29,14 @@
     fzf           # Fuzzy finder
     lazygit       # Git TUI
     ncdu          # Disk usage TUI
+
+    # Emacs para Doom
+    emacs
+    ripgrep       # Dependencia de Doom
+    fd            # Dependencia de Doom
+
+    # Claude Code (desde nixpkgs-master para version mas reciente)
+    pkgsMasterArm.claude-code
   ];
 
   # Fish shell con config ligera

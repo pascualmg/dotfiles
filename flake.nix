@@ -123,6 +123,12 @@
         config.allowUnfree = true;
       };
 
+      # pkgsMaster para ARM (nix-on-droid)
+      pkgsMasterArm = import nixpkgs-master {
+        system = "aarch64-linux";
+        config.allowUnfree = true;
+      };
+
       # -------------------------------------------------------------------------
       # Funcion helper para crear configuraciones NixOS
       # -------------------------------------------------------------------------
@@ -351,12 +357,18 @@
       # -----------------------------------------------------------------------
       nixOnDroidConfigurations.default = nix-on-droid.lib.nixOnDroidConfiguration {
         pkgs = import nixpkgs { system = "aarch64-linux"; };
+        extraSpecialArgs = {
+          inherit pkgsMasterArm;  # Para paquetes bleeding-edge en ARM
+        };
         modules = [
           ./nix-on-droid/nix-on-droid.nix
           {
             home-manager = {
               useGlobalPkgs = true;
               backupFileExtension = "backup";
+              extraSpecialArgs = {
+                inherit pkgsMasterArm;  # Pasar a home-manager también
+              };
               config = ./modules/home-manager/machines/android.nix;
             };
           }
