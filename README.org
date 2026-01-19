@@ -1,6 +1,6 @@
-#+TITLE: Dotfiles - passh@aurin
+#+TITLE: Dotfiles - passh (Multi-Machine NixOS)
 #+AUTHOR: passh
-#+DATE: 2025-11-22
+#+DATE: 2026-01-19
 #+STARTUP: overview
 
 * TL;DR - Setup Rapido
@@ -10,86 +10,116 @@
 git clone <repo> ~/dotfiles
 cd ~/dotfiles
 
-# Aplicar configs importantes
-stow -v home-manager  # Home Manager (gestion de paquetes)
-stow -v fish          # Shell
-stow -v xmonad        # Window manager
-stow -v xmobar        # Status bar
-stow -v picom         # Compositor (transparencias, sombras, etc.)
-stow -v alacritty     # Terminal
+# Aplicar NixOS config (FLAKES - metodo actual)
+# IMPORTANTE: Ejecutar 'hostname' primero para saber en que maquina estas
 
-# NixOS config (necesita root)
-sudo stow -v -t / nixos-aurin
+# Aurin - necesita --impure (hosts Vocento)
+sudo nixos-rebuild switch --flake ~/dotfiles#aurin --impure
 
-# Rebuild NixOS
-sudo nixos-rebuild switch
+# MacBook
+sudo nixos-rebuild switch --flake ~/dotfiles#macbook
+
+# Vespino - necesita --impure (hosts Vocento)
+sudo nixos-rebuild switch --flake ~/dotfiles#vespino --impure
+
+# Test sin aplicar cambios permanentes
+sudo nixos-rebuild test --flake ~/dotfiles#aurin --impure
+
+# Rollback de emergencia
+sudo nixos-rebuild switch --rollback
 #+END_SRC
 
-* Estructura del Proyecto
+* Arquitectura Clone-First (2026-01-19)
+
+** Filosofia
+
+*Todas las maquinas son CLONES IDENTICOS.* Solo se diferencian en hardware.
+
+La configuracion se divide en 3 capas:
+
+#+BEGIN_SRC text
+modules/base/       -> Config comun a TODAS las maquinas (desktop, servicios, etc.)
+hardware/           -> Config especifica de hardware (nvidia, apple, audio)
+hosts/*/            -> Solo servicios y overrides especificos de cada maquina
+#+END_SRC
+
+** Estructura del Proyecto
 
 #+BEGIN_SRC text
 dotfiles/
-|-- flake.nix         * Entry point NixOS (multi-maquina)
-|-- modules/          * Modulos NixOS compartidos
-|   |-- common/       * Paquetes y servicios comunes
-|   |-- desktop/      * XMonad, Hyprland, GNOME
-|   `-- home-manager/ * Configs de usuario (fish, alacritty, etc.)
-|-- nixos-aurin/      * Config NixOS Aurin (workstation)
-|-- nixos-macbook/    * Config NixOS MacBook Pro
-|-- nixos-vespino/    * Config NixOS Vespino (servidor)
-|-- xmonad/           * XMonad config (stow)
-|-- xmobar/           . Legacy (migrado a home-manager)
-|-- picom/            . Legacy (migrado a home-manager)
-|-- fish/             . Legacy (migrado a home-manager)
-|-- alacritty/        . Legacy (migrado a home-manager)
-|-- claude-code/      * Config Claude Code CLI
-`-- README.org          Este archivo
+|-- flake.nix                    * Entry point (mkSystem para clone-first)
+|-- modules/
+|   |-- base/                    * BASE UNIFICADA (todas las maquinas)
+|   |   |-- default.nix          # Imports: boot, nix-settings, packages, desktop, etc.
+|   |   |-- desktop.nix          # LightDM + GNOME + XMonad
+|   |   |-- sunshine.nix         # Streaming server (opcional)
+|   |   `-- virtualization.nix   # Docker + libvirt
+|   |-- common/                  . Modulos legacy (usados por mkNixosConfig)
+|   |-- desktop/                 * Wayland: hyprland.nix, niri.nix
+|   `-- home-manager/            * Configuracion usuario passh
+|-- hardware/                    * MODULOS HARDWARE
+|   |-- nvidia/
+|   |   |-- rtx5080.nix          # Aurin: RTX 5080 (open drivers)
+|   |   `-- rtx2060.nix          # Vespino: RTX 2060
+|   |-- apple/
+|   |   |-- macbook-pro-13-2.nix # MacBook: keyd, HiDPI, bateria
+|   |   `-- snd-hda-macbookpro.nix # MacBook: audio CS8409
+|   `-- audio/
+|       `-- fiio-k7.nix          # Aurin: DAC/AMP FiiO K7
+|-- hosts/                       * HOST-SPECIFIC (solo overrides)
+|   |-- aurin/
+|   |   |-- hardware-configuration.nix
+|   |   `-- default.nix          # VPN bridge, hosts Vocento, etc.
+|   |-- macbook/
+|   |   |-- hardware-configuration.nix
+|   |   `-- default.nix          # Casi vacio (todo viene de base + hardware)
+|   `-- vespino/
+|       |-- hardware-configuration.nix
+|       |-- default.nix          # NFS, Minecraft, VPN VM
+|       `-- minecraft.nix        # Servidor Minecraft
+|-- xmonad/                      * XMonad config (stow)
+|-- nixos-*/                     . Legacy (pre-flakes, backup)
+`-- README.org                     Este archivo
 #+END_SRC
 
 *Leyenda:* =* Activo= | =. Legacy/migrado=
 
-** Arquitectura de Modulos NixOS
+** Como se construye cada maquina
 
-Filosofia: *modulos compartidos* con *opciones configurables* por maquina.
-
-#+BEGIN_SRC text
-modules/
-|-- common/
-|   |-- packages.nix      # Paquetes compartidos (todas las maquinas)
-|   `-- services.nix      # Servicios comunes
-|-- desktop/
-|   |-- xmonad.nix        # XMonad + X11 + Picom + libinput
-|   |-- hyprland.nix      # Wayland (experimental)
-|   `-- gnome.nix         # GNOME Desktop
-`-- home-manager/
-    |-- default.nix       # Entry point
-    |-- passh.nix         # Config usuario passh
-    `-- programs/         # Configs por programa
-#+END_SRC
-
-*Ejemplo - XMonad compartido:*
 #+BEGIN_SRC nix
-# En modules/desktop/xmonad.nix - define opciones
-options.desktop.xmonad = {
-  enable = lib.mkEnableOption "XMonad";
-  displaySetupCommand = lib.mkOption { ... };
-  picomBackend = lib.mkOption { ... };
-  refreshRate = lib.mkOption { ... };
+# En flake.nix
+aurin = mkSystem {
+  hostname = "aurin";
+  hardware = [
+    ./hardware/nvidia/rtx5080.nix
+    ./hardware/audio/fiio-k7.nix
+  ];
 };
 
-# En nixos-aurin/configuration.nix - usa el modulo
-imports = [ ../../../modules/desktop/xmonad.nix ];
-desktop.xmonad = {
-  enable = true;
-  displaySetupCommand = "xrandr --output DP-4 --mode 5120x1440 --rate 120";
-  picomBackend = "glx";
-  refreshRate = 120;
+macbook = mkSystem {
+  hostname = "macbook";
+  hardware = [
+    nixos-hardware.nixosModules.apple-macbook-pro
+    ./hardware/apple/macbook-pro-13-2.nix
+    ./hardware/apple/snd-hda-macbookpro.nix
+  ];
+};
+
+vespino = mkSystem {
+  hostname = "vespino";
+  hardware = [
+    ./hardware/nvidia/rtx2060.nix
+  ];
 };
 #+END_SRC
 
-*Hardware de Input - Filosofia HHKB:*
-El modulo =desktop/xmonad.nix= incluye =libinput= con perfil =flat= (raw input).
-El hardware manda, no el software. Ratones gaming usan su DPI sin aceleracion del sistema.
+** Maquinas
+
+| Maquina | Hardware | Rol | Display Manager |
+|---------+----------+-----+-----------------|
+| aurin   | Dual Xeon E5-2699v3, RTX 5080, 128GB | Produccion, desarrollo | LightDM |
+| macbook | MacBook Pro 2016, Intel, HiDPI | Laptop, movilidad | LightDM |
+| vespino | AMD CPU, RTX 2060 | Testing, Minecraft, NFS | LightDM |
 
 * Configuraciones Principales
 
@@ -117,15 +147,8 @@ El hardware manda, no el software. Ratones gaming usan su DPI sin aceleracion de
 
 *Aplicar cambios:*
 #+BEGIN_SRC bash
-# Editar
-vim ~/.config/home-manager/home.nix
-
-# Aplicar
-home-manager switch
-
-# O si usas stow
-stow -R home-manager
-home-manager switch
+# Con flakes (recomendado) - home-manager integrado en nixos-rebuild
+sudo nixos-rebuild switch --flake ~/dotfiles#aurin --impure
 #+END_SRC
 
 ** NixOS Aurin (/etc/nixos/configuration.nix) *
@@ -469,19 +492,19 @@ rm ~/.git-credentials
 * Comandos Mas Usados
 
 #+BEGIN_SRC bash
-# Activar config (con verbose)
-stow -v -R PAQUETE
+# Aplicar NixOS config (FLAKES - metodo actual)
+sudo nixos-rebuild switch --flake ~/dotfiles#aurin --impure
+sudo nixos-rebuild switch --flake ~/dotfiles#macbook
+sudo nixos-rebuild switch --flake ~/dotfiles#vespino --impure
 
-# Para NixOS
-sudo stow -v -R -t / nixos-aurin
-sudo nixos-rebuild switch
+# Test sin aplicar permanentemente
+sudo nixos-rebuild test --flake ~/dotfiles#aurin --impure
 
-# Home Manager
-stow -v -R home-manager
-home-manager switch
+# Rollback
+sudo nixos-rebuild switch --rollback
 
-# Testear sin aplicar
-stow -v -n PAQUETE
+# Activar config stow (solo para xmonad ya)
+stow -v -R xmonad
 #+END_SRC
 
 * Setup Completo Nueva Maquina
@@ -491,25 +514,17 @@ stow -v -n PAQUETE
 git clone <repo-url> ~/dotfiles
 cd ~/dotfiles
 
-# 2. Aplicar Home Manager
-stow -v home-manager
-home-manager switch
+# 2. Aplicar NixOS config (incluye home-manager)
+# Cambiar 'aurin' por tu hostname
+sudo nixos-rebuild switch --flake ~/dotfiles#aurin --impure
 
-# 3. Aplicar configs de usuario
-stow -v fish
+# 3. Aplicar xmonad (unico que aun usa stow)
 stow -v xmonad
-stow -v xmobar
-stow -v picom
-stow -v alacritty
 
-# 4. NixOS config (solo en NixOS)
-sudo stow -v -t / nixos-aurin
-sudo nixos-rebuild switch
-
-# 5. Recargar shell
+# 4. Recargar shell
 fish
 
-# 6. Reiniciar sesion X (logout/login) o:
+# 5. Reiniciar sesion X (logout/login) o:
 xmonad --recompile && xmonad --restart
 #+END_SRC
 
@@ -982,176 +997,69 @@ dotfiles.xmobar = {
 
 La formula: =TopH = fontSize * 1.8= ajusta la altura de barra proporcionalmente.
 
-** Display Managers: GDM vs LightDM - Problema de unificacion
+** Display Managers: GDM vs LightDM - RESUELTO (2026-01-19)
 
-*Estado:* PENDIENTE DE DECISION (analisis 2026-01-18)
+*Estado:* RESUELTO - LightDM para todas las maquinas
 
 *** El problema
 
-El modulo compartido =modules/desktop/xmonad.nix= fue disenado originalmente para aurin
-(LightDM + XMonad puro). Al intentar usarlo en macbook con GDM + GNOME, surgieron
-*cuatro conflictos criticos*:
+Intentamos usar GDM + GNOME + XMonad como stack unificado en la arquitectura clone-first.
+*Ambas maquinas (aurin y macbook) dejaron de arrancar graficamente.*
 
-| # | Conflicto | Causa | Impacto |
-|---+-----------+-------+---------|
-| 1 | Picom duplicado | NixOS services + home-manager | Doble compositor, warnings |
-| 2 | Variables X11 forzadas | =XDG_SESSION_TYPE=x11= hardcoded | Rompe sesiones Wayland |
-| 3 | setupCommands incompatible | GDM 49 ignora DisplaySetupCommands | xrandr nunca se ejecuta |
-| 4 | Picom vs Mutter | Picom corre cuando Mutter ya es compositor | Conflicto de compositing |
+Sintoma: El sistema arranca, llega a "reached target graphical interface", pero nunca aparece el login.
+
+*** Causa raiz
+
+GDM 49+ tiene problemas con:
+1. *NVIDIA*: GDM en modo X11 busca =gnome-session-x11@gnome-login.target= que no existe
+2. *XMonad puro*: GDM espera una sesion GNOME completa, no solo un WM
+
+*** Intentos fallidos
+
+1. =services.displayManager.gdm.wayland = false=
+   - ERROR: GDM en X11 tiene dependencias rotas con gnome-session
+   - Rompio AMBAS maquinas
+
+2. Mover =gdm.wayland = false= solo al modulo NVIDIA
+   - Seguia fallando porque el problema es GDM en si
+
+*** Solucion final
+
+Cambiar de GDM a LightDM en =modules/base/desktop.nix=:
+
+#+BEGIN_SRC nix
+# ANTES (roto con NVIDIA y XMonad):
+services.displayManager.gdm.enable = true;
+
+# DESPUES (funciona perfectamente):
+services.xserver.displayManager.lightdm.enable = true;
+services.displayManager.defaultSession = "none+xmonad";
+#+END_SRC
+
+*** Por que LightDM funciona
+
+- Es simple: solo lanza sesiones, no tiene dependencias complejas
+- Funciona con NVIDIA sin configuracion extra
+- Puede lanzar cualquier sesion: GNOME, XMonad, Hyprland, etc.
+- =display-setup-script= se ejecuta ANTES de crear la sesion X
 
 *** Estado actual de las maquinas
 
 | Maquina | DM | WM/DE | Picom | Estado |
 |---------+----+-------+-------+--------|
-| aurin | LightDM | XMonad | home-manager | OK (produccion) |
-| vespino | LightDM | XMonad | home-manager | OK |
-| macbook | GDM | GNOME + XMonad | NixOS service | Conflictos |
+| aurin | LightDM | XMonad + GNOME disponible | home-manager | OK |
+| vespino | LightDM | XMonad + GNOME disponible | home-manager | OK |
+| macbook | LightDM | XMonad + GNOME disponible | home-manager | OK |
 
-*** Analisis tecnico
+*** Picom: por que no esta en desktop.nix
 
-**** Por que LightDM funciona y GDM no
+Picom NO se habilita en =modules/base/desktop.nix= porque conflictua con Mutter (GNOME).
 
-LightDM:
-- =display-setup-script= se ejecuta ANTES de crear la sesion X
-- El script de xrandr configura monitores antes de XMonad
-- Sin compositor integrado, Picom es necesario
-- Compatible con =XDG_SESSION_TYPE=x11=
-
-GDM 49+:
-- =DisplaySetupCommands= fue removido por problemas de seguridad
-- Solo soporta Wayland como sesion nativa
-- Cuando lanza X11, ya es "demasiado tarde" para setup scripts
-- GNOME usa Mutter como compositor (Picom es redundante y conflictivo)
-
-**** El problema de las variables XDG_SESSION_TYPE
-
-El modulo xmonad.nix fuerza:
-
-#+BEGIN_SRC nix
-displayManager.sessionCommands = ''
-  export XDG_SESSION_TYPE=x11
-  export GDK_BACKEND=x11
-'';
-#+END_SRC
-
-Esto:
-- En aurin (solo X11): Correcto
-- En macbook (GNOME Wayland + XMonad X11): Rompe GNOME
-
-**** La duplicacion de Picom
-
-Actualmente hay DOS configuraciones de Picom:
-
-#+BEGIN_SRC nix
-# 1. NixOS service (modules/desktop/xmonad.nix)
-services.picom = {
-  enable = true;
-  backend = cfg.picomBackend;
-};
-
-# 2. Home-manager (modules/home-manager/programs/picom.nix)
-services.picom = {
-  enable = true;
-  # Config completa con blur, animations, etc.
-};
-#+END_SRC
-
-Cuando ambos estan activos, puede haber conflictos sutiles.
-
-**** Picom vs Mutter
-
-GNOME usa Mutter como window manager Y compositor. Ejecutar Picom encima de Mutter:
-- Es redundante (doble compositing)
-- Puede causar tearing o artefactos visuales
-- Desperdicia recursos (dos procesos haciendo lo mismo)
-
-*** Soluciones posibles
-
-**** Opcion A: Refactorizar xmonad.nix con opciones granulares
-
-Anadir opciones para controlar cada aspecto:
-
-#+BEGIN_SRC nix
-options.desktop.xmonad = {
-  enable = lib.mkEnableOption "XMonad";
-  enablePicom = lib.mkOption { default = true; };
-  forceX11Session = lib.mkOption { default = true; };
-  displaySetupCommand = lib.mkOption { default = ""; };
-};
-#+END_SRC
-
-*Pros:*
-- Mantiene un solo modulo
-- Flexibilidad total por maquina
-- Cambio incremental
-
-*Contras:*
-- Complejidad adicional en el modulo
-- Muchas combinaciones a testear
-- El modulo ya tiene bastantes opciones
-
-**** Opcion B: Crear modulo display-manager.nix centralizado
-
-Nuevo modulo que abstraiga Display Manager y compositor:
-
-#+BEGIN_SRC nix
-# modules/desktop/display-manager.nix
-options.desktop.displayManager = {
-  type = lib.mkOption {
-    type = lib.types.enum [ "lightdm" "gdm" "none" ];
-  };
-  compositor = lib.mkOption {
-    type = lib.types.enum [ "picom" "mutter" "none" ];
-  };
-  forceX11 = lib.mkOption { default = false; };
-};
-#+END_SRC
-
-*Pros:*
-- Separacion clara de responsabilidades
-- Reutilizable para futuros DEs
-- Facil de razonar
-
-*Contras:*
-- Mas archivos que mantener
-- Refactor mas grande
-- Puede introducir bugs durante migracion
-
-**** Opcion C: Limpiar duplicacion de Picom primero (RECOMENDADA)
-
-Paso minimo de bajo riesgo:
-1. Eliminar =services.picom= de xmonad.nix (NixOS level)
-2. Mantener solo home-manager picom
-3. Anadir opcion =enablePicom= al modulo xmobar para maquinas sin X11 compositor
-
-#+BEGIN_SRC nix
-# En machines/macbook.nix
-dotfiles.picom.enable = false;  # GNOME usa Mutter
-#+END_SRC
-
-*Pros:*
-- Cambio pequeno y seguro
-- Elimina la duplicacion inmediatamente
-- Base para futuras mejoras
-- Facil rollback si algo falla
-
-*Contras:*
-- No resuelve el problema de setupCommands
-- No resuelve variables X11 forzadas
-- Solucion parcial
-
-*** Recomendacion
-
-1. *NO migrar aurin a GDM* - Mantener LightDM + XMonad puro. Aurin es produccion critica.
-
-2. *Orden de pruebas:* vespino (testing) -> macbook (semi-produccion) -> aurin (nunca sin necesidad)
-
-3. *Empezar por Opcion C* (limpiar picom) como primer paso de bajo riesgo:
-   - Probar en vespino primero
-   - Si funciona, aplicar a macbook
-   - Luego evaluar si vale la pena Opcion A o B
-
-4. *Para macbook con GNOME:* Considerar NO importar xmonad.nix en absoluto cuando se use GNOME, y solo importarlo para sesiones XMonad puras.
+*Solucion implementada:*
+1. Picom se configura en home-manager (=modules/home-manager/programs/picom.nix=)
+2. =xmonad.hs= lo lanza en =startupHook: spawnOnce "picom"=
+3. Cuando usas GNOME, picom NO corre (Mutter hace de compositor)
+4. Cuando usas XMonad, picom SI corre
 
 *** Comandos utiles para debugging
 
@@ -1173,12 +1081,6 @@ pgrep -a picom
 # Ver compositor activo
 echo $WAYLAND_DISPLAY  # Si tiene valor, estas en Wayland
 #+END_SRC
-
-*** Referencias
-
-- [[https://gitlab.gnome.org/GNOME/gdm/-/issues/][GDM Issues - GNOME GitLab]]
-- [[https://wiki.archlinux.org/title/GDM][ArchWiki GDM]]
-- [[https://nixos.wiki/wiki/XMonad][NixOS Wiki XMonad]]
 
 * CPU Frequency Scaling: Por que tu CPU no siempre va a tope
 
@@ -1253,7 +1155,7 @@ independientemente. Muy eficiente para workloads variados.
 Vespino tiene un AMD FX-8350, un procesador de 2012 (arquitectura Bulldozer).
 Estos CPUs son anteriores a =amd-pstate=, asi que usan =acpi-cpufreq=.
 
-Antes de añadir el modulo en =boot.nix=, vespino no tenia *ningun* driver de
+Antes de anadir el modulo en =boot.nix=, vespino no tenia *ningun* driver de
 frecuencia cargado. El resultado? El script de xmobar mostraba "?.?" porque
 no encontraba =/sys/devices/system/cpu/cpu0/cpufreq/=.
 
@@ -1300,7 +1202,7 @@ El modulo configura:
 
 ** Uso diario: el monitor en xmobar
 
-En xmobar veras algo como: =󰾅 2.3GHz auto=
+En xmobar veras algo como: =2.3GHz auto=
 
 | Color  | Governor        | Significado                    |
 |--------+-----------------+--------------------------------|
@@ -1662,11 +1564,14 @@ Esto crea: =~/.config/nueva-app/config.conf= -> =~/dotfiles/nueva-app/.config/nu
 
 ---
 
-*Ultima actualizacion:* 2026-01-18
-*Sistemas:* Aurin (NixOS 25.05), MacBook Pro 13,2 (NixOS Flakes), Vespino (pendiente migrar)
+*Ultima actualizacion:* 2026-01-19
+*Arquitectura:* Clone-First (mkSystem)
+*Display Manager:* LightDM (todas las maquinas)
+*Sistemas:* Aurin, MacBook, Vespino (NixOS 25.05)
 *Shell principal:* Fish
 *Window Manager:* XMonad
 *Terminal:* Alacritty
 
 *Documentacion adicional:*
 - [[file:docs/MACBOOK-INSTALL-GUIDE.org][Guia instalacion MacBook]] - Paso a paso para instalar NixOS en MacBook Pro 2016
+- [[file:CLAUDE.md][CLAUDE.md]] - Instrucciones rapidas para Claude AI
