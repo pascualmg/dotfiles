@@ -20,14 +20,23 @@ let
   # Script para iniciar XMonad con Termux-X11
   start-x11 = pkgs.writeShellScriptBin "start-x11" ''
     export DISPLAY=:0
-    echo "Conectando a Termux-X11 en DISPLAY=:0..."
+
+    # Compilar xmonad si hay config
+    if [ -f ~/.config/xmonad/xmonad.hs ]; then
+      echo "Compilando tu config de XMonad..."
+      ${pkgs.haskellPackages.xmonad}/bin/xmonad --recompile || echo "Warning: compile failed, usando default"
+    fi
+
     echo ""
-    echo "Asegurate de tener Termux-X11 corriendo:"
-    echo "  1. Abre Termux (no nix-on-droid)"
-    echo "  2. Ejecuta: termux-x11 :0"
-    echo "  3. Abre la app Termux-X11"
+    echo "Lanzando XMonad en DISPLAY=:0..."
+    echo "(Asegurate de tener Termux-X11 corriendo)"
     echo ""
-    echo "Lanzando XMonad..."
+
+    # Lanzar xmobar en background si existe config
+    if [ -f ~/.config/xmobar/xmobarrc ]; then
+      ${pkgs.haskellPackages.xmobar}/bin/xmobar &
+    fi
+
     exec ${pkgs.haskellPackages.xmonad}/bin/xmonad
   '';
 
@@ -60,11 +69,18 @@ in
     # =========================================================================
     # X11 + XMonad (para usar con Termux-X11)
     # =========================================================================
+    # El mismo stack que desktop - ¿por qué no?
     haskellPackages.xmonad
     haskellPackages.xmonad-contrib
-    xterm           # Terminal X11 basica
-    dmenu           # Launcher
-    feh             # Visor de imagenes / wallpaper
+    haskellPackages.xmobar       # Status bar
+    alacritty                    # Terminal
+    xterm                        # Terminal fallback
+    dmenu                        # Launcher
+    feh                          # Wallpaper
+    picom                        # Compositor (sombras, transparencias)
+    nitrogen                     # Wallpaper manager
+    scrot                        # Screenshots
+    xclip                        # Clipboard
 
     # Scripts helper
     start-x11
