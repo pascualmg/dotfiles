@@ -112,7 +112,7 @@
       mkSystem = {
         hostname,
         hardware ? [],
-        extra ? [],  # Modulos adicionales opt-in (ej: vocento-vpn.nix)
+        extra ? [],
       }: nixpkgs.lib.nixosSystem {
         inherit system;
 
@@ -124,17 +124,11 @@
         };
 
         modules = [
-          # ===== BASE UNIFICADA (igual para TODAS las maquinas) =====
           ./modules/base
-
-          # ===== HOST SPECIFIC =====
           ./hosts/${hostname}/hardware-configuration.nix
           ./hosts/${hostname}
-
-          # ===== HOSTNAME =====
           { networking.hostName = hostname; }
 
-          # ===== NIX-INDEX DATABASE =====
           nix-index-database.nixosModules.nix-index
           {
             system.configurationRevision =
@@ -144,7 +138,6 @@
             programs.nix-index-database.comma.enable = true;
           }
 
-          # ===== HOME MANAGER =====
           home-manager.nixosModules.home-manager
           {
             home-manager = {
@@ -159,6 +152,50 @@
             };
           }
         ] ++ hardware ++ extra;
+      };
+
+      # =========================================================================
+      # mkDroid - Crear configuracion nix-on-droid (Android)
+      # =========================================================================
+      # Patron consistente con mkSystem para dispositivos Android.
+      # =========================================================================
+      mkDroid = {
+        hostname,
+        extra ? [],
+      }: nix-on-droid.lib.nixOnDroidConfiguration {
+        pkgs = import nixpkgs {
+          system = "aarch64-linux";
+          config.allowUnfree = true;
+        };
+
+        extraSpecialArgs = {
+          inherit inputs;
+          inherit pkgsMasterArm;
+          inherit alacritty-themes;
+        };
+
+        modules = [
+          ./droid/common.nix
+          ./droid/${hostname}
+
+          {
+            home-manager = {
+              useGlobalPkgs = true;
+              backupFileExtension = "backup";
+              extraSpecialArgs = {
+                inherit inputs;
+                inherit pkgsMasterArm;
+                inherit alacritty-themes;
+                hostname = hostname;
+              };
+              config = ./modules/home-manager/machines/android.nix;
+              sharedModules = [
+                nix-index-database.hmModules.nix-index
+                { programs.nix-index-database.comma.enable = true; }
+              ];
+            };
+          }
+        ] ++ extra;
       };
     in
     {
@@ -253,42 +290,14 @@
       # -----------------------------------------------------------------------
       # NIX-ON-DROID - Android
       # -----------------------------------------------------------------------
-      # Configuracion para el movil con Nix-on-Droid.
-      # Usa el mismo flake que el resto de maquinas, compartiendo core.nix.
+      # Usa mkDroid (patron consistente con mkSystem).
+      # Estructura: droid/common.nix (base) + droid/<hostname>/ (especifico)
       #
-      # Instalacion inicial en Android:
-      #   1. Instalar Nix-on-Droid desde F-Droid o GitHub releases
-      #   2. Clonar dotfiles: git clone <repo> ~/dotfiles
-      #   3. nix-on-droid switch --flake ~/dotfiles
-      #
-      # Actualizaciones posteriores:
-      #   nix-on-droid switch --flake ~/dotfiles
+      # Uso: nix-on-droid switch --flake ~/dotfiles
       # -----------------------------------------------------------------------
-      nixOnDroidConfigurations.default = nix-on-droid.lib.nixOnDroidConfiguration {
-        pkgs = import nixpkgs { system = "aarch64-linux"; };
-        extraSpecialArgs = {
-          inherit pkgsMasterArm;
-        };
-        modules = [
-          ./nix-on-droid/nix-on-droid.nix
-          {
-            home-manager = {
-              useGlobalPkgs = true;
-              backupFileExtension = "backup";
-              extraSpecialArgs = {
-                inherit inputs;
-                inherit pkgsMasterArm;
-                inherit alacritty-themes;
-                hostname = "android";
-              };
-              config = ./modules/home-manager/machines/android.nix;
-              sharedModules = [
-                nix-index-database.hmModules.nix-index
-                { programs.nix-index-database.comma.enable = true; }
-              ];
-            };
-          }
-        ];
+      nixOnDroidConfigurations = {
+        default = mkDroid { hostname = "android"; };
+        android = mkDroid { hostname = "android"; };
       };
 
       # -----------------------------------------------------------------------
