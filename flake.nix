@@ -317,43 +317,33 @@
         # ---------------------------------------------------------------------
         # AURIN - Workstation de produccion (CRITICO)
         # ---------------------------------------------------------------------
-        # Hardware: Dual Xeon E5-2699v3, 128GB RAM, RTX 5080
+        # ARQUITECTURA CLONE-FIRST (migrado 2026-01-19)
+        # Hardware: Dual Xeon E5-2699v3 + RTX 5080 + FiiO K7
         # Rol: Desarrollo, streaming (Sunshine), VMs
-        #
-        # ADVERTENCIA: Sistema de produccion
-        # Testear cambios en vespino primero cuando sea posible
         #
         # Uso:
         #   sudo nixos-rebuild switch --flake ~/dotfiles#aurin --impure
         #
         # NOTA: --impure necesario para leer /home/passh/src/vocento/autoenv/hosts_all.txt
-        # Sin --impure, los hosts de desarrollo Vocento no se incluyen en /etc/hosts
-        #
-        # Home Manager integrado via flake (configuration-pure.nix)
         # ---------------------------------------------------------------------
-        aurin = mkNixosConfig {
-          hostname = "aurin";
-          configPath = ./nixos-aurin/etc/nixos/configuration.nix;
-          enableHomeManager = true;
-        };
-
-        # ---------------------------------------------------------------------
-        # AURIN-NEW - Version clone-first para testing
-        # ---------------------------------------------------------------------
-        # ARQUITECTURA CLONE-FIRST (migrado 2026-01-19)
-        # Hardware: Dual Xeon E5-2699v3 + RTX 5080 + FiiO K7
-        #
-        # TESTING: Usar aurin-new para probar antes de reemplazar aurin
-        #   sudo nixos-rebuild test --flake ~/dotfiles#aurin-new --impure
-        #
-        # Cuando funcione, renombrar aurin-new -> aurin
-        # ---------------------------------------------------------------------
-        aurin-new = mkSystem {
+        aurin = mkSystem {
           hostname = "aurin";
           hardware = [
             ./hardware/nvidia/rtx5080.nix
             ./hardware/audio/fiio-k7.nix
           ];
+        };
+
+        # ---------------------------------------------------------------------
+        # AURIN-LEGACY - Version anterior (rollback)
+        # ---------------------------------------------------------------------
+        # Mantener por si necesitamos volver atras
+        # Usa la configuracion antigua con mkNixosConfig
+        # ---------------------------------------------------------------------
+        aurin-legacy = mkNixosConfig {
+          hostname = "aurin";
+          configPath = ./nixos-aurin/etc/nixos/configuration.nix;
+          enableHomeManager = true;
         };
 
         # ---------------------------------------------------------------------
