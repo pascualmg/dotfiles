@@ -2,10 +2,12 @@
 # Machine-specific config: ANDROID (Nix-on-Droid)
 # =============================================================================
 # Movil con Nix-on-Droid (aarch64-linux)
-# Hardware: Android phone
 #
-# NOTA: Importa core.nix directamente (no passh.nix que es desktop-only).
-#       No tiene X11, Wayland, ni systemd user services.
+# TERMUX-X11 SUPPORT:
+#   1. Instalar Termux-X11 desde F-Droid o GitHub releases
+#   2. En Termux normal: pkg install termux-x11-nightly
+#   3. Lanzar: termux-x11 :0 &
+#   4. Desde nix-on-droid: start-x11 (script incluido)
 #
 # Uso: nix-on-droid switch --flake ~/dotfiles
 # =============================================================================
@@ -13,29 +15,60 @@
 { config, pkgs, lib, pkgsMasterArm ? null, hostname, ... }:
 
 let
-  # Claude Code puede no existir en ARM - intentar con fallback
   hasClaudeCode = pkgsMasterArm != null && (builtins.tryEval pkgsMasterArm.claude-code).success;
+
+  # Script para iniciar XMonad con Termux-X11
+  start-x11 = pkgs.writeShellScriptBin "start-x11" ''
+    export DISPLAY=:0
+    echo "Conectando a Termux-X11 en DISPLAY=:0..."
+    echo ""
+    echo "Asegurate de tener Termux-X11 corriendo:"
+    echo "  1. Abre Termux (no nix-on-droid)"
+    echo "  2. Ejecuta: termux-x11 :0"
+    echo "  3. Abre la app Termux-X11"
+    echo ""
+    echo "Lanzando XMonad..."
+    exec ${pkgs.haskellPackages.xmonad}/bin/xmonad
+  '';
+
+  # Script para lanzar apps X11 individuales
+  x11-run = pkgs.writeShellScriptBin "x11-run" ''
+    export DISPLAY=:0
+    exec "$@"
+  '';
 in
 {
   imports = [
-    ../core.nix  # Config minima CLI (compartida con desktop)
+    ../core.nix
   ];
 
-  # Paquetes CLI adicionales para movil
   home.packages = with pkgs; [
     # Sesiones remotas
-    tmux          # Multiplexor para sesiones SSH
-    mosh          # SSH resistente a desconexiones
+    tmux
+    mosh
 
     # TUI tools
-    fzf           # Fuzzy finder
-    lazygit       # Git TUI
-    ncdu          # Disk usage TUI
+    fzf
+    lazygit
+    ncdu
 
     # Emacs (Doom)
     emacs
     ripgrep
     fd
+
+    # =========================================================================
+    # X11 + XMonad (para usar con Termux-X11)
+    # =========================================================================
+    haskellPackages.xmonad
+    haskellPackages.xmonad-contrib
+    xterm           # Terminal X11 basica
+    dmenu           # Launcher
+    feh             # Visor de imagenes / wallpaper
+
+    # Scripts helper
+    start-x11
+    x11-run
   ] ++ lib.optionals hasClaudeCode [
     pkgsMasterArm.claude-code
   ];
