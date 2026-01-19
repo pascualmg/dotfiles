@@ -1,0 +1,317 @@
+#+TITLE: Nix-on-Droid Roadmap - Android como Workstation
+#+AUTHOR: passh
+#+DATE: 2026-01-19
+#+STARTUP: overview
+
+* El Objetivo
+
+Convertir un Android en una workstation portable capaz de:
+
+1. Ejecutar *Claude Code* para seguir desarrollando desde el móvil
+2. Correr *XMonad + xmobar* con la misma config que desktop
+3. Usar *Emacs Doom* para editar código
+4. Tener el *mismo entorno* que aurin/macbook/vespino
+
+#+BEGIN_QUOTE
+"Si puedo hacer `nix-on-droid switch` y tener mi entorno completo,
+¿por qué no hacerlo?"
+#+END_QUOTE
+
+* Estado Actual (2026-01-19)
+
+| Componente        | Estado      | Notas                                    |
+|-------------------+-------------+------------------------------------------|
+| nix-on-droid      | OK          | Flake integrado con mkDroid              |
+| home-manager      | OK          | Comparte core.nix con desktop            |
+| fish shell        | OK          | Con abbrs y config                       |
+| git + gh          | OK          | Credenciales configuradas                |
+| emacs             | OK          | Instalado, Doom pendiente                |
+| comma (,)         | OK          | nix-index-database funcionando           |
+| tmux + mosh       | OK          | Sesiones remotas                         |
+| Claude Code       | PENDIENTE   | No existe para aarch64 en nixpkgs        |
+| XMonad            | EXPERIMENTAL| Requiere Termux-X11                      |
+| xmobar            | EXPERIMENTAL| Requiere Termux-X11                      |
+| alacritty         | EXPERIMENTAL| Requiere Termux-X11                      |
+
+* Arquitectura
+
+** Estructura de Directorios
+
+#+BEGIN_SRC
+dotfiles/
+├── flake.nix                 # mkDroid definido aquí
+├── droid/
+│   ├── common.nix            # Base común (como modules/base para NixOS)
+│   └── android/
+│       └── default.nix       # Config específica del dispositivo
+├── modules/home-manager/
+│   ├── core.nix              # CLI mínimo (compartido con desktop)
+│   └── machines/
+│       └── android.nix       # Home-manager para Android
+└── docs/
+    └── NIX-ON-DROID-ROADMAP.org  # Este archivo
+#+END_SRC
+
+** mkDroid vs mkSystem
+
+#+BEGIN_SRC nix
+# NixOS (desktop)
+aurin = mkSystem {
+  hostname = "aurin";
+  hardware = [ ./hardware/nvidia/rtx5080.nix ];
+};
+
+# Android (móvil)
+android = mkDroid {
+  hostname = "android";
+};
+#+END_SRC
+
+Mismo patrón, diferentes backends:
+- =mkSystem= → =nixpkgs.lib.nixosSystem=
+- =mkDroid= → =nix-on-droid.lib.nixOnDroidConfiguration=
+
+** Capas de Configuración
+
+#+BEGIN_SRC
+┌─────────────────────────────────────────────────────────┐
+│                    home-manager                         │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐ │
+│  │  core.nix   │  │  passh.nix  │  │   android.nix   │ │
+│  │ (CLI base)  │  │  (desktop)  │  │ (móvil + X11)   │ │
+│  └──────┬──────┘  └──────┬──────┘  └────────┬────────┘ │
+│         │                │                   │          │
+│         └────────────────┴───────────────────┘          │
+└─────────────────────────────────────────────────────────┘
+                           │
+        ┌──────────────────┼──────────────────┐
+        ▼                  ▼                  ▼
+┌──────────────┐  ┌──────────────┐  ┌──────────────────┐
+│    NixOS     │  │    NixOS     │  │   nix-on-droid   │
+│   (aurin)    │  │  (macbook)   │  │    (android)     │
+└──────────────┘  └──────────────┘  └──────────────────┘
+#+END_SRC
+
+* Instalación Inicial
+
+** Prerequisitos en Android
+
+1. Descargar *Nix-on-Droid* desde F-Droid
+2. Descargar *Termux* desde F-Droid (para termux-x11)
+3. Descargar *Termux-X11* desde GitHub releases
+
+** Setup
+
+#+BEGIN_SRC bash
+# En nix-on-droid
+git clone https://github.com/pascualmg/dotfiles ~/dotfiles
+cd ~/dotfiles
+nix-on-droid switch --flake ~/dotfiles
+
+# Linkear configs (xmonad, xmobar, etc.)
+stow -v xmonad
+stow -v alacritty
+#+END_SRC
+
+* X11 con Termux-X11
+
+** Cómo Funciona
+
+#+BEGIN_SRC
+┌─────────────────┐     ┌─────────────────┐
+│   Termux-X11    │◄────│   nix-on-droid  │
+│   (X server)    │     │   (X clients)   │
+│                 │     │                 │
+│  - Display :0   │     │  - xmonad       │
+│  - Touch input  │     │  - xmobar       │
+│  - GPU accel    │     │  - alacritty    │
+└─────────────────┘     └─────────────────┘
+        ▲
+        │
+┌───────┴───────┐
+│  App Android  │
+│  Termux:X11   │
+│  (viewer)     │
+└───────────────┘
+#+END_SRC
+
+** Pasos para Lanzar X11
+
+#+BEGIN_SRC bash
+# 1. En Termux (no nix-on-droid)
+pkg install termux-x11-nightly
+termux-x11 :0 &
+
+# 2. Abrir la app Termux-X11 (se queda en negro esperando)
+
+# 3. En nix-on-droid
+start-x11    # Lanza xmonad + xmobar
+#+END_SRC
+
+** Scripts Disponibles
+
+| Script      | Descripción                              |
+|-------------+------------------------------------------|
+| =start-x11= | Compila xmonad.hs y lanza con xmobar     |
+| =x11-run=   | Ejecuta cualquier app X11 (ej: x11-run xterm) |
+
+* Claude Code en Android
+
+** El Problema
+
+Claude Code no está empaquetado para =aarch64-linux= en nixpkgs.
+
+#+BEGIN_SRC nix
+# Esto falla en ARM:
+pkgsMasterArm.claude-code  # No existe
+#+END_SRC
+
+** Soluciones Posibles
+
+*** Opción 1: Compilar desde source
+
+#+BEGIN_SRC bash
+# Claude Code es Node.js - debería compilar
+npm install -g @anthropic/claude-code
+#+END_SRC
+
+Problema: Requiere Node.js configurado correctamente en nix-on-droid.
+
+*** Opción 2: Usar nix con Node.js
+
+#+BEGIN_SRC nix
+# En android.nix
+home.packages = with pkgs; [
+  nodejs_22
+  # Luego instalar claude-code via npm
+];
+#+END_SRC
+
+*** Opción 3: SSH a aurin
+
+#+BEGIN_SRC bash
+# Desde el móvil
+mosh aurin
+# Ya tienes claude-code en aurin
+#+END_SRC
+
+Esta es la opción que *funciona ahora mismo*.
+
+*** Opción 4: Empaquetar claude-code para ARM
+
+Crear un derivation que compile/descargue Claude Code para aarch64.
+Esto requiere investigar cómo se distribuye (binarios, npm, etc.).
+
+** Estado: PENDIENTE
+
+Por ahora, usar =mosh aurin= para acceder a Claude Code.
+
+* Roadmap
+
+** Fase 1: CLI Funcional [COMPLETADO]
+
+- [X] nix-on-droid integrado en flake
+- [X] mkDroid helper creado
+- [X] home-manager compartiendo core.nix
+- [X] fish, git, emacs, tmux, mosh
+- [X] comma (,) para ejecutar programas sin instalar
+
+** Fase 2: X11 Desktop [EN PROGRESO]
+
+- [X] Paquetes X11 instalados (xmonad, xmobar, alacritty)
+- [X] Scripts start-x11 y x11-run
+- [ ] Probar que XMonad arranca con Termux-X11
+- [ ] Verificar que la config de xmonad compila en ARM
+- [ ] Probar xmobar
+- [ ] Probar alacritty
+
+** Fase 3: Claude Code Nativo [PENDIENTE]
+
+- [ ] Investigar distribución de Claude Code (npm? binario?)
+- [ ] Crear derivation para aarch64 si es posible
+- [ ] Alternativamente: documentar workaround con SSH
+
+** Fase 4: Doom Emacs [PENDIENTE]
+
+- [ ] Instalar Doom Emacs en nix-on-droid
+- [ ] Verificar que org-mode funciona
+- [ ] Sincronizar ~/org entre dispositivos (Syncthing?)
+
+** Fase 5: Paridad con Desktop [FUTURO]
+
+- [ ] Misma config de xmonad funcionando
+- [ ] Misma config de alacritty
+- [ ] Clipboard compartido (si es posible)
+- [ ] Notificaciones
+
+* Comandos Útiles
+
+#+BEGIN_SRC bash
+# Actualizar todo
+cd ~/dotfiles && git pull && nix-on-droid switch --flake ~/dotfiles
+
+# Lanzar X11
+start-x11
+
+# Ejecutar app X11 individual
+x11-run alacritty
+x11-run emacs
+
+# SSH a aurin (con mosh para conexión resistente)
+mosh aurin
+
+# Ver paquetes instalados
+ls ~/.nix-profile/bin/
+
+# Ejecutar programa sin instalar
+, cowsay "hola desde android"
+#+END_SRC
+
+* Troubleshooting
+
+** "DISPLAY not set"
+
+#+BEGIN_SRC bash
+export DISPLAY=:0
+# O usar el script x11-run
+#+END_SRC
+
+** XMonad no compila
+
+La config puede tener dependencias que no existen en ARM.
+Probar con config mínima:
+
+#+BEGIN_SRC haskell
+-- ~/.config/xmonad/xmonad.hs (minimal)
+import XMonad
+main = xmonad def
+#+END_SRC
+
+** Termux-X11 pantalla negra
+
+1. Verificar que =termux-x11 :0= está corriendo en Termux
+2. Verificar que la app Termux:X11 está abierta
+3. Ejecutar =x11-run xterm= para probar
+
+** Paquete no compila para ARM
+
+Algunos paquetes no tienen soporte aarch64. Opciones:
+- Buscar alternativa
+- Compilar desde source
+- Usar =lib.optionals (!isAarch64)= para excluir
+
+* Referencias
+
+- [[https://github.com/nix-community/nix-on-droid][nix-on-droid GitHub]]
+- [[https://github.com/termux/termux-x11][Termux-X11 GitHub]]
+- [[https://f-droid.org/en/packages/com.termux.nix/][Nix-on-Droid en F-Droid]]
+- [[https://github.com/nix-community/nix-on-droid/discussions/281][Discusión: GUI apps en nix-on-droid]]
+
+* Changelog
+
+| Fecha      | Cambio                                         |
+|------------+------------------------------------------------|
+| 2026-01-19 | Creación del documento                         |
+| 2026-01-19 | mkDroid implementado                           |
+| 2026-01-19 | Soporte X11 añadido (experimental)             |
+| 2026-01-19 | Full desktop stack (xmobar, alacritty, picom)  |
