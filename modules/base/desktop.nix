@@ -24,7 +24,7 @@
   # ===== DISPLAY MANAGER: LIGHTDM =====
   # LightDM en vez de GDM (GDM tiene problemas con NVIDIA)
   # LightDM es simple y funciona con cualquier sesion
-  services.displayManager.lightdm.enable = true;
+  services.xserver.displayManager.lightdm.enable = true;
   services.displayManager.defaultSession = "none+xmonad";  # XMonad por defecto en todas
 
   # ===== DESKTOP ENVIRONMENT: GNOME =====
