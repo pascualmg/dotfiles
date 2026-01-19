@@ -38,5 +38,9 @@
     # ===== VIRTUALIZACION =====
     # Docker + libvirt/QEMU para TODAS las maquinas
     ./virtualization.nix
+
+    # ===== STREAMING =====
+    # Sunshine server (NVENC si NVIDIA, software si no)
+    ./sunshine.nix
   ];
 }

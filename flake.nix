@@ -340,23 +340,18 @@
         # ---------------------------------------------------------------------
         # VESPINO - Servidor secundario / Testing
         # ---------------------------------------------------------------------
-        # Hardware: PC antiguo con NVIDIA
+        # ARQUITECTURA CLONE-FIRST (migrado 2026-01-19)
+        # Hardware: AMD CPU + NVIDIA RTX 2060
         # Rol: Minecraft server, NFS, Ollama, VM VPN Vocento
         #
-        # Usar como banco de pruebas antes de aplicar cambios a aurin
-        #
         # Uso:
-        #   sudo nixos-rebuild test --flake ~/dotfiles#vespino --impure
         #   sudo nixos-rebuild switch --flake ~/dotfiles#vespino --impure
-        #
-        # ESTADO HOME-MANAGER:
-        #   enableHomeManager = false (por ahora)
-        #   configuration.nix todavia usa <home-manager/nixos>
         # ---------------------------------------------------------------------
-        vespino = mkNixosConfig {
+        vespino = mkSystem {
           hostname = "vespino";
-          configPath = ./nixos-vespino/etc/nixos/configuration.nix;
-          enableHomeManager = true;
+          hardware = [
+            ./hardware/nvidia/legacy.nix
+          ];
         };
 
         # ---------------------------------------------------------------------
@@ -375,22 +370,6 @@
             nixos-hardware.nixosModules.common-pc-ssd
             ./hardware/apple/macbook-pro-13-2.nix
             ./hardware/apple/snd-hda-macbookpro.nix
-          ];
-        };
-
-        # ---------------------------------------------------------------------
-        # VESPINO-NEW - Testing clone-first architecture
-        # ---------------------------------------------------------------------
-        # ARQUITECTURA CLONE-FIRST (migrando 2026-01-19)
-        # Hardware: AMD CPU + NVIDIA RTX 2060
-        #
-        # Uso para testear:
-        #   ssh vespino "sudo nixos-rebuild test --flake ~/dotfiles#vespino-new --impure"
-        # ---------------------------------------------------------------------
-        vespino-new = mkSystem {
-          hostname = "vespino";
-          hardware = [
-            ./hardware/nvidia/legacy.nix
           ];
         };
       };
