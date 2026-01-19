@@ -16,16 +16,16 @@
 {
   imports = [
     # ===== SISTEMA BASE =====
-    ../common/boot.nix
-    ../common/locale.nix
-    ../common/console.nix
-    ../common/nix-settings.nix
-    ../common/nix-ld.nix
-    ../common/security.nix
-    ../common/users.nix
-    ../common/packages.nix
-    ../common/services.nix
-    ../common/cpupower-gui.nix
+    ../core/boot.nix
+    ../core/locale.nix
+    ../core/console.nix
+    ../core/nix-settings.nix
+    ../core/nix-ld.nix
+    ../core/security.nix
+    ../core/users.nix
+    ../core/packages.nix
+    ../core/services.nix
+    ../core/cpupower-gui.nix
 
     # ===== DESKTOP UNIFICADO =====
     # GDM + GNOME + XMonad + Hyprland + Niri - TODO disponible en TODAS

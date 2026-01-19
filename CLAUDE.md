@@ -25,11 +25,11 @@ dotfiles/
 |-- flake.nix                    # Entry point (mkSystem para clone-first)
 |-- modules/
 |   |-- base/                    # BASE UNIFICADA (todas las maquinas)
-|   |   |-- default.nix          # Imports: boot, nix-settings, packages, desktop, etc.
+|   |   |-- default.nix          # Imports: core/* + desktop + virtualization
 |   |   |-- desktop.nix          # LightDM + GNOME + XMonad
 |   |   |-- sunshine.nix         # Streaming server (opcional)
 |   |   `-- virtualization.nix   # Docker + libvirt
-|   |-- common/                  # Modulos legacy (usados por mkNixosConfig)
+|   |-- core/                    # Modulos core del sistema (boot, locale, packages, etc.)
 |   |-- desktop/                 # Wayland: hyprland.nix, niri.nix
 |   `-- home-manager/            # Configuracion usuario passh
 |-- hardware/                    # MODULOS HARDWARE
@@ -52,7 +52,6 @@ dotfiles/
 |       |-- hardware-configuration.nix
 |       |-- default.nix          # NFS, Minecraft, VPN VM
 |       `-- minecraft.nix        # Servidor Minecraft
-`-- nixos-*/                     # Legacy (pre-flakes, backup)
 ```
 
 ### Como se construye cada maquina
