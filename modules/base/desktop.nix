@@ -4,10 +4,10 @@
 # GDM + GNOME + XMonad - TODO disponible en TODAS las maquinas
 #
 # IMPORTANTE:
-#   - GDM forzado a X11 (NVIDIA + Wayland = problemas)
 #   - Variables X11 forzadas (XDG_SESSION_TYPE, GDK_BACKEND, QT_QPA_PLATFORM)
 #   - picom va en home-manager (se lanza desde xmonad.hs)
 #   - displaySetupCommand va en hosts/*/default.nix de cada maquina
+#   - gdm.wayland = false va en hardware/nvidia/*.nix (solo NVIDIA lo necesita)
 #
 # Sesiones disponibles en GDM:
 #   - GNOME (Wayland o X11)
@@ -25,8 +25,8 @@
 
   # ===== DISPLAY MANAGER: GDM =====
   # GDM funciona con GNOME, XMonad, Hyprland, Niri
+  # NOTA: gdm.wayland = false se pone en hardware/nvidia/*.nix (solo NVIDIA lo necesita)
   services.displayManager.gdm.enable = true;
-  services.displayManager.gdm.wayland = false;  # CRITICO: Forzar X11 (NVIDIA + Wayland = problemas)
   services.displayManager.defaultSession = "none+xmonad";  # XMonad por defecto en todas
 
   # ===== DESKTOP ENVIRONMENT: GNOME =====
