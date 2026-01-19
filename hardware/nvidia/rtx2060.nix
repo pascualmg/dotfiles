@@ -1,10 +1,10 @@
 # =============================================================================
-# HARDWARE/NVIDIA/LEGACY.NIX - NVIDIA GPUs con drivers stable (no open)
+# HARDWARE/NVIDIA/RTX2060.NIX - NVIDIA RTX 2060 (Turing)
 # =============================================================================
-# Para GPUs NVIDIA que no soportan drivers open-source:
+# Drivers propietarios estables para RTX 2060 y GPUs similares:
 #   - RTX 2060, 2070, 2080, etc. (Turing)
 #   - GTX 1000 series (Pascal)
-#   - Cualquier GPU que necesite drivers propietarios estables
+#   - Cualquier GPU que necesite drivers propietarios (no open)
 #
 # Caracteristicas:
 #   - Drivers propietarios stable (no open)

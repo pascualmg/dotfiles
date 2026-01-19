@@ -359,7 +359,7 @@
         vespino = mkSystem {
           hostname = "vespino";
           hardware = [
-            ./hardware/nvidia/legacy.nix
+            ./hardware/nvidia/rtx2060.nix
           ];
         };
 
