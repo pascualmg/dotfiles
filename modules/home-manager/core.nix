@@ -16,6 +16,10 @@
 
 { config, pkgs, lib, ... }:
 
+let
+  isAarch64 = pkgs.stdenv.hostPlatform.isAarch64;
+in
+
 {
   # Home Manager basico
   programs.home-manager.enable = true;
@@ -64,7 +68,8 @@
 
       # Network tools
       openssh
-      dig
+    ] ++ lib.optionals (!isAarch64) [
+      dig  # bind.dnsutils puede fallar en ARM
     ];
 
     sessionVariables = {

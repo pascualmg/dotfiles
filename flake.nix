@@ -2,52 +2,27 @@
 # Dotfiles Flake - Configuracion Multi-Maquina NixOS
 # =============================================================================
 #
-# Este flake integra las 3 maquinas NixOS manteniendo compatibilidad con
-# el metodo tradicional (stow + channels).
+# Arquitectura "Clone-First": Todas las maquinas son CLONES IDENTICOS.
+# Solo cambia: hostname, hardware-configuration.nix, y modulos hardware.
 #
 # MAQUINAS:
-#   - aurin:   Workstation produccion (Dual Xeon + RTX 5080)
-#   - vespino: Servidor secundario (Minecraft, NFS, Ollama)
-#   - macbook: Laptop Apple MacBook Pro 13,2 (2016)
-#   - android: Movil con Nix-on-Droid (aarch64)
+#   - aurin:   Workstation (Dual Xeon E5-2699v3 + RTX 5080)
+#   - vespino: Servidor (AMD + RTX 2060, Minecraft, NFS)
+#   - macbook: Laptop (MacBook Pro 13,2 2016)
+#   - android: Movil (Nix-on-Droid, aarch64)
 #
-# USO CON FLAKES:
-#   # Desde el directorio dotfiles
-#   sudo nixos-rebuild switch --flake .#aurin
-#   sudo nixos-rebuild switch --flake .#vespino --impure  # vespino aun usa channels
-#   sudo nixos-rebuild switch --flake .#macbook
+# USO:
+#   sudo nixos-rebuild switch --flake ~/dotfiles#aurin --impure
+#   sudo nixos-rebuild switch --flake ~/dotfiles#vespino --impure
+#   sudo nixos-rebuild switch --flake ~/dotfiles#macbook
+#   nix-on-droid switch --flake ~/dotfiles  # Android
 #
-#   # Desde cualquier lugar
-#   sudo nixos-rebuild switch --flake ~/dotfiles#aurin
+# NOTA: --impure necesario en aurin/vespino para leer hosts Vocento
 #
-#   # Solo testear (sin hacer switch)
-#   sudo nixos-rebuild test --flake .#aurin
-#
-#   # Ver que cambiaria (dry-run)
-#   sudo nixos-rebuild dry-build --flake .#aurin
-#
-# USO TRADICIONAL (sigue funcionando igual que siempre):
-#   sudo stow -v -t / nixos-aurin
-#   sudo nixos-rebuild switch
-#
-# ACTUALIZAR FLAKE.LOCK:
-#   nix flake update              # Actualiza todos los inputs
-#   nix flake lock --update-input nixpkgs  # Solo nixpkgs
-#
-# VERIFICAR:
-#   nix flake show                # Mostrar outputs
-#   nix flake check --impure      # Verificar (con impure por channels)
-#
-# =============================================================================
-# NOTA SOBRE MIGRACION:
-#
-# aurin y macbook usan home-manager integrado en el flake (NO requieren --impure)
-# vespino aun usa <home-manager/nixos> channel (requiere --impure)
-#
-# ESTADO:
-#   aurin:   Migrado (configuration-pure.nix + enableHomeManager=true)
-#   macbook: Migrado
-#   vespino: Pendiente de migracion
+# FLAKE COMMANDS:
+#   nix flake show      # Mostrar outputs
+#   nix flake check     # Verificar sintaxis
+#   nix flake update    # Actualizar lock
 # =============================================================================
 
 {
@@ -129,132 +104,10 @@
         config.allowUnfree = true;
       };
 
-      # -------------------------------------------------------------------------
-      # Funcion helper para crear configuraciones NixOS
-      # -------------------------------------------------------------------------
-      # Reduce repeticion y asegura consistencia
-      #
-      # Parametros:
-      #   hostname: nombre de la maquina
-      #   configPath: path al configuration.nix
-      #   extraModules: modulos adicionales (opcional)
-      #   enableHomeManager: si incluir home-manager del flake (default: false)
-      #                      Poner en true cuando se elimine <home-manager/nixos>
-      #                      del configuration.nix correspondiente
-      # -------------------------------------------------------------------------
-      mkNixosConfig = {
-        hostname,
-        configPath,
-        extraModules ? [],
-        enableHomeManager ? false
-      }:
-        nixpkgs.lib.nixosSystem {
-          inherit system;
-
-          # specialArgs pasa valores adicionales a todos los modulos
-          # Esto permite que los modulos accedan a inputs si lo necesitan
-          specialArgs = {
-            inherit inputs;
-            # Pasar home-manager y nixos-hardware para uso en modulos
-            inherit home-manager nixos-hardware;
-            # Alacritty themes para hot-reload
-            inherit alacritty-themes;
-            # pkgsMaster para paquetes bleeding-edge
-            inherit pkgsMaster;
-          };
-
-          modules = [
-            # Configuracion principal de la maquina
-            configPath
-
-            # =================================================================
-            # MODULOS COMUNES - compartidos por TODAS las maquinas
-            # =================================================================
-            # Cada modulo tiene una responsabilidad unica (Single Responsibility)
-            # Los valores por defecto se pueden sobreescribir en cada maquina
-            # usando lib.mkForce o las opciones expuestas por cada modulo
-
-            # --- Base del sistema ---
-            ./modules/common/locale.nix       # Timezone Europe/Madrid, locale es_ES/en_US
-            ./modules/common/console.nix      # Configuracion TTY (fuente terminus)
-            ./modules/common/boot.nix         # systemd-boot base
-            ./modules/common/nix-settings.nix # Flakes, auto-optimise, GC
-            ./modules/common/security.nix     # Polkit, RTKit
-
-            # --- Paquetes y servicios ---
-            ./modules/common/packages.nix     # Paquetes sistema (vim, git, alacritty, etc.)
-            ./modules/common/services.nix     # Servicios (SSH, Avahi, Bluetooth, PipeWire)
-            ./modules/common/users.nix        # Usuario passh consolidado
-            ./modules/common/cpupower-gui.nix # GUI para gestionar frecuencias CPU
-            ./modules/common/nix-ld.nix       # Ejecutar binarios dinamicos (JetBrains, VSCode)
-
-            # =================================================================
-            # DESKTOP WAYLAND - Hyprland y niri (habilitados por defecto)
-            # =================================================================
-            ./modules/desktop/hyprland.nix
-            ./modules/desktop/niri.nix
-
-            # NIX-INDEX-DATABASE - Base de datos precompilada para command-not-found
-            # Proporciona la opcion programs.nix-index-database.comma.enable
-            nix-index-database.nixosModules.nix-index
-
-            # Modulo para compatibilidad: registra el flake en el sistema
-            {
-              # Revision del flake para trazabilidad
-              system.configurationRevision =
-                if self ? rev
-                then self.rev
-                else "dirty";
-
-              # Label en el bootloader para identificar builds de flake
-              system.nixos.label =
-                if self ? shortRev
-                then "flake-${self.shortRev}"
-                else "flake-dirty";
-
-              # Usar la base de datos precompilada de nix-index-database
-              # Esto evita tener que correr `nix-index` manualmente (~30 min)
-              programs.nix-index-database.comma.enable = true;
-            }
-          ]
-          # Home Manager del flake (cuando se active)
-          ++ (if enableHomeManager then [
-            home-manager.nixosModules.home-manager
-            {
-              home-manager = {
-                # Usar pkgs del sistema (no traer otro nixpkgs)
-                useGlobalPkgs = true;
-                # Instalar paquetes en /etc/profiles en lugar de ~/.nix-profile
-                useUserPackages = true;
-                # Pasar inputs Y hostname a home-manager modules
-                extraSpecialArgs = {
-                  inherit inputs;
-                  inherit pkgsMaster;  # Para paquetes bleeding-edge
-                  inherit alacritty-themes;  # Temas para hot-reload
-                  hostname = hostname;  # permite configs por maquina
-                };
-                # Configuracion del usuario passh
-                users.passh = import ./modules/home-manager;
-                # Permitir paquetes unfree en home-manager
-                # (backupFileExtension evita conflictos con archivos existentes)
-                backupFileExtension = "backup";
-              };
-            }
-          ] else [])
-          ++ extraModules;
-        };
-
       # =========================================================================
-      # NUEVA ARQUITECTURA: mkSystem (Clone-First)
+      # mkSystem - Crear configuracion NixOS (Clone-First)
       # =========================================================================
-      # Filosofia: Todas las maquinas son CLONES IDENTICOS.
-      # Solo cambia: hostname, hardware-configuration.nix, y modulos hardware.
-      #
-      # Uso:
-      #   macbook-new = mkSystem {
-      #     hostname = "macbook";
-      #     hardware = [ ./hardware/apple/macbook-pro-13-2.nix ];
-      #   };
+      # Todas las maquinas comparten modules/base/ y solo diferencian hardware.
       # =========================================================================
       mkSystem = {
         hostname,
@@ -332,18 +185,6 @@
             ./hardware/nvidia/rtx5080.nix
             ./hardware/audio/fiio-k7.nix
           ];
-        };
-
-        # ---------------------------------------------------------------------
-        # AURIN-LEGACY - Version anterior (rollback)
-        # ---------------------------------------------------------------------
-        # Mantener por si necesitamos volver atras
-        # Usa la configuracion antigua con mkNixosConfig
-        # ---------------------------------------------------------------------
-        aurin-legacy = mkNixosConfig {
-          hostname = "aurin";
-          configPath = ./nixos-aurin/etc/nixos/configuration.nix;
-          enableHomeManager = true;
         };
 
         # ---------------------------------------------------------------------
@@ -426,7 +267,7 @@
       nixOnDroidConfigurations.default = nix-on-droid.lib.nixOnDroidConfiguration {
         pkgs = import nixpkgs { system = "aarch64-linux"; };
         extraSpecialArgs = {
-          inherit pkgsMasterArm;  # Para paquetes bleeding-edge en ARM
+          inherit pkgsMasterArm;
         };
         modules = [
           ./nix-on-droid/nix-on-droid.nix
@@ -435,7 +276,10 @@
               useGlobalPkgs = true;
               backupFileExtension = "backup";
               extraSpecialArgs = {
-                inherit pkgsMasterArm;  # Pasar a home-manager también
+                inherit inputs;
+                inherit pkgsMasterArm;
+                inherit alacritty-themes;
+                hostname = "android";  # Mismo patron que desktop
               };
               config = ./modules/home-manager/machines/android.nix;
             };

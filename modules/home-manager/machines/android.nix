@@ -1,41 +1,42 @@
 # =============================================================================
-# Home Manager Machine Config - Android (Nix-on-Droid)
+# Machine-specific config: ANDROID (Nix-on-Droid)
 # =============================================================================
-# Configuracion especifica para el movil con Nix-on-Droid.
+# Movil con Nix-on-Droid (aarch64-linux)
+# Hardware: Android phone
 #
-# NOTA: Esta config NO importa passh.nix (que es para desktop).
-#       Solo importa core.nix directamente.
+# NOTA: Importa core.nix directamente (no passh.nix que es desktop-only).
+#       No tiene X11, Wayland, ni systemd user services.
 #
 # Uso: nix-on-droid switch --flake ~/dotfiles
 # =============================================================================
 
-{ config, pkgs, lib, pkgsMasterArm, ... }:
+{ config, pkgs, lib, pkgsMasterArm ? null, hostname, ... }:
 
+let
+  # Claude Code puede no existir en ARM - intentar con fallback
+  hasClaudeCode = pkgsMasterArm != null && (builtins.tryEval pkgsMasterArm.claude-code).success;
+in
 {
-  # Solo importamos el core (sin desktop stuff)
   imports = [
-    ../core.nix
+    ../core.nix  # Config minima CLI (compartida con desktop)
   ];
 
-  # nix-on-droid ya setea username="nix-on-droid" y homeDirectory correctamente
-  # No necesitamos override aqui
-
-  # Paquetes adicionales especificos para Android
-  # (ligeros, utiles para terminal movil)
+  # Paquetes CLI adicionales para movil
   home.packages = with pkgs; [
-    # Ya tenemos los basicos de core.nix, añadimos extras utiles
+    # Sesiones remotas
     tmux          # Multiplexor para sesiones SSH
-    mosh          # SSH resistente a desconexiones (perfecto para movil)
+    mosh          # SSH resistente a desconexiones
+
+    # TUI tools
     fzf           # Fuzzy finder
     lazygit       # Git TUI
     ncdu          # Disk usage TUI
 
-    # Emacs para Doom
+    # Emacs (Doom)
     emacs
-    ripgrep       # Dependencia de Doom
-    fd            # Dependencia de Doom
-
-    # Claude Code (desde nixpkgs-master para version mas reciente)
+    ripgrep
+    fd
+  ] ++ lib.optionals hasClaudeCode [
     pkgsMasterArm.claude-code
   ];
 
