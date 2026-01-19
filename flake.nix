@@ -338,6 +338,25 @@
         };
 
         # ---------------------------------------------------------------------
+        # AURIN-NEW - Version clone-first para testing
+        # ---------------------------------------------------------------------
+        # ARQUITECTURA CLONE-FIRST (migrado 2026-01-19)
+        # Hardware: Dual Xeon E5-2699v3 + RTX 5080 + FiiO K7
+        #
+        # TESTING: Usar aurin-new para probar antes de reemplazar aurin
+        #   sudo nixos-rebuild test --flake ~/dotfiles#aurin-new --impure
+        #
+        # Cuando funcione, renombrar aurin-new -> aurin
+        # ---------------------------------------------------------------------
+        aurin-new = mkSystem {
+          hostname = "aurin";
+          hardware = [
+            ./hardware/nvidia/rtx5080.nix
+            ./hardware/audio/fiio-k7.nix
+          ];
+        };
+
+        # ---------------------------------------------------------------------
         # VESPINO - Servidor secundario / Testing
         # ---------------------------------------------------------------------
         # ARQUITECTURA CLONE-FIRST (migrado 2026-01-19)
