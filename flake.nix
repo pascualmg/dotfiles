@@ -279,9 +279,13 @@
                 inherit inputs;
                 inherit pkgsMasterArm;
                 inherit alacritty-themes;
-                hostname = "android";  # Mismo patron que desktop
+                hostname = "android";
               };
               config = ./modules/home-manager/machines/android.nix;
+              sharedModules = [
+                nix-index-database.hmModules.nix-index
+                { programs.nix-index-database.comma.enable = true; }
+              ];
             };
           }
         ];
