@@ -4,10 +4,9 @@
 # GDM + GNOME + XMonad - TODO disponible en TODAS las maquinas
 #
 # IMPORTANTE:
-#   - Variables X11 forzadas (XDG_SESSION_TYPE, GDK_BACKEND, QT_QPA_PLATFORM)
-#   - picom va en home-manager (se lanza desde xmonad.hs)
-#   - displaySetupCommand va en hosts/*/default.nix de cada maquina
-#   - gdm.wayland = false va en hardware/nvidia/*.nix (solo NVIDIA lo necesita)
+#   - NO habilita picom aqui (va en home-manager, se lanza desde xmonad.hs)
+#   - NO fuerza variables X11 (cada sesion decide)
+#   - displaySetupCommand va en los modulos hardware/ de cada maquina
 #
 # Sesiones disponibles en GDM:
 #   - GNOME (Wayland o X11)
@@ -25,7 +24,6 @@
 
   # ===== DISPLAY MANAGER: GDM =====
   # GDM funciona con GNOME, XMonad, Hyprland, Niri
-  # NOTA: gdm.wayland = false se pone en hardware/nvidia/*.nix (solo NVIDIA lo necesita)
   services.displayManager.gdm.enable = true;
   services.displayManager.defaultSession = "none+xmonad";  # XMonad por defecto en todas
 
@@ -75,15 +73,6 @@
     # Wallpaper
     feh             # Image viewer + wallpaper setter
   ];
-
-  # ===== SESSION VARIABLES: Forzar X11 para XMonad =====
-  # CRITICO: Sin esto, GDM/aplicaciones pueden intentar Wayland
-  # XMonad es X11-only, necesita estas variables
-  environment.sessionVariables = {
-    XDG_SESSION_TYPE = "x11";
-    GDK_BACKEND = "x11";       # GTK apps usan X11
-    QT_QPA_PLATFORM = "xcb";   # Qt apps usan X11
-  };
 
   # ===== NOTA IMPORTANTE =====
   # picom NO se habilita aqui porque conflictua con Mutter (GNOME)

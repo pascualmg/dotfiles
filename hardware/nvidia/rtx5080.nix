@@ -84,11 +84,6 @@
   # ===== X11 VIDEO DRIVER =====
   services.xserver.videoDrivers = [ "nvidia" ];
 
-  # ===== GDM: FORZAR X11 =====
-  # CRITICO: NVIDIA + Wayland en GDM = problemas
-  # Esto SOLO aplica a maquinas con NVIDIA (no a macbook con Intel)
-  services.displayManager.gdm.wayland = false;
-
   # ===== VARIABLES DE ENTORNO NVIDIA =====
   environment.sessionVariables = {
     # Driver de aceleracion de video
