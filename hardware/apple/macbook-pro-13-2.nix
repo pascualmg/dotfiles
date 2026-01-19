@@ -275,6 +275,25 @@ in
         "default.clock.max-quantum" = 2048;
       };
     };
+
+    # WirePlumber: Auto-set profile para Intel HDA + CS8409
+    # Sin esto, el perfil no se activa y solo hay Dummy Output
+    wireplumber.extraConfig."10-macbook-alsa" = {
+      "monitor.alsa.rules" = [
+        {
+          matches = [
+            { "device.name" = "alsa_card.pci-0000_00_1f.3"; }
+          ];
+          actions = {
+            update-props = {
+              "api.acp.auto-profile" = true;
+              "api.acp.auto-port" = true;
+              "device.profile" = "output:analog-stereo+input:analog-stereo";
+            };
+          };
+        }
+      ];
+    };
   };
 
   services.pulseaudio.enable = false;
