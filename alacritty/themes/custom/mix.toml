@@ -1,0 +1,56 @@
+# Mix Theme - Spacemacs meets Neon
+# Cyberpunk vibes - Matching console-theme "mix"
+
+[colors.primary]
+background = "#1a1a2e"
+foreground = "#d1f7ff"
+
+[colors.cursor]
+text = "#1a1a2e"
+cursor = "#39ff14"
+
+[colors.vi_mode_cursor]
+text = "#1a1a2e"
+cursor = "#ff2a6d"
+
+[colors.selection]
+text = "#1a1a2e"
+background = "#4a4a6a"
+
+[colors.search.matches]
+foreground = "#1a1a2e"
+background = "#39ff14"
+
+[colors.search.focused_match]
+foreground = "#1a1a2e"
+background = "#ff2a6d"
+
+[colors.normal]
+black   = "#1a1a2e"
+red     = "#ff2a6d"
+green   = "#05d9e8"
+yellow  = "#f9c80e"
+blue    = "#4f97d7"
+magenta = "#bc6ec5"
+cyan    = "#39ff14"
+white   = "#d1f7ff"
+
+[colors.bright]
+black   = "#4a4a6a"
+red     = "#ff6b9d"
+green   = "#39ff14"
+yellow  = "#ffe66d"
+blue    = "#7590db"
+magenta = "#ff2a6d"
+cyan    = "#05d9e8"
+white   = "#ffffff"
+
+[colors.dim]
+black   = "#0f0f1a"
+red     = "#992040"
+green   = "#038290"
+yellow  = "#9a7a08"
+blue    = "#305b80"
+magenta = "#704080"
+cyan    = "#229910"
+white   = "#8090a0"

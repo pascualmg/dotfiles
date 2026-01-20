@@ -45,6 +45,7 @@ in
     ./programs/libinput-gestures.nix
     ./programs/hyprland.nix         # Wayland compositor moderno
     ./programs/niri.nix             # Wayland scroll infinito
+    ./programs/console-theme.nix    # Temas TTY en caliente (solo macbook)
 
     # Config especifica de maquina (setea las opciones)
     # Solo importar si existe el archivo para esa maquina

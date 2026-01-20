@@ -147,7 +147,14 @@ in
       # Intel Graphics optimizations
       "i915.enable_fbc=1"         # Framebuffer compression
       "i915.enable_psr=1"         # Panel self-refresh
-      "i915.fastboot=1"           # Reduce flickering at boot
+      # NOTA: NO usar i915.fastboot=1 - preserva geometria incorrecta del EFI
+
+      # === SOLUCION FBCON TTY ===
+      # El EFI Apple reporta 3360x2100 (resolucion HiDPI interna) pero el panel es 2560x1600
+      # Estrategia: Deshabilitar efifb y forzar i915 a usar EDID real del panel
+      "video=efifb:off"           # Deshabilitar framebuffer EFI
+      "fbcon=nodefer"             # Forzar fbcon a reconfigurarse con i915
+      "video=eDP-1:2560x1600@60"  # Forzar resolucion nativa del panel
     ];
 
     # Modulos extra del kernel compilados out-of-tree
@@ -165,9 +172,40 @@ in
     blacklistedKernelModules = [
       "b43" "b43legacy" "bcma" "brcmsmac" "ssb"
       # NOTA: NO blacklistear brcmfmac - algunos dongles USB lo usan
+      # NOTA: simpledrm está built-in, no se puede blacklistear
     ];
     # NOTA: extraModprobeConfig para audio está en snd-hda-macbookpro.nix
   };
+
+  # ===========================================================================
+  # CONSOLA TTY: Tema Spacemacs Dark (matching Alacritty)
+  # ===========================================================================
+  # Spleen 16x32 - fuente bitmap para HiDPI
+  # Default: Spacemacs Dark (matching alacritty-theme default)
+  #
+  # CAMBIAR EN CALIENTE: console-theme <tema>
+  #   Temas: dark, light, commodore, mix, amber
+  #   Solo funciona en TTY (Ctrl+Alt+F1-F6), no en terminales gráficos
+  console.font = lib.mkForce "spleen-16x32";
+  console.packages = lib.mkForce [ pkgs.spleen ];
+  console.colors = lib.mkForce [
+    "292b2e"  # 0: black (bg1)
+    "f2241f"  # 1: red
+    "67b11d"  # 2: green
+    "b1951d"  # 3: yellow
+    "4f97d7"  # 4: blue
+    "a31db1"  # 5: magenta
+    "2d9574"  # 6: cyan
+    "b2b2b2"  # 7: white (base)
+    "686868"  # 8: bright black
+    "f2241f"  # 9: bright red
+    "86dc2f"  # 10: bright green
+    "e89e0f"  # 11: bright yellow (warning)
+    "7590db"  # 12: bright blue
+    "bc6ec5"  # 13: bright magenta (el rosa!)
+    "28def0"  # 14: bright cyan
+    "e3dedd"  # 15: bright white
+  ];
 
   # ===========================================================================
   # HARDWARE: Complementos a nixos-hardware

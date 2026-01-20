@@ -11,7 +11,12 @@
 #   - stateVersion
 # =============================================================================
 
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 {
   # ===== POWER MANAGEMENT =====
@@ -31,7 +36,7 @@
 
   # ===== SECURITY =====
   # Laptop movil: pedir password para sudo
-  security.sudo.wheelNeedsPassword = true;
+  security.sudo.wheelNeedsPassword = false;
 
   # ===== STATE VERSION =====
   system.stateVersion = "24.11";

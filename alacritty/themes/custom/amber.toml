@@ -1,0 +1,57 @@
+# Amber CRT Phosphor Theme
+# Inspired by vintage amber monochrome CRT monitors
+# Classic P3 amber phosphor vibes
+
+[colors.primary]
+background = "#0a0800"
+foreground = "#ffb000"
+
+[colors.cursor]
+text = "#0a0800"
+cursor = "#ffc800"
+
+[colors.vi_mode_cursor]
+text = "#0a0800"
+cursor = "#ffe135"
+
+[colors.selection]
+text = "#0a0800"
+background = "#5a4000"
+
+[colors.search.matches]
+foreground = "#0a0800"
+background = "#ffc800"
+
+[colors.search.focused_match]
+foreground = "#0a0800"
+background = "#ffe135"
+
+[colors.normal]
+black   = "#1a1200"
+red     = "#ff6600"
+green   = "#ffb000"
+yellow  = "#ffd700"
+blue    = "#cc8800"
+magenta = "#ff8c00"
+cyan    = "#ffcc00"
+white   = "#ffb000"
+
+[colors.bright]
+black   = "#3d2800"
+red     = "#ff8c00"
+green   = "#ffc800"
+yellow  = "#ffe135"
+blue    = "#ffaa00"
+magenta = "#ffcc66"
+cyan    = "#ffd966"
+white   = "#ffe4b5"
+
+[colors.dim]
+black   = "#0a0600"
+red     = "#995200"
+green   = "#997300"
+yellow  = "#998c00"
+blue    = "#805500"
+magenta = "#996600"
+cyan    = "#998000"
+white   = "#997300"

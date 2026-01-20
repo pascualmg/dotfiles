@@ -68,6 +68,27 @@
   # Solo configuramos opciones especificas de macbook
   dotfiles.hyprland.monitorScale = "2";  # HiDPI Retina
 
+  # ===========================================================================
+  # WORKAROUND: Geometría TTY incorrecta por EFI Apple
+  # ===========================================================================
+  # Apple EFI reporta 3360x2100 via GOP pero el panel es 2560x1600.
+  # simpledrm (built-in kernel) hereda esta resolución y fbcon calcula
+  # 210x65 en vez de 160x50, causando que el texto se salga de pantalla.
+  #
+  # SOLUCIÓN REAL: Usar rEFInd que puede forzar resolución GOP antes del kernel.
+  # Ver README.org sección "TODO Tareas Pendientes" para más info.
+  #
+  # WORKAROUND TEMPORAL: Forzar geometría correcta en login de TTY.
+  # Solo afecta TTY (TERM=linux), no terminales gráficos.
+  home.file.".config/fish/conf.d/macbook-tty-geometry.fish".text = ''
+    # Fix TTY geometry for MacBook Retina
+    # EFI GOP reports 3360x2100 but panel is 2560x1600
+    # With spleen-16x32 font: 2560/16=160 cols, 1600/32=50 rows
+    if test "$TERM" = "linux"
+      stty cols 160 rows 50
+    end
+  '';
+
   # GNOME dconf settings
   dconf.settings = {
     # HiDPI: Escalado de texto para pantalla Retina 227 DPI
