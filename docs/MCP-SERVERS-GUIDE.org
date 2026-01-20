@@ -1,0 +1,387 @@
+#+TITLE: Guía Completa de MCP Servers (Model Context Protocol)
+#+AUTHOR: Pascual Muñoz Galián
+#+DATE: 2026-01-20
+#+STARTUP: overview
+#+OPTIONS: toc:3
+
+* Qué es MCP (Model Context Protocol)
+
+** Definición Simple
+MCP es un *protocolo estándar* que permite a los LLMs (como Claude) comunicarse
+con servicios externos de forma segura y estructurada.
+
+Piensa en MCP como un "USB universal" para IAs:
+- Antes: Cada IA tenía su propia forma de conectarse a servicios
+- Ahora: Un protocolo estándar que cualquier IA puede usar
+
+** Analogía: El Camarero del Restaurante
+#+begin_quote
+Imagina que Claude es un cliente en un restaurante:
+- *Sin MCP*: Claude tiene que ir a la cocina, abrir la nevera, buscar ingredientes...
+- *Con MCP*: Claude le dice al camarero (MCP Server) "busca la tarea EED-11923 en Jira"
+  y el camarero se encarga de autenticarse, llamar a la API y traer los datos.
+#+end_quote
+
+** Historia
+- *Nov 2024*: Anthropic introduce MCP como estándar abierto
+- *2025*: OpenAI y Google DeepMind adoptan el protocolo
+- *Dic 2025*: Anthropic dona MCP a la Linux Foundation (AAIF)
+
+* Arquitectura: Cómo Funciona Por Debajo
+
+** Componentes del Sistema
+
+#+begin_src
+┌─────────────────────────────────────────────────────────────────┐
+│                         TU MÁQUINA                              │
+│                                                                 │
+│  ┌──────────────┐     ┌──────────────┐     ┌──────────────┐    │
+│  │  Claude Code │────▶│  MCP Client  │────▶│  MCP Server  │    │
+│  │   (CLI/UI)   │     │  (interno)   │     │   (proceso)  │    │
+│  └──────────────┘     └──────────────┘     └──────┬───────┘    │
+│                                                    │            │
+└────────────────────────────────────────────────────│────────────┘
+                                                     │
+                                                     ▼
+                                          ┌──────────────────┐
+                                          │  API Externa     │
+                                          │  (Jira, GitHub,  │
+                                          │   Confluence)    │
+                                          └──────────────────┘
+#+end_src
+
+** Los 3 Componentes Clave
+
+*** 1. MCP Client (dentro de Claude Code)
+- Viene integrado en Claude Code
+- Lee la configuración de =~/.mcp.json=
+- Lanza y gestiona los MCP Servers
+- Traduce las peticiones de Claude al protocolo MCP
+
+*** 2. MCP Server (proceso separado)
+- Es un *proceso independiente* que corre en tu máquina
+- Cada servidor expone "herramientas" (tools) que Claude puede usar
+- Ejemplo: El servidor de Atlassian expone =getJiraIssue=, =createJiraIssue=, etc.
+- Puede ser:
+  - *Local*: Un script Python/Node que corre en tu máquina
+  - *Remoto*: Un servidor en la nube (como =mcp.atlassian.com=)
+
+*** 3. Protocolo de Comunicación
+- Usa JSON-RPC 2.0 sobre STDIO (entrada/salida estándar)
+- El cliente y servidor se comunican via stdin/stdout del proceso
+
+** Flujo de una Petición Real (Ejemplo: Buscar tarea en Jira)
+
+#+begin_src
+1. TÚ escribes: "busca la tarea EED-11923"
+
+2. CLAUDE interpreta que necesita usar la herramienta getJiraIssue
+
+3. CLAUDE CODE (MCP Client) envía al MCP Server:
+   {
+     "jsonrpc": "2.0",
+     "method": "tools/call",
+     "params": {
+       "name": "getJiraIssue",
+       "arguments": {
+         "issueIdOrKey": "EED-11923",
+         "cloudId": "0ccb01c8-031e-4b1f-9c51-1a25b2839bd8"
+       }
+     }
+   }
+
+4. MCP SERVER (Atlassian) recibe la petición y:
+   - Lee los tokens OAuth de ~/.mcp-auth/
+   - Hace la llamada real a la API de Jira
+   - Devuelve el resultado en JSON
+
+5. CLAUDE CODE recibe el resultado y se lo pasa a Claude
+
+6. CLAUDE te muestra la información de la tarea formateada
+#+end_src
+
+* Configuración: El archivo ~/.mcp.json
+
+** Ubicación
+El archivo debe estar en tu HOME: =~/.mcp.json=
+
+** Estructura Básica
+
+#+begin_src json
+{
+  "mcpServers": {
+    "nombre_servidor": {
+      "command": "comando_a_ejecutar",
+      "args": ["argumento1", "argumento2"],
+      "env": {
+        "VARIABLE": "valor"
+      }
+    }
+  }
+}
+#+end_src
+
+** Campos Explicados
+
+| Campo   | Descripción                              | Ejemplo               |
+|---------+------------------------------------------+-----------------------|
+| command | Ejecutable que lanza el servidor         | "npx", "python", "uv" |
+| args    | Argumentos para el comando               | ["-y", "mcp-remote"]  |
+| env     | Variables de entorno (opcional)          | {"API_KEY": "xxx"}    |
+
+** Mi Configuración: Atlassian (Jira + Confluence)
+
+#+begin_src json
+{
+  "mcpServers": {
+    "atlassian": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://mcp.atlassian.com/v1/mcp"]
+    }
+  }
+}
+#+end_src
+
+* Ejemplo Completo: Configurar Atlassian MCP
+
+** Paso 1: Crear ~/.mcp.json
+
+#+begin_src bash
+cat > ~/.mcp.json << 'EOF'
+{
+  "mcpServers": {
+    "atlassian": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://mcp.atlassian.com/v1/mcp"]
+    }
+  }
+}
+EOF
+#+end_src
+
+** Paso 2: Autorizar OAuth (primera vez)
+
+#+begin_src bash
+# Ejecutar manualmente - se abrirá el navegador
+npx -y mcp-remote https://mcp.atlassian.com/v1/mcp
+#+end_src
+
+1. Se abre el navegador pidiendo autorización con tu cuenta Atlassian
+2. Completa el flujo OAuth (clic en "Allow")
+3. Verás "Authorization successful" en el navegador
+4. Los tokens se guardan en =~/.mcp-auth/=
+
+** Paso 3: Reiniciar Claude Code
+
+#+begin_src bash
+exit
+claude
+#+end_src
+
+** Paso 4: Probar
+
+Escribe en Claude Code:
+#+begin_example
+busca la tarea EED-11923
+#+end_example
+
+Si funciona, verás los detalles de la tarea.
+
+* Ciclo de Vida y Autenticación
+
+** Cuándo se Lanzan los Servidores
+1. Inicias Claude Code (=claude=)
+2. Claude Code lee =~/.mcp.json=
+3. Por cada servidor configurado, lanza el proceso con =command + args=
+4. Los procesos quedan corriendo mientras Claude Code esté abierto
+5. Al cerrar Claude Code, los procesos MCP también se cierran
+
+** Diagrama de Autenticación OAuth
+
+#+begin_src
+┌─────────────┐     ┌─────────────┐     ┌─────────────────────┐
+│ Claude Code │────▶│ mcp-remote  │────▶│  mcp.atlassian.com  │
+│             │     │  (proxy)    │     │                     │
+└─────────────┘     └──────┬──────┘     └─────────────────────┘
+                           │
+                           ▼
+                    ┌─────────────┐
+                    │  Navegador  │ ◀── Tú autorizas aquí
+                    │   (OAuth)   │
+                    └─────────────┘
+                           │
+                           ▼
+                    ┌─────────────┐
+                    │ ~/.mcp-auth │ ◀── Tokens guardados aquí
+                    └─────────────┘
+#+end_src
+
+** Tokens y Expiración
+- Los tokens se guardan en =~/.mcp-auth/=
+- *Expiran aprox. cada 55 minutos*
+- Si ves error 401: borrar cache y re-autorizar
+
+* Herramientas (Tools) del Atlassian MCP
+
+** Tools de Jira
+
+| Tool                        | Descripción                          | hasScreen |
+|-----------------------------+--------------------------------------+-----------|
+| getJiraIssue                | Obtener detalles de una tarea        | -         |
+| createJiraIssue             | Crear nueva tarea                    | -         |
+| editJiraIssue               | Editar título/descripción            | -         |
+| transitionJiraIssue         | Cambiar estado de tarea              | variable  |
+| addCommentToJiraIssue       | Añadir comentario                    | -         |
+| searchJiraIssuesUsingJql    | Buscar con JQL                       | -         |
+| getTransitionsForJiraIssue  | Ver transiciones disponibles         | -         |
+| getVisibleJiraProjects      | Listar proyectos accesibles          | -         |
+
+** Tools de Confluence
+
+| Tool                     | Descripción                    |
+|--------------------------+--------------------------------|
+| getConfluencePage        | Leer página por ID             |
+| createConfluencePage     | Crear página nueva             |
+| updateConfluencePage     | Actualizar página              |
+| searchConfluenceUsingCql | Buscar con CQL                 |
+| getConfluenceSpaces      | Listar espacios                |
+
+** Tool Unificada
+
+| Tool   | Descripción                                |
+|--------+--------------------------------------------|
+| search | Búsqueda unificada Jira+Confluence (Rovo)  |
+
+* Transiciones de Estado en Jira (Proyecto EED)
+
+** IDs de Transiciones Conocidas
+
+| ID  | Nombre               | Desde       | hasScreen                   |
+|-----+----------------------+-------------+-----------------------------|
+| 131 | Ejecución            | TO DO       | true (Start/Due/Account)    |
+| 21  | Vuelta a pendiente   | IN PROGRESS | false                       |
+| 31  | En revisión          | IN PROGRESS | false                       |
+| 171 | Bloqueado            | IN PROGRESS | true                        |
+| 201 | Pendiente Producción | IN PROGRESS | true                        |
+| 111 | Cancelado            | (global)    | true                        |
+
+** Workflow del Proyecto EED
+
+#+begin_src
+TO DO → IN PROGRESS → BLOCKED (opcional)
+                   ↓
+              EN REVISION → TESTING → ACCEPT → TO PRO → DONE
+#+end_src
+
+** Ejemplo: Transicionar a Ejecución
+
+#+begin_src javascript
+// Requiere campos obligatorios (hasScreen: true)
+{
+  "transition": {"id": "131"},
+  "fields": {
+    "customfield_10015": "2026-01-20",  // Start date
+    "duedate": "2026-01-20",            // Due date
+    "customfield_10035": 45             // Account: Identity-CPX-IT
+  }
+}
+#+end_src
+
+** Ejemplo: Transicionar a En Revisión
+
+#+begin_src javascript
+// Sin campos requeridos (hasScreen: false)
+{
+  "transition": {"id": "31"}
+}
+#+end_src
+
+** Accounts Conocidas (customfield_10035)
+
+| ID | Nombre          |
+|----+-----------------|
+| 45 | Identity-CPX-IT |
+
+* Troubleshooting
+
+** Error: "Connection closed" o "MCP error"
+- El servidor MCP se cayó o no arrancó
+- *Solución*: Reiniciar Claude Code
+
+** Error: 401 Unauthorized (OAuth expirado)
+
+#+begin_src bash
+# Paso 1: Borrar tokens expirados
+rm -rf ~/.mcp-auth/
+
+# Paso 2: Re-autorizar (abre navegador)
+npx -y mcp-remote https://mcp.atlassian.com/v1/mcp
+
+# Paso 3: Completar OAuth en navegador
+# Espera mensaje "Authorization successful"
+
+# Paso 4: Reiniciar Claude Code
+exit
+claude
+#+end_src
+
+** El navegador no se abre para OAuth
+1. Busca en el output una URL =https://auth.atlassian.com/...=
+2. Cópiala y ábrela manualmente en el navegador
+
+** Ver logs de MCP Servers
+
+#+begin_src bash
+# Los logs van a stderr
+npx -y mcp-remote https://mcp.atlassian.com/v1/mcp 2>&1 | tee mcp.log
+#+end_src
+
+* MCP Servers Disponibles en NixOS
+
+#+begin_src bash
+nix search nixpkgs mcp-server
+#+end_src
+
+| Paquete              | Descripción                |
+|----------------------+----------------------------|
+| github-mcp-server    | GitHub oficial             |
+| gitea-mcp-server     | Gitea                      |
+| terraform-mcp-server | Terraform                  |
+| aks-mcp-server       | Azure Kubernetes           |
+
+* Recursos
+
+- [[https://modelcontextprotocol.io/][Model Context Protocol - Sitio Oficial]]
+- [[https://modelcontextprotocol.io/specification/2025-11-25][Especificación MCP 2025-11-25]]
+- [[https://github.com/modelcontextprotocol][GitHub - Model Context Protocol]]
+- [[https://support.atlassian.com/atlassian-rovo-mcp-server/][Atlassian Rovo MCP Server - Documentación]]
+
+* Mi Configuración Actual
+
+** Atlassian (Jira + Confluence)
+- *Tipo*: Remoto (mcp.atlassian.com)
+- *Proxy*: mcp-remote (npx)
+- *Auth*: OAuth via navegador
+- *Tokens*: ~/.mcp-auth/
+- *Cloud ID Vocento*: =0ccb01c8-031e-4b1f-9c51-1a25b2839bd8=
+
+** Archivo ~/.mcp.json
+
+#+begin_src json
+{
+  "mcpServers": {
+    "atlassian": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://mcp.atlassian.com/v1/mcp"]
+    }
+  }
+}
+#+end_src
+
+* Historial de Cambios
+
+| Fecha      | Cambio                                           |
+|------------+--------------------------------------------------|
+| 2026-01-20 | Documentación inicial con ejemplo Atlassian/Jira |
+| 2026-01-20 | Añadidos IDs de transiciones proyecto EED        |
+| 2026-01-20 | Documentado workflow y campos requeridos         |
