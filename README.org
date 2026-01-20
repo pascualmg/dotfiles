@@ -1051,9 +1051,9 @@ console.font = lib.mkForce "ter-v32n";
 console.packages = lib.mkForce [ pkgs.terminus_font ];
 #+END_SRC
 
-** Display Managers: GDM vs LightDM - RESUELTO (2026-01-19)
+** Display Managers: GDM vs LightDM - PARCIAL (2026-01-19)
 
-*Estado:* RESUELTO - LightDM para todas las maquinas
+*Estado:* PARCIAL - XMonad OK, Wayland ROTO
 
 *** El problema
 
@@ -1101,9 +1101,24 @@ services.displayManager.defaultSession = "none+xmonad";
 
 | Maquina | DM | WM/DE | Picom | Estado |
 |---------+----+-------+-------+--------|
-| aurin | LightDM | XMonad + GNOME disponible | home-manager | OK |
-| vespino | LightDM | XMonad + GNOME disponible | home-manager | OK |
-| macbook | LightDM | XMonad + GNOME disponible | home-manager | OK |
+| aurin | LightDM | XMonad (X11) | home-manager | OK |
+| vespino | LightDM | XMonad (X11) | home-manager | OK |
+| macbook | LightDM | XMonad (X11) | home-manager | OK |
+
+*** PENDIENTE: Wayland no funciona
+
+*Problema:* LightDM es un display manager X11. Las sesiones Wayland (GNOME, niri, Hyprland) no arrancan correctamente.
+
+*Afectados:*
+- GNOME (Wayland) - No arranca
+- niri - No arranca
+- Hyprland - No arranca
+
+*Posibles soluciones a investigar:*
+1. Volver a GDM solo para sesiones Wayland
+2. Usar greetd (display manager moderno que soporta Wayland)
+3. Usar SDDM con soporte Wayland
+4. Login directo desde TTY con =Hyprland= / =niri=
 
 *** Picom: por que no esta en desktop.nix
 
@@ -1444,6 +1459,11 @@ Para implementar sops-nix: [[https://github.com/Mic92/sops-nix][sops-nix GitHub]
 
 * TODO Tareas Pendientes
 
+- [ ] *WAYLAND ROTO* - LightDM no soporta sesiones Wayland (GNOME, niri, Hyprland)
+  - Investigar: greetd, SDDM, o login directo desde TTY
+- [ ] *rEFInd* - Bootloader para fix geometria TTY en MacBook
+  - =boot.loader.refind.enable = true=
+  - Configurar =resolution 2560 1600= en refind.conf
 - [ ] Revisar y limpiar configs obsoletas (shell/, composer/)
 - [ ] Documentar scripts utiles en scripts/
 - [ ] Migrar xmonad a home-manager (si merece la pena)
