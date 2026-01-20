@@ -180,14 +180,16 @@ in
   # ===========================================================================
   # CONSOLA TTY: Tema Spacemacs Dark (matching Alacritty)
   # ===========================================================================
-  # Spleen 16x32 - fuente bitmap para HiDPI
+  # Terminus 32 - LA fuente clasica para programar en consola
   # Default: Spacemacs Dark (matching alacritty-theme default)
   #
   # CAMBIAR EN CALIENTE: console-theme <tema>
   #   Temas: dark, light, commodore, mix, amber
   #   Solo funciona en TTY (Ctrl+Alt+F1-F6), no en terminales gráficos
-  console.font = lib.mkForce "spleen-16x32";
-  console.packages = lib.mkForce [ pkgs.spleen ];
+  #
+  # Fuentes disponibles: ter-v16n (pequeña), ter-v24n (media), ter-v32n (HiDPI)
+  console.font = lib.mkForce "ter-v32n";
+  console.packages = lib.mkForce [ pkgs.terminus_font ];
   console.colors = lib.mkForce [
     "292b2e"  # 0: black (bg1)
     "f2241f"  # 1: red

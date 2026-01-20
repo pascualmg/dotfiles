@@ -997,6 +997,60 @@ dotfiles.xmobar = {
 
 La formula: =TopH = fontSize * 1.8= ajusta la altura de barra proporcionalmente.
 
+** Consola TTY: Temas y Fuentes (2026-01-20)
+
+*Estado:* FUNCIONAL con workaround
+
+*** El problema
+
+El EFI de Apple reporta resolucion incorrecta (3360x2100 en vez de 2560x1600).
+Esto causa que el texto en TTY se salga de pantalla.
+
+*Workaround:* =stty cols 160 rows 50= en fish login (automatico).
+
+*** console-theme: Cambio de temas en caliente
+
+Comando para cambiar colores de la consola TTY en caliente:
+
+#+BEGIN_SRC bash
+console-theme dark            # Spacemacs Dark (default)
+console-theme light           # Spacemacs Light
+console-theme commodore       # Fosforo verde CRT retro
+console-theme mix             # Synthwave neon
+console-theme amber           # CRT ambar retro
+console-theme solarized-dark  # Solarized Dark
+console-theme solarized-light # Solarized Light
+console-theme list            # Ver todos
+#+END_SRC
+
+*Nota:* Solo funciona en TTY real (Ctrl+Alt+F1-F6), no en terminales graficos.
+Para Alacritty usar =alacritty-theme=.
+
+*** Fuentes de consola disponibles
+
+Fuente actual: *Terminus* (ter-v32n) - LA clasica para programar.
+
+*Terminus* (recomendada):
+| Nombre | Tamano | Uso |
+|--------+--------+-----|
+| ter-v16n | 8x16 | Muchas lineas, puede ser pequena |
+| ter-v24n | 12x24 | Balance |
+| ter-v32n | 16x32 | HiDPI (actual) |
+| ter-v32b | 16x32 | Bold |
+
+*Spleen* (retro):
+| Nombre | Tamano | Uso |
+|--------+--------+-----|
+| spleen-8x16 | 8x16 | Pequena |
+| spleen-16x32 | 16x32 | HiDPI |
+| spleen-32x64 | 32x64 | ENORME |
+
+Cambiar fuente en =hardware/apple/macbook-pro-13-2.nix=:
+#+BEGIN_SRC nix
+console.font = lib.mkForce "ter-v32n";
+console.packages = lib.mkForce [ pkgs.terminus_font ];
+#+END_SRC
+
 ** Display Managers: GDM vs LightDM - RESUELTO (2026-01-19)
 
 *Estado:* RESUELTO - LightDM para todas las maquinas
