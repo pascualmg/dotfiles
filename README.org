@@ -1,7 +1,19 @@
 #+TITLE: Dotfiles - passh (Multi-Machine NixOS)
 #+AUTHOR: passh
-#+DATE: 2026-01-19
+#+DATE: 2026-01-20
 #+STARTUP: overview
+
+* TODO Tareas Pendientes
+
+- [ ] *WAYLAND ROTO* - LightDM no soporta sesiones Wayland (GNOME, niri, Hyprland)
+  - Investigar: greetd, SDDM, o login directo desde TTY
+- [ ] *rEFInd* - Bootloader para fix geometria TTY en MacBook
+  - =boot.loader.refind.enable = true=
+  - Configurar =resolution 2560 1600= en refind.conf
+- [ ] Revisar y limpiar configs obsoletas (shell/, composer/)
+- [ ] Documentar scripts utiles en scripts/
+- [ ] Migrar xmonad a home-manager (si merece la pena)
+- [ ] Considerar sops-nix para secretos
 
 * TL;DR - Setup Rapido
 
@@ -1456,18 +1468,6 @@ sudo nixos-rebuild switch --flake ~/dotfiles#macbook --impure
 | Repo privado input | Si | Media | Flake input con SSH |
 
 Para implementar sops-nix: [[https://github.com/Mic92/sops-nix][sops-nix GitHub]]
-
-* TODO Tareas Pendientes
-
-- [ ] *WAYLAND ROTO* - LightDM no soporta sesiones Wayland (GNOME, niri, Hyprland)
-  - Investigar: greetd, SDDM, o login directo desde TTY
-- [ ] *rEFInd* - Bootloader para fix geometria TTY en MacBook
-  - =boot.loader.refind.enable = true=
-  - Configurar =resolution 2560 1600= en refind.conf
-- [ ] Revisar y limpiar configs obsoletas (shell/, composer/)
-- [ ] Documentar scripts utiles en scripts/
-- [ ] Migrar xmonad a home-manager (si merece la pena)
-- [ ] Considerar sops-nix para secretos
 
 * Roadmap: Migracion Stow -> Home Manager
 
