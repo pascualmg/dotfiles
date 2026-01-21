@@ -5,6 +5,10 @@
 
 * TODO Tareas Pendientes
 
+- [ ] *VPN VOCENTO EXPERIMENTAL* - Probar modulos en vespino antes de aurin
+  - Copiar disco QCOW2 a vespino
+  - Configurar =services.vocento-vpn-bridge= con interface correcta
+  - Validar que funciona igual que en macbook
 - [ ] *WAYLAND ROTO* - LightDM no soporta sesiones Wayland (GNOME, niri, Hyprland)
   - Investigar: greetd, SDDM, o login directo desde TTY
 - [ ] *rEFInd* - Bootloader para fix geometria TTY en MacBook
@@ -132,6 +136,227 @@ vespino = mkSystem {
 | aurin   | Dual Xeon E5-2699v3, RTX 5080, 128GB | Produccion, desarrollo | LightDM |
 | macbook | MacBook Pro 2016, Intel, HiDPI | Laptop, movilidad | LightDM |
 | vespino | AMD CPU, RTX 2060 | Testing, Minecraft, NFS | LightDM |
+
+** VPN Vocento (Ivanti/Pulse Secure) - EXPERIMENTAL [2026-01-21]
+
+*** El Problema
+
+Vocento usa *Ivanti VPN* (Pulse Secure) que NO funciona nativamente en NixOS.
+El cliente propietario tiene dependencias imposibles de satisfacer.
+
+*** La Solucion: VM como Gateway VPN
+
+#+BEGIN_SRC text
+┌─────────────────────────────────────────────────────────────────────────┐
+│                              HOST (NixOS)                               │
+│                                                                         │
+│   ┌──────────────────┐         ┌──────────────┐       ┌──────────────┐ │
+│   │  Interface Ext.  │         │    br0       │       │  VM Ubuntu   │ │
+│   │ (WiFi/Ethernet)  │   NAT   │192.168.53.10 │◄─────►│192.168.53.12 │ │
+│   │                  │◄───────►│   Bridge     │       │              │ │
+│   └────────┬─────────┘         └──────────────┘       │ ┌──────────┐ │ │
+│            │                          ▲               │ │ Ivanti   │ │ │
+│            ▼                          │               │ │ Client   │ │ │
+│       Internet                   Rutas corp.          │ └────┬─────┘ │ │
+│                                  via VM               │      │tun0   │ │
+│                                                       └──────┼───────┘ │
+└───────────────────────────────────────────────────────────────┼─────────┘
+                                                                ▼
+                                                        Redes Vocento
+                                                        10.180.0.0/16
+                                                        10.182.0.0/16
+                                                        192.168.196.0/24
+                                                        etc...
+#+END_SRC
+
+*** Modulos NixOS
+
+Dos modulos declarativos que trabajan juntos:
+
+| Modulo | Funcion | Ubicacion |
+|--------+---------+-----------|
+| =vocento-vpn-bridge.nix= | Bridge br0, NAT, rutas, DNS | =modules/services/= |
+| =ivanti-vpn-vm.nix= | VM libvirt declarativa | =modules/services/= |
+
+**** vocento-vpn-bridge.nix
+
+Configura toda la red del host:
+
+#+BEGIN_SRC nix
+services.vocento-vpn-bridge = {
+  enable = true;
+  externalInterface = "wlp0s20f0u7u4";  # Interface con internet
+  # hostAddress = "192.168.53.10";       # IP del host en bridge (default)
+  # vmAddress = "192.168.53.12";         # IP de la VM (default)
+};
+#+END_SRC
+
+*Que hace:*
+- Crea bridge =br0= con IP =192.168.53.10/24=
+- Configura NAT (MASQUERADE) para que la VM salga a internet
+- Añade rutas estaticas: =10.180.0.0/16 via 192.168.53.12=, etc.
+- Configura DNS apuntando a servidores Vocento
+- Añade script =vpn-bridge-status= para diagnostico
+
+**** ivanti-vpn-vm.nix
+
+Define la VM de forma declarativa:
+
+#+BEGIN_SRC nix
+services.ivanti-vpn-vm = {
+  enable = true;
+  networkMode = "bridge";        # "nat" para testing, "bridge" para produccion
+  vmAddress = "192.168.53.12";   # IP fija de la VM
+};
+#+END_SRC
+
+*Que hace:*
+- Genera XML de libvirt embebido en Nix
+- Servicio systemd que define la VM al boot
+- Script =vpn-vm= con comandos: start, stop, ssh, setup-network
+
+*** Comandos Disponibles
+
+#+BEGIN_SRC bash
+# Gestion de la VM
+vpn-vm start         # Arranca VM + abre virt-viewer
+vpn-vm stop          # Apaga la VM
+vpn-vm ssh           # SSH a la VM
+vpn-vm status        # Estado y conectividad
+vpn-vm setup-network # Configura IP en disco (VM apagada)
+
+# Diagnostico del bridge
+vpn-bridge-status    # Estado completo del sistema VPN
+#+END_SRC
+
+*** Reproducir en Equipo Nuevo
+
+#+BEGIN_SRC bash
+# 1. Copiar disco de la VM (17GB) desde maquina existente
+scp origen:/var/lib/libvirt/images/ivanti-vpn-clone.qcow2 \
+    /var/lib/libvirt/images/
+
+# 2. Configurar en hosts/NUEVO/default.nix:
+#+END_SRC
+
+#+BEGIN_SRC nix
+imports = [
+  ../../modules/services/ivanti-vpn-vm.nix
+  ../../modules/services/vocento-vpn-bridge.nix
+];
+
+services.ivanti-vpn-vm = {
+  enable = true;
+  networkMode = "bridge";
+};
+
+services.vocento-vpn-bridge = {
+  enable = true;
+  externalInterface = "enp0s31f6";  # <-- CAMBIAR a tu interface
+};
+#+END_SRC
+
+#+BEGIN_SRC bash
+# 3. Rebuild
+sudo nixos-rebuild switch --flake ~/dotfiles#NUEVO
+
+# 4. Configurar red en la VM (solo primera vez, automatico!)
+vpn-vm setup-network
+
+# 5. Arrancar y conectar
+vpn-vm start
+# -> En la VM: conectar cliente Ivanti
+# -> Listo! bitbucket.vocento.com accesible desde el host
+#+END_SRC
+
+*** Estado: EXPERIMENTAL
+
+| Aspecto | Estado |
+|---------+--------|
+| Funciona en macbook | ✓ Probado |
+| Funciona en vespino | ⏳ Pendiente probar |
+| Funciona en aurin | ⏳ NO migrar (usar snapshot existente) |
+| Reproducible | ✓ Modulos declarativos |
+| Disco VM en Nix | ✗ Manual (QCOW2 externo) |
+
+*** Notas del NixOS Guru
+
+*Puntos fuertes:*
+- Estructura modular correcta
+- Tipos bien definidos (submodules para rutas)
+- Scripts helper muy utiles
+- Documentacion en cabeceras
+
+*Mejoras sugeridas:*
+- Añadir assertions para dependencias
+- Hacer UUID de VM configurable
+- Cuidado con referencias circulares en defaults
+
+*Seguridad:*
+- =checkReversePath = false= necesario pero riesgoso
+- =--impure= requerido si usas hostsFile
+
+*** Arquitectura Detallada
+
+#+BEGIN_SRC text
+                    MODULOS NIX
+                    ───────────
+┌─────────────────────────────────────────────────────────┐
+│ modules/services/vocento-vpn-bridge.nix                │
+│                                                         │
+│  options:                                              │
+│    - enable                                            │
+│    - externalInterface (requerido)                     │
+│    - hostAddress (default: 192.168.53.10)              │
+│    - vmAddress (default: 192.168.53.12)                │
+│    - vpnRoutes (lista de redes corporativas)           │
+│    - dnsServers (default: DNS Vocento + 8.8.8.8)       │
+│                                                         │
+│  configura:                                            │
+│    - networking.bridges.br0                            │
+│    - networking.interfaces.br0.ipv4.routes             │
+│    - networking.nat                                    │
+│    - environment.etc."resolv.conf"                     │
+└─────────────────────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────┐
+│ modules/services/ivanti-vpn-vm.nix                     │
+│                                                         │
+│  options:                                              │
+│    - enable                                            │
+│    - networkMode ("nat" | "bridge")                    │
+│    - vmAddress                                         │
+│    - hostAddress                                       │
+│                                                         │
+│  configura:                                            │
+│    - systemd.services.define-ivanti-vpn-vm             │
+│    - environment.systemPackages [vpn-vm, guestfs-tools]│
+│                                                         │
+│  genera:                                               │
+│    - XML libvirt con bridge o NAT segun modo           │
+└─────────────────────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────┐
+│ hosts/macbook/default.nix                              │
+│                                                         │
+│  services.ivanti-vpn-vm.enable = true;                 │
+│  services.ivanti-vpn-vm.networkMode = "bridge";        │
+│  services.vocento-vpn-bridge.enable = true;            │
+│  services.vocento-vpn-bridge.externalInterface = "...";│
+└─────────────────────────────────────────────────────────┘
+#+END_SRC
+
+*** Troubleshooting
+
+| Problema | Solucion |
+|----------+----------|
+| VM sin internet | Verificar NAT: =sudo iptables -t nat -L= |
+| Host no resuelve DNS Vocento | Verificar ruta a DNS: =ping 192.168.201.38= |
+| No llega a redes corporativas | Verificar VPN conectada en VM: =vpn-vm ssh= + =ip route= |
+| Bridge no existe | =sudo systemctl start br0-netdev.service= |
+| VM no arranca | Verificar disco: =ls /var/lib/libvirt/images/*.qcow2= |
 
 * Configuraciones Principales
 
