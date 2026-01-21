@@ -133,6 +133,12 @@ in
       default = if cfg.networkMode == "bridge" then "192.168.53.12" else "192.168.122.192";
       description = "IP de la VM (para SSH y scripts)";
     };
+
+    hostAddress = mkOption {
+      type = types.str;
+      default = if cfg.networkMode == "bridge" then "192.168.53.10" else "192.168.122.1";
+      description = "IP del host/gateway (para configurar red en la VM)";
+    };
   };
 
   # ===========================================================================
@@ -176,7 +182,8 @@ in
     };
 
     # Script helper para conectar rapidamente
-    environment.systemPackages = [
+    environment.systemPackages = with pkgs; [
+      guestfs-tools  # Para virt-customize (setup-network)
       (pkgs.writeShellScriptBin "vpn-vm" ''
         set -euo pipefail
 
@@ -213,16 +220,63 @@ in
           ip)
             echo "$VM_IP"
             ;;
+          setup-network)
+            # Configura IP estatica en la VM (requiere VM apagada)
+            echo "Configurando red en la VM..."
+
+            STATE=$(virsh domstate ${vmName} 2>/dev/null || echo "unknown")
+            if [ "$STATE" = "running" ]; then
+              echo "ERROR: La VM debe estar apagada. Ejecuta: vpn-vm stop"
+              exit 1
+            fi
+
+            DISK="${diskPath}"
+            if [ ! -f "$DISK" ]; then
+              echo "ERROR: Disco no encontrado: $DISK"
+              exit 1
+            fi
+
+            # Crear archivo netplan temporal
+            NETPLAN=$(mktemp)
+            cat > "$NETPLAN" << 'YAML'
+        network:
+          version: 2
+          ethernets:
+            ens3:
+              addresses:
+                - ${cfg.vmAddress}/24
+              routes:
+                - to: default
+                  via: ${cfg.hostAddress}
+              nameservers:
+                addresses:
+                  - 8.8.8.8
+                  - 8.8.4.4
+        YAML
+
+            echo "Inyectando configuracion de red en el disco..."
+            sudo virt-customize -a "$DISK" \
+              --upload "$NETPLAN":/etc/netplan/01-bridge.yaml \
+              --run-command 'chmod 600 /etc/netplan/01-bridge.yaml' \
+              --run-command 'rm -f /etc/netplan/00* /etc/netplan/50*' \
+              2>&1
+
+            rm -f "$NETPLAN"
+            echo ""
+            echo "Red configurada! IP: ${cfg.vmAddress}"
+            echo "Ahora puedes arrancar la VM: vpn-vm start"
+            ;;
           *)
-            echo "Uso: vpn-vm <start|stop|status|ssh|viewer|ip>"
+            echo "Uso: vpn-vm <start|stop|status|ssh|viewer|ip|setup-network>"
             echo ""
             echo "Comandos:"
-            echo "  start   - Arranca la VM y abre virt-viewer"
-            echo "  stop    - Apaga la VM"
-            echo "  status  - Muestra estado de la VM"
-            echo "  ssh     - Conectar por SSH a la VM"
-            echo "  viewer  - Abre virt-viewer (VM debe estar corriendo)"
-            echo "  ip      - Muestra IP de la VM"
+            echo "  start         - Arranca la VM y abre virt-viewer"
+            echo "  stop          - Apaga la VM"
+            echo "  status        - Muestra estado de la VM"
+            echo "  ssh           - Conectar por SSH a la VM"
+            echo "  viewer        - Abre virt-viewer (VM debe estar corriendo)"
+            echo "  ip            - Muestra IP de la VM"
+            echo "  setup-network - Configura IP estatica (VM debe estar apagada)"
             echo ""
             echo "Configuracion actual:"
             echo "  Modo de red: ${cfg.networkMode}"
