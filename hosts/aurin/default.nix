@@ -22,7 +22,13 @@
 #   NO MODIFICAR sin plan de rollback
 # =============================================================================
 
-{ config, pkgs, lib, pkgsMaster, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  pkgsMaster,
+  ...
+}:
 
 {
   # ===========================================================================
@@ -38,7 +44,7 @@
   # ===========================================================================
   # Nix settings: 72 jobs para Dual Xeon
   common.nix.maxJobs = 72;
-  common.nix.gcDays = 8;  # GC mas agresivo, tenemos mucho disco
+  common.nix.gcDays = 8; # GC mas agresivo, tenemos mucho disco
 
   # ===========================================================================
   # HARDWARE
@@ -132,10 +138,12 @@
     useHostResolvConf = false;
     useDHCP = false;
 
-    hosts = { "185.14.56.20" = [ "pascualmg" ]; };
+    hosts = {
+      "185.14.56.20" = [ "pascualmg" ];
+    };
     # NOTA: Requiere --impure para leer paths externos al flake
-    extraHosts = if builtins.pathExists
-      "/home/passh/src/vocento/autoenv/hosts_all.txt" then
+    extraHosts =
+      if builtins.pathExists "/home/passh/src/vocento/autoenv/hosts_all.txt" then
         builtins.readFile "/home/passh/src/vocento/autoenv/hosts_all.txt"
       else
         "";
@@ -145,34 +153,72 @@
     interfaces = {
       enp7s0 = {
         useDHCP = false;
-        ipv4.addresses = [{
-          address = "192.168.2.147";
-          prefixLength = 24;
-        }];
+        ipv4.addresses = [
+          {
+            address = "192.168.2.147";
+            prefixLength = 24;
+          }
+        ];
       };
 
       br0 = {
         useDHCP = false;
         ipv4 = {
-          addresses = [{
-            address = "192.168.53.10";
-            prefixLength = 24;
-          }];
+          addresses = [
+            {
+              address = "192.168.53.10";
+              prefixLength = 24;
+            }
+          ];
           routes = [
-            { address = "10.180.0.0"; prefixLength = 16; via = "192.168.53.12"; }
-            { address = "10.182.0.0"; prefixLength = 16; via = "192.168.53.12"; }
-            { address = "192.168.196.0"; prefixLength = 24; via = "192.168.53.12"; }
-            { address = "10.200.26.0"; prefixLength = 24; via = "192.168.53.12"; }
-            { address = "10.184.0.0"; prefixLength = 16; via = "192.168.53.12"; }
-            { address = "10.186.0.0"; prefixLength = 16; via = "192.168.53.12"; }
-            { address = "34.175.0.0"; prefixLength = 16; via = "192.168.53.12"; }
-            { address = "34.13.0.0"; prefixLength = 16; via = "192.168.53.12"; }
+            {
+              address = "10.180.0.0";
+              prefixLength = 16;
+              via = "192.168.53.12";
+            }
+            {
+              address = "10.182.0.0";
+              prefixLength = 16;
+              via = "192.168.53.12";
+            }
+            {
+              address = "192.168.196.0";
+              prefixLength = 24;
+              via = "192.168.53.12";
+            }
+            {
+              address = "10.200.26.0";
+              prefixLength = 24;
+              via = "192.168.53.12";
+            }
+            {
+              address = "10.184.0.0";
+              prefixLength = 16;
+              via = "192.168.53.12";
+            }
+            {
+              address = "10.186.0.0";
+              prefixLength = 16;
+              via = "192.168.53.12";
+            }
+            {
+              address = "34.175.0.0";
+              prefixLength = 16;
+              via = "192.168.53.12";
+            }
+            {
+              address = "34.13.0.0";
+              prefixLength = 16;
+              via = "192.168.53.12";
+            }
           ];
         };
       };
     };
 
-    bridges = { br0.interfaces = [ ]; };
+    bridges = {
+      br0.interfaces = [ ];
+    };
 
     defaultGateway = {
       address = "192.168.2.1";
@@ -202,18 +248,32 @@
     firewall = {
       enable = true;
       allowedTCPPorts = [
-        53 80 443 22          # Basicos
-        8385 22000 8096       # Syncthing, Jellyfin
-        5900 5901             # VNC
-        8000 8081 8080 3000   # Web apps
-        5990 5991 5992 5993   # Custom
-        34279                 # Claude Code
-        631                   # CUPS
+        53
+        80
+        443
+        22 # Basicos
+        11434 # Ollama
+        8385
+        22000
+        8096 # Syncthing, Jellyfin
+        5900
+        5901 # VNC
+        8000
+        8081
+        8080
+        3000 # Web apps
+        5990
+        5991
+        5992
+        5993 # Custom
+        34279 # Claude Code
+        631 # CUPS
       ];
       allowedUDPPorts = [
         53
-        22000 21027           # Syncthing
-        5353                  # Avahi/mDNS
+        22000
+        21027 # Syncthing
+        5353 # Avahi/mDNS
       ];
       checkReversePath = false;
     };
@@ -278,6 +338,9 @@
     ollama = {
       enable = true;
       package = pkgs.ollama-cuda;
+      host = "0.0.0.0"; # Permitir conexiones externas
+      openFirewall = true; # Abrir puerto 11434 automáticamente
+      port = 11434; # Especificar puerto explícitamente
       environmentVariables = {
         CUDA_VISIBLE_DEVICES = "0";
         CUDA_LAUNCH_BLOCKING = "0";
@@ -339,15 +402,25 @@
       guiAddress = "0.0.0.0:8385";
       settings = {
         devices = {
-          "vespino" = { id = "C2DZIRD-A65IMBL-34MTS3M-ULVUMOL-6436UPS-DNZU5QI-ITPPIER-LWZCOAG"; };
-          "cohete" = { id = "MJCXI4B-EA5DX64-SY4QGGI-TKPDYG5-Y3OKBIU-XXAAWML-7TXS57Q-GLNQ4AY"; };
-          "pocapullos" = { id = "OYORVJB-XKOUBKT-NPILWWO-FYXSBAB-Q2FFRMC-YIZB4FW-XX5HDWR-X6K65QE"; };
+          "vespino" = {
+            id = "C2DZIRD-A65IMBL-34MTS3M-ULVUMOL-6436UPS-DNZU5QI-ITPPIER-LWZCOAG";
+          };
+          "cohete" = {
+            id = "MJCXI4B-EA5DX64-SY4QGGI-TKPDYG5-Y3OKBIU-XXAAWML-7TXS57Q-GLNQ4AY";
+          };
+          "pocapullos" = {
+            id = "OYORVJB-XKOUBKT-NPILWWO-FYXSBAB-Q2FFRMC-YIZB4FW-XX5HDWR-X6K65QE";
+          };
         };
         folders = {
           "org" = {
             id = "pgore-xe7pu";
             path = "/home/passh/org";
-            devices = [ "vespino" "cohete" "pocapullos" ];
+            devices = [
+              "vespino"
+              "cohete"
+              "pocapullos"
+            ];
             type = "sendreceive";
             ignorePerms = false;
           };
@@ -394,15 +467,42 @@
     dedicatedServer.openFirewall = true;
     extraCompatPackages = with pkgs; [ proton-ge-bin ];
     package = pkgs.steam.override {
-      extraPkgs = pkgs: with pkgs; [
-        libGL libGLU vulkan-loader vulkan-tools mesa
-        nvidia-vaapi-driver libva libva-utils
-        xorg.libX11 xorg.libXcursor xorg.libXrandr xorg.libXi
-        xorg.libXext xorg.libXfixes xorg.libXrender xorg.libXScrnSaver
-        xorg.libXcomposite xorg.libXdamage xorg.libXtst
-        nss nspr at-spi2-atk at-spi2-core dbus cups libdrm
-        expat libxkbcommon alsa-lib pango cairo gdk-pixbuf gtk3
-      ];
+      extraPkgs =
+        pkgs: with pkgs; [
+          libGL
+          libGLU
+          vulkan-loader
+          vulkan-tools
+          mesa
+          nvidia-vaapi-driver
+          libva
+          libva-utils
+          xorg.libX11
+          xorg.libXcursor
+          xorg.libXrandr
+          xorg.libXi
+          xorg.libXext
+          xorg.libXfixes
+          xorg.libXrender
+          xorg.libXScrnSaver
+          xorg.libXcomposite
+          xorg.libXdamage
+          xorg.libXtst
+          nss
+          nspr
+          at-spi2-atk
+          at-spi2-core
+          dbus
+          cups
+          libdrm
+          expat
+          libxkbcommon
+          alsa-lib
+          pango
+          cairo
+          gdk-pixbuf
+          gtk3
+        ];
     };
   };
 

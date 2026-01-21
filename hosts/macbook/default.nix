@@ -8,6 +8,7 @@
 #
 # Aqui solo van politicas/comportamientos especificos de este host:
 #   - Suspension deshabilitada (MacBook no se recupera bien)
+#   - VPN Vocento via VM Ubuntu
 #   - stateVersion
 # =============================================================================
 
@@ -20,8 +21,26 @@
 
 {
   imports = [
-    ../../modules/services/ivanti-vpn-vm.nix  # VM Ubuntu para VPN Ivanti
+    ../../modules/services/ivanti-vpn-vm.nix       # VM Ubuntu para VPN Ivanti
+    ../../modules/services/vocento-vpn-bridge.nix  # Bridge networking para VPN
   ];
+
+  # ===== VPN VOCENTO =====
+  # VM con cliente Ivanti + Bridge para enrutar trafico corporativo
+  services.ivanti-vpn-vm = {
+    enable = true;
+    networkMode = "bridge";        # Usar bridge br0 (no NAT)
+    vmAddress = "192.168.53.12";   # IP fija de la VM
+  };
+
+  services.vocento-vpn-bridge = {
+    enable = true;
+    externalInterface = "wlp0s20f0u7u4";  # WiFi USB dongle
+    # hostAddress = "192.168.53.10";      # default
+    # vmAddress = "192.168.53.12";        # default
+    # hostsFile = "/home/passh/src/vocento/autoenv/hosts_all.txt";  # si lo tienes
+  };
+
   # ===== POWER MANAGEMENT =====
   # Deshabilitar suspension - el MacBook no se recupera bien de sleep
   services.logind.settings.Login = {
