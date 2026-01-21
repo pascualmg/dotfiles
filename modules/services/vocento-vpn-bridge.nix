@@ -17,21 +17,67 @@
 #     externalInterface = "wlp0s20f0u7u4";  # Interface con internet
 #   };
 # =============================================================================
+#
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │                    GUIA PARA NOOBS DE NIX                               │
+# ├─────────────────────────────────────────────────────────────────────────┤
+# │                                                                         │
+# │  ESTRUCTURA DE UN MODULO NIXOS:                                         │
+# │  ─────────────────────────────                                          │
+# │  { config, pkgs, lib, ... }:    <- Funcion que recibe argumentos        │
+# │  {                                                                      │
+# │    options.foo = { ... };       <- Define opciones configurables        │
+# │    config = { ... };            <- Aplica config si opciones activas    │
+# │  }                                                                      │
+# │                                                                         │
+# │  CONCEPTOS CLAVE:                                                       │
+# │  ────────────────                                                       │
+# │  • with lib;      -> Importa funciones de lib (mkOption, mkIf, etc.)    │
+# │  • let x = y; in  -> Define variable local x con valor y                │
+# │  • mkOption       -> Crea una opcion configurable desde fuera           │
+# │  • mkIf cond val  -> Solo aplica val si cond es true                    │
+# │  • mkEnableOption -> Atajo para crear opcion enable = true/false        │
+# │  • types.str      -> El valor debe ser un string                        │
+# │  • types.listOf   -> El valor debe ser una lista de algo                │
+# │  • cfg.algo       -> Accede al valor que el usuario puso en la opcion   │
+# │                                                                         │
+# └─────────────────────────────────────────────────────────────────────────┘
 
+# Esta linea define el modulo como una FUNCION que recibe:
+#   - config: la configuracion completa del sistema (para leer valores)
+#   - pkgs: todos los paquetes de nixpkgs (para instalar programas)
+#   - lib: funciones auxiliares de NixOS (mkOption, mkIf, types, etc.)
+#   - ...: otros argumentos que no usamos pero podrian venir
 { config, pkgs, lib, ... }:
 
+# "with lib;" importa todas las funciones de lib al scope actual
+# Sin esto tendriamos que escribir lib.mkOption, lib.mkIf, lib.types.str, etc.
 with lib;
 
+# El bloque "let ... in" define variables locales que solo existen dentro
+# del bloque que viene despues del "in"
 let
+  # cfg es un atajo para no escribir config.services.vocento-vpn-bridge cada vez
+  # Cuando el usuario escribe: services.vocento-vpn-bridge.enable = true;
+  # Nosotros lo leemos como: cfg.enable (que sera true)
   cfg = config.services.vocento-vpn-bridge;
 in
 {
   # ===========================================================================
-  # OPTIONS
+  # OPTIONS - Definimos que puede configurar el usuario
   # ===========================================================================
+  # Cada opcion tiene:
+  #   - type: que tipo de valor acepta (str, int, bool, listOf str, etc.)
+  #   - default: valor por defecto si el usuario no lo especifica
+  #   - description: documentacion para nixos-option y manpages
+  #   - example: ejemplo de uso (opcional)
   options.services.vocento-vpn-bridge = {
+
+    # mkEnableOption crea automaticamente una opcion tipo bool
+    # que el usuario activa con: services.vocento-vpn-bridge.enable = true;
     enable = mkEnableOption "Vocento VPN Bridge networking";
 
+    # Esta opcion NO tiene default, asi que es OBLIGATORIA cuando enable = true
     externalInterface = mkOption {
       type = types.str;
       description = "Interface con acceso a internet (ej: enp7s0, wlp0s20f0u7u4)";
@@ -56,6 +102,8 @@ in
       description = "Subred del bridge";
     };
 
+    # Esta opcion es una LISTA de objetos (submodules)
+    # Cada objeto tiene sus propias opciones: address y prefixLength
     vpnRoutes = mkOption {
       type = types.listOf (types.submodule {
         options = {
@@ -78,7 +126,7 @@ in
     };
 
     dnsServers = mkOption {
-      type = types.listOf types.str;
+      type = types.listOf types.str;  # Lista de strings
       default = [ "192.168.201.38" "192.168.201.43" "8.8.8.8" ];
       description = "Servidores DNS Vocento + fallback publico";
     };
@@ -89,6 +137,7 @@ in
       description = "Dominios de busqueda DNS";
     };
 
+    # types.nullOr permite que el valor sea null O el tipo indicado
     hostsFile = mkOption {
       type = types.nullOr types.path;
       default = null;
@@ -98,82 +147,115 @@ in
   };
 
   # ===========================================================================
-  # CONFIG
+  # CONFIG - Lo que realmente se aplica al sistema
   # ===========================================================================
+  # mkIf cfg.enable { ... } significa:
+  # "Solo aplica esta configuracion si el usuario puso enable = true"
+  # Si enable = false, todo este bloque se ignora completamente
   config = mkIf cfg.enable {
+
     # -------------------------------------------------------------------------
-    # NETWORKING
+    # NETWORKING - Configuracion de red del sistema
     # -------------------------------------------------------------------------
     networking = {
+      # Deshabilitamos el manejo automatico de DNS
       useHostResolvConf = false;
       resolvconf.enable = false;
 
-      # Hosts adicionales (Vocento)
+      # Hosts adicionales (como /etc/hosts pero desde archivo externo)
+      # mkIf anidado: solo si hostsFile no es null
       extraHosts = mkIf (cfg.hostsFile != null) (
+        # builtins.pathExists comprueba si el archivo existe
+        # builtins.readFile lee el contenido del archivo
         if builtins.pathExists cfg.hostsFile
         then builtins.readFile cfg.hostsFile
         else ""
       );
 
-      # Bridge br0 (sin interfaces fisicas - la VM se conecta via libvirt)
+      # Bridge br0: interfaz virtual que conecta el host con la VM
+      # interfaces = [] significa que NO conectamos interfaces fisicas al bridge
+      # La VM se conecta al bridge via libvirt (vnet*)
       bridges.br0.interfaces = [ ];
 
+      # Configuramos la IP del host en el bridge
       interfaces.br0 = {
-        useDHCP = false;
+        useDHCP = false;  # IP estatica, no DHCP
         ipv4 = {
           addresses = [{
-            address = cfg.hostAddress;
-            prefixLength = 24;
+            address = cfg.hostAddress;  # 192.168.53.10
+            prefixLength = 24;          # /24 = 255.255.255.0
           }];
-          # Rutas corporativas via la VM VPN
+
+          # RUTAS ESTATICAS: el corazon del sistema VPN
+          # "map" transforma cada elemento de vpnRoutes en una ruta
+          # Cada ruta dice: "para llegar a address/prefix, pasa por vmAddress"
           routes = map (route: {
+            # "inherit (route) x y" es atajo para: x = route.x; y = route.y;
             inherit (route) address prefixLength;
-            via = cfg.vmAddress;
+            via = cfg.vmAddress;  # La VM es el gateway para estas redes
           }) cfg.vpnRoutes;
         };
       };
 
-      # NAT para que la VM pueda salir a internet
+      # NAT: permite que la VM salga a internet a traves del host
+      # Sin esto, la VM podria hablar con el host pero no con internet
       nat = {
         enable = true;
-        internalInterfaces = [ "br0" ];
-        externalInterface = cfg.externalInterface;
+        internalInterfaces = [ "br0" ];         # Desde donde viene trafico
+        externalInterface = cfg.externalInterface;  # Por donde sale
+        # iptables MASQUERADE: reescribe IP origen de paquetes del bridge
         extraCommands = ''
           iptables -t nat -A POSTROUTING -s ${cfg.bridgeSubnet} -j MASQUERADE
         '';
       };
 
-      # NetworkManager no gestiona el bridge
+      # Decimos a NetworkManager que NO toque estas interfaces
+      # NixOS las gestiona, NM solo las estropearia
       networkmanager.unmanaged = [
         "interface-name:br0"
         "interface-name:vnet*"
       ];
 
-      # Firewall
+      # Firewall: permisos de red
       firewall = {
+        # checkReversePath = false es CRITICO para VPN
+        # Normalmente Linux descarta paquetes que llegan por una interfaz
+        # distinta a la que usaria para responder (anti-spoofing)
+        # Pero con VPN, los paquetes llegan por br0 y responden por otra
+        # interfaz, asi que deshabilitamos esta comprobacion
         checkReversePath = false;
+        # Abrimos puerto 53 (DNS) por si la VM hace de servidor DNS
         allowedTCPPorts = [ 53 ];
         allowedUDPPorts = [ 53 ];
       };
     };
 
     # -------------------------------------------------------------------------
-    # DNS (via VM)
+    # DNS - Configuracion manual de /etc/resolv.conf
     # -------------------------------------------------------------------------
+    # Creamos el archivo nosotros en vez de dejar que lo gestione resolved
     environment.etc."resolv.conf" = {
+      # La sintaxis '' ... '' es un string multilinea en Nix
+      # ${variable} dentro del string se interpola (reemplaza por su valor)
       text = ''
         ${concatMapStrings (ns: "nameserver ${ns}\n") cfg.dnsServers}
         ${optionalString (cfg.searchDomains != []) "search ${concatStringsSep " " cfg.searchDomains}"}
         options timeout:1 attempts:1 rotate
       '';
-      mode = "0644";
+      # concatMapStrings: aplica funcion a cada elemento y concatena resultados
+      # optionalString: solo incluye el string si la condicion es true
+      # concatStringsSep: une lista con separador (como join en otros lenguajes)
+      mode = "0644";  # Permisos del archivo: rw-r--r--
     };
 
+    # Deshabilitamos systemd-resolved porque gestionamos DNS manualmente
     services.resolved.enable = false;
 
     # -------------------------------------------------------------------------
-    # NSSWITCH (files antes que dns)
+    # NSSWITCH - Orden de resolucion de nombres
     # -------------------------------------------------------------------------
+    # nsswitch.conf dice al sistema DONDE buscar informacion
+    # Para hosts: primero files (/etc/hosts), luego dns
     environment.etc."nsswitch.conf" = {
       enable = true;
       text = ''
@@ -191,9 +273,13 @@ in
     };
 
     # -------------------------------------------------------------------------
-    # SCRIPTS HELPER
+    # SCRIPTS HELPER - Comandos para diagnostico
     # -------------------------------------------------------------------------
+    # Instalamos un script que el usuario puede ejecutar para ver el estado
     environment.systemPackages = [
+      # pkgs.writeShellScriptBin crea un script ejecutable en /run/current-system/sw/bin/
+      # Primer argumento: nombre del comando
+      # Segundo argumento: contenido del script (bash)
       (pkgs.writeShellScriptBin "vpn-bridge-status" ''
         echo "=== VOCENTO VPN BRIDGE STATUS ==="
         echo ""

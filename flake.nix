@@ -24,6 +24,50 @@
 #   nix flake check     # Verificar sintaxis
 #   nix flake update    # Actualizar lock
 # =============================================================================
+#
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │                    GUIA PARA NOOBS DE NIX - FLAKES                      │
+# ├─────────────────────────────────────────────────────────────────────────┤
+# │                                                                         │
+# │  QUE ES UN FLAKE:                                                       │
+# │  ────────────────                                                       │
+# │  Un flake es como un package.json de Node o Cargo.toml de Rust.         │
+# │  Define: dependencias (inputs) y lo que produce (outputs)               │
+# │  El archivo flake.lock fija las versiones exactas (reproducibilidad)    │
+# │                                                                         │
+# │  ESTRUCTURA DE UN FLAKE:                                                │
+# │  ───────────────────────                                                │
+# │  {                                                                      │
+# │    description = "...";         <- Descripcion del proyecto             │
+# │    inputs = { ... };            <- Dependencias (repos, otros flakes)   │
+# │    outputs = { ... }: { ... };  <- Lo que produce el flake              │
+# │  }                                                                      │
+# │                                                                         │
+# │  INPUTS - De donde vienen los paquetes:                                 │
+# │  ──────────────────────────────────────                                 │
+# │  nixpkgs.url = "github:NixOS/nixpkgs/...";  <- Repo de paquetes         │
+# │  inputs.nixpkgs.follows = "nixpkgs";        <- Usa la misma version     │
+# │  flake = false;                             <- No es un flake (raw)     │
+# │                                                                         │
+# │  OUTPUTS - Lo que produce:                                              │
+# │  ─────────────────────────                                              │
+# │  nixosConfigurations.hostname   <- Config NixOS para "hostname"         │
+# │  homeConfigurations.user        <- Config home-manager para "user"      │
+# │  devShells.system.default       <- Shell de desarrollo                  │
+# │                                                                         │
+# │  FUNCION outputs:                                                       │
+# │  ────────────────                                                       │
+# │  outputs = { self, nixpkgs, ... }@inputs:                               │
+# │            ^^^^^^^^^^^^^^^^^^^^^^^                                      │
+# │            Recibe todos los inputs como argumentos                      │
+# │            @inputs captura todo en una variable                         │
+# │                                                                         │
+# │  let ... in:                                                            │
+# │  ───────────                                                            │
+# │  Dentro de outputs usamos let para definir funciones helper             │
+# │  como mkSystem que crea configuraciones NixOS                           │
+# │                                                                         │
+# └─────────────────────────────────────────────────────────────────────────┘
 
 {
 
@@ -32,6 +76,9 @@
   # ---------------------------------------------------------------------------
   # INPUTS - Fuentes de paquetes y modulos
   # ---------------------------------------------------------------------------
+  # Cada input es una dependencia externa que el flake necesita.
+  # El formato es: nombre.url = "tipo:ubicacion/version";
+  # Tipos comunes: github:, path:, git:
   inputs = {
     # Nixpkgs unstable - paquetes mas recientes
     # Todas las maquinas usan unstable para consistencia
@@ -42,19 +89,19 @@
     nixpkgs-master.url = "github:NixOS/nixpkgs/master";
 
     # Home Manager - gestion de configuracion de usuario
-    # Sigue la misma version de nixpkgs
-    # AHORA: Se usa activamente via home-manager.nixosModules.home-manager
+    # "inputs.nixpkgs.follows" significa: usa el mismo nixpkgs que yo
+    # Esto evita tener dos versiones de nixpkgs en el sistema
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
     # NixOS Hardware - perfiles hardware especificos
-    # Usado principalmente por macbook para drivers Apple
-    # NOTA: macbook actualmente usa fetchTarball, este input es para migracion futura
+    # Contiene configuraciones para muchos laptops, GPUs, etc.
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
 
-    # Alacritty themes - repo oficial de temas para hot-reload
+    # Alacritty themes - repo oficial de temas
+    # flake = false significa: no es un flake, solo descarga el repo
     alacritty-themes = {
       url = "github:alacritty/alacritty-theme";
       flake = false;
@@ -70,7 +117,6 @@
 
     # nix-index-database - Base de datos precompilada para nix-index
     # Proporciona command-not-found mejorado sin necesidad de generar indice
-    # Se actualiza semanalmente automaticamente
     nix-index-database = {
       url = "github:nix-community/nix-index-database";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -80,42 +126,59 @@
   # ---------------------------------------------------------------------------
   # OUTPUTS - Configuraciones NixOS generadas
   # ---------------------------------------------------------------------------
+  # La funcion outputs recibe todos los inputs y devuelve un attrset
+  # con las configuraciones que queremos generar.
+  #
+  # { self, nixpkgs, ... }@inputs significa:
+  #   - self: referencia a este mismo flake
+  #   - nixpkgs: el input llamado nixpkgs
+  #   - ...: otros inputs que no nombramos explicitamente
+  #   - @inputs: captura TODOS los inputs en la variable "inputs"
   outputs = { self, nixpkgs, nixpkgs-master, home-manager, nixos-hardware, alacritty-themes, nix-on-droid, nix-index-database, ... }@inputs:
     let
-      # Sistema comun para todas las maquinas
+      # Sistema comun para todas las maquinas x86_64
       system = "x86_64-linux";
 
-      # pkgs con unfree habilitado (para home-manager)
+      # Importamos nixpkgs con allowUnfree = true
+      # Esto permite instalar paquetes propietarios (nvidia, chrome, etc)
       pkgs = import nixpkgs {
-        inherit system;
+        inherit system;  # Equivalente a: system = system;
         config.allowUnfree = true;
       };
 
-      # pkgs de master para paquetes bleeding-edge (claude-code, etc)
-      # Usar como: pkgsMaster.claude-code en cualquier modulo
+      # pkgs de master para paquetes bleeding-edge
+      # Usar como: pkgsMaster.paquete en cualquier modulo
       pkgsMaster = import nixpkgs-master {
         inherit system;
         config.allowUnfree = true;
       };
 
-      # pkgsMaster para ARM (nix-on-droid)
+      # pkgsMaster para ARM (nix-on-droid en Android)
       pkgsMasterArm = import nixpkgs-master {
         system = "aarch64-linux";
         config.allowUnfree = true;
       };
 
       # =========================================================================
-      # mkSystem - Crear configuracion NixOS (Clone-First)
+      # mkSystem - Funcion helper para crear configuraciones NixOS
       # =========================================================================
-      # Todas las maquinas comparten modules/base/ y solo diferencian hardware.
+      # Esta funcion encapsula la logica comun de todas las maquinas.
+      # Recibe: hostname, lista de modulos hardware, y extras opcionales.
+      #
+      # PATRON CLONE-FIRST:
+      #   - modules/base/ es comun a TODAS las maquinas
+      #   - hardware/ contiene modulos especificos de hardware
+      #   - hosts/hostname/ contiene overrides especificos del host
       # =========================================================================
       mkSystem = {
-        hostname,
-        hardware ? [],
-        extra ? [],
+        hostname,           # Nombre de la maquina (aurin, macbook, vespino)
+        hardware ? [],      # Lista de modulos hardware (opcional, default [])
+        extra ? [],         # Modulos extra (opcional, default [])
       }: nixpkgs.lib.nixosSystem {
         inherit system;
 
+        # specialArgs pasa variables a TODOS los modulos
+        # Cualquier modulo puede recibir estos como argumentos
         specialArgs = {
           inherit inputs;
           inherit home-manager nixos-hardware;
@@ -123,41 +186,58 @@
           inherit pkgsMaster;
         };
 
+        # Lista de modulos que componen la configuracion
+        # El orden importa: los modulos posteriores pueden override anteriores
         modules = [
+          # Base comun a todas las maquinas
           ./modules/base
+
+          # Hardware-configuration.nix generado por nixos-generate-config
           ./hosts/${hostname}/hardware-configuration.nix
+
+          # Config especifica del host (overrides, servicios locales)
           ./hosts/${hostname}
+
+          # Establecemos el hostname
           { networking.hostName = hostname; }
 
+          # nix-index-database para command-not-found mejorado
           nix-index-database.nixosModules.nix-index
           {
+            # Etiqueta la configuracion con el commit de git
             system.configurationRevision =
               if self ? rev then self.rev else "dirty";
             system.nixos.label =
               if self ? shortRev then "flake-${self.shortRev}" else "flake-dirty";
+            # Habilita "comma" (ejecutar programas sin instalar: , htop)
             programs.nix-index-database.comma.enable = true;
           }
 
+          # Home Manager integrado en NixOS
           home-manager.nixosModules.home-manager
           {
             home-manager = {
+              # Usa los mismos pkgs del sistema (no descarga otra vez)
               useGlobalPkgs = true;
               useUserPackages = true;
+              # Variables disponibles en la config de home-manager
               extraSpecialArgs = {
                 inherit inputs pkgsMaster alacritty-themes;
                 hostname = hostname;
               };
+              # Configuracion de home-manager para el usuario passh
               users.passh = import ./modules/home-manager;
+              # Si hay conflicto con archivo existente, renombralo a .backup
               backupFileExtension = "backup";
             };
           }
-        ] ++ hardware ++ extra;
+        ]
+        # ++ concatena listas: modules ++ hardware ++ extra
+        ++ hardware ++ extra;
       };
 
       # =========================================================================
       # mkDroid - Crear configuracion nix-on-droid (Android)
-      # =========================================================================
-      # Patron consistente con mkSystem para dispositivos Android.
       # =========================================================================
       mkDroid = {
         hostname,
@@ -197,24 +277,19 @@
           }
         ] ++ extra;
       };
+
+    # Fin del bloque "let", ahora el attrset que devuelve outputs
     in
     {
       # -----------------------------------------------------------------------
       # NIXOS CONFIGURATIONS
       # -----------------------------------------------------------------------
+      # Cada entrada aqui es una configuracion NixOS completa
+      # Se usa con: sudo nixos-rebuild switch --flake .#nombre
 
       nixosConfigurations = {
         # ---------------------------------------------------------------------
         # AURIN - Workstation de produccion (CRITICO)
-        # ---------------------------------------------------------------------
-        # ARQUITECTURA CLONE-FIRST (migrado 2026-01-19)
-        # Hardware: Dual Xeon E5-2699v3 + RTX 5080 + FiiO K7
-        # Rol: Desarrollo, streaming (Sunshine), VMs
-        #
-        # Uso:
-        #   sudo nixos-rebuild switch --flake ~/dotfiles#aurin --impure
-        #
-        # NOTA: --impure necesario para leer /home/passh/src/vocento/autoenv/hosts_all.txt
         # ---------------------------------------------------------------------
         aurin = mkSystem {
           hostname = "aurin";
@@ -227,13 +302,6 @@
         # ---------------------------------------------------------------------
         # VESPINO - Servidor secundario / Testing
         # ---------------------------------------------------------------------
-        # ARQUITECTURA CLONE-FIRST (migrado 2026-01-19)
-        # Hardware: AMD CPU + NVIDIA RTX 2060
-        # Rol: Minecraft server, NFS, Ollama, VM VPN Vocento
-        #
-        # Uso:
-        #   sudo nixos-rebuild switch --flake ~/dotfiles#vespino --impure
-        # ---------------------------------------------------------------------
         vespino = mkSystem {
           hostname = "vespino";
           hardware = [
@@ -244,17 +312,13 @@
         # ---------------------------------------------------------------------
         # MACBOOK - Laptop Apple MacBook Pro 13,2 (2016)
         # ---------------------------------------------------------------------
-        # ARQUITECTURA CLONE-FIRST (migrado 2026-01-18)
-        # Usa modules/base/ + hardware/ + hosts/
-        #
-        # Uso:
-        #   sudo nixos-rebuild switch --flake ~/dotfiles#macbook
-        # ---------------------------------------------------------------------
         macbook = mkSystem {
           hostname = "macbook";
           hardware = [
+            # Modulos de nixos-hardware para hardware Apple
             nixos-hardware.nixosModules.apple-macbook-pro
             nixos-hardware.nixosModules.common-pc-ssd
+            # Modulos locales para configuracion especifica
             ./hardware/apple/macbook-pro-13-2.nix
             ./hardware/apple/snd-hda-macbookpro.nix
           ];
@@ -264,22 +328,15 @@
       # -----------------------------------------------------------------------
       # HOME MANAGER STANDALONE (opcional)
       # -----------------------------------------------------------------------
-      # Permite usar home-manager independiente del sistema NixOS
-      # Util para: testing, maquinas no-NixOS, o preferencia personal
-      #
-      # Uso:
-      #   nix run ~/dotfiles#homeConfigurations.passh.activationPackage
-      #   # o si tienes home-manager instalado:
-      #   home-manager switch --flake ~/dotfiles#passh
-      # -----------------------------------------------------------------------
+      # Uso: home-manager switch --flake .#passh
       homeConfigurations = {
         passh = home-manager.lib.homeManagerConfiguration {
           inherit pkgs;
           extraSpecialArgs = {
             inherit inputs;
-            inherit pkgsMaster;  # Para paquetes bleeding-edge
-            inherit alacritty-themes;  # Temas para hot-reload
-            hostname = "aurin";  # Default para standalone
+            inherit pkgsMaster;
+            inherit alacritty-themes;
+            hostname = "aurin";
           };
           modules = [
             ./modules/home-manager
@@ -290,40 +347,28 @@
       # -----------------------------------------------------------------------
       # NIX-ON-DROID - Android
       # -----------------------------------------------------------------------
-      # Usa mkDroid (patron consistente con mkSystem).
-      # Estructura: droid/common.nix (base) + droid/<hostname>/ (especifico)
-      #
       # Uso: nix-on-droid switch --flake ~/dotfiles
-      # -----------------------------------------------------------------------
       nixOnDroidConfigurations = {
         default = mkDroid { hostname = "android"; };
         android = mkDroid { hostname = "android"; };
       };
 
       # -----------------------------------------------------------------------
-      # DESARROLLO - Shells y herramientas
+      # DESARROLLO - Shell con herramientas NixOS
       # -----------------------------------------------------------------------
-
-      # Shell de desarrollo con herramientas NixOS
-      # Uso: nix develop (o: nix develop ~/dotfiles)
+      # Uso: nix develop (dentro del repo)
       devShells.${system}.default = pkgs.mkShell {
         buildInputs = with pkgs; [
-          # LSP para Nix (elegir uno)
-          nil        # Mas ligero, basico
-          nixd       # Mas features, usa evaluacion real
-
-          # Formateadores
-          nixfmt # Estilo clasico
-          nixpkgs-fmt    # Estilo nixpkgs
-
-          # Linters
-          statix     # Sugerencias de mejora
-          deadnix    # Detecta codigo muerto
-
-          # Otros
-          nix-tree   # Visualizar dependencias
+          nil            # LSP para Nix
+          nixd           # LSP alternativo
+          nixfmt         # Formateador
+          nixpkgs-fmt    # Formateador estilo nixpkgs
+          statix         # Linter
+          deadnix        # Detecta codigo muerto
+          nix-tree       # Visualizar dependencias
         ];
 
+        # Este hook se ejecuta al entrar al shell
         shellHook = ''
           echo "=========================================="
           echo "  NixOS Dotfiles Development Shell"
@@ -339,20 +384,12 @@
           echo "  sudo nixos-rebuild switch --flake .#macbook"
           echo "  sudo nixos-rebuild switch --flake .#vespino --impure"
           echo ""
-          echo "Home Manager standalone:"
-          echo "  home-manager switch --flake .#passh"
-          echo ""
-          echo "Nix-on-Droid (Android):"
-          echo "  nix-on-droid switch --flake ~/dotfiles"
-          echo ""
         '';
       };
 
       # -----------------------------------------------------------------------
-      # TEMPLATES (opcional, para referencia)
+      # TEMPLATES
       # -----------------------------------------------------------------------
-
-      # Template para crear nuevo modulo NixOS
       # Uso: nix flake init -t ~/dotfiles#module
       templates.module = {
         path = ./templates/module;

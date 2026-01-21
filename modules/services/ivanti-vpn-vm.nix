@@ -21,18 +21,55 @@
 #   2. En Ubuntu: abrir cliente Ivanti y conectar
 #   3. El trafico VPN pasa por la VM
 # =============================================================================
+#
+# ┌─────────────────────────────────────────────────────────────────────────┐
+# │                    GUIA PARA NOOBS DE NIX                               │
+# ├─────────────────────────────────────────────────────────────────────────┤
+# │                                                                         │
+# │  STRINGS EN NIX:                                                        │
+# │  ───────────────                                                        │
+# │  "hola"           -> String simple (una linea)                          │
+# │  ''hola           -> String multilinea (varias lineas)                  │
+# │    mundo''                                                              │
+# │  "${var}"         -> Interpolacion: inserta valor de var en string      │
+# │  ''${var}''       -> En multilinea tambien funciona                     │
+# │  "''$" + "{1:-}"  -> Escapar ${ en bash: se escribe ''$                 │
+# │                                                                         │
+# │  CONDICIONALES:                                                         │
+# │  ──────────────                                                         │
+# │  if cond then a else b   -> Ternario (siempre necesita else)            │
+# │  optionalString cond s   -> Devuelve s si cond es true, "" si no        │
+# │                                                                         │
+# │  FUNCIONES:                                                             │
+# │  ──────────                                                             │
+# │  (x: x + 1)              -> Funcion anonima (lambda): recibe x, suma 1  │
+# │  map (x: x*2) [1 2 3]    -> Aplica funcion a lista: [2 4 6]             │
+# │                                                                         │
+# │  LIBVIRT XML:                                                           │
+# │  ────────────                                                           │
+# │  libvirt usa XML para definir VMs. Aqui generamos ese XML desde Nix     │
+# │  usando pkgs.writeText para crear un archivo con el contenido           │
+# │                                                                         │
+# └─────────────────────────────────────────────────────────────────────────┘
 
+# Argumentos que recibe el modulo (igual que el otro archivo)
 { config, pkgs, lib, ... }:
 
+# Importamos funciones de lib para no tener que escribir lib.mkOption, etc.
 with lib;
 
 let
+  # Atajo para acceder a la configuracion de este modulo
   cfg = config.services.ivanti-vpn-vm;
 
+  # Constantes: nombre de la VM y ruta del disco
+  # Estas NO son opciones configurables, son valores fijos
   vmName = "ivanti-vpn";
   diskPath = "/var/lib/libvirt/images/ivanti-vpn-clone.qcow2";
 
-  # Configuracion de red segun modo
+  # Configuracion de red segun el modo elegido
+  # if-then-else en Nix SIEMPRE necesita ambas ramas (then y else)
+  # El resultado es un string con XML de libvirt
   networkConfig = if cfg.networkMode == "bridge" then ''
     <interface type='bridge'>
       <mac address='52:54:00:04:89:fa'/>
@@ -49,7 +86,9 @@ let
     </interface>
   '';
 
-  # XML de definicion de la VM
+  # pkgs.writeText crea un archivo en /nix/store/ con el contenido dado
+  # Usamos esto para generar el XML de definicion de la VM
+  # El XML es el formato que usa libvirt para definir maquinas virtuales
   vmXml = pkgs.writeText "ivanti-vpn.xml" ''
     <domain type='kvm'>
       <name>${vmName}</name>
@@ -110,14 +149,19 @@ let
     </domain>
   '';
 
+# Fin del bloque "let", ahora viene el cuerpo del modulo
 in
 {
   # ===========================================================================
-  # OPTIONS
+  # OPTIONS - Lo que el usuario puede configurar
   # ===========================================================================
   options.services.ivanti-vpn-vm = {
+
+    # Opcion para habilitar/deshabilitar el modulo completo
     enable = mkEnableOption "Ivanti VPN VM";
 
+    # types.enum restringe los valores posibles a una lista cerrada
+    # Solo puede ser "nat" o "bridge", cualquier otro valor da error
     networkMode = mkOption {
       type = types.enum [ "nat" "bridge" ];
       default = "nat";
@@ -128,6 +172,8 @@ in
       '';
     };
 
+    # Nota: el default usa cfg.networkMode, lo cual es evaluacion lazy
+    # Nix evalua esto SOLO cuando se necesita el valor, no antes
     vmAddress = mkOption {
       type = types.str;
       default = if cfg.networkMode == "bridge" then "192.168.53.12" else "192.168.122.192";
@@ -142,21 +188,30 @@ in
   };
 
   # ===========================================================================
-  # CONFIG
+  # CONFIG - La implementacion real del modulo
   # ===========================================================================
   config = mkIf cfg.enable {
-    # Servicio para definir la VM en libvirt
+
+    # -------------------------------------------------------------------------
+    # SERVICIO SYSTEMD - Define la VM en libvirt al arrancar
+    # -------------------------------------------------------------------------
+    # systemd.services crea un servicio que systemd gestiona
+    # Este servicio se ejecuta una vez al arrancar y define la VM
     systemd.services.define-ivanti-vpn-vm = {
       description = "Define Ivanti VPN VM in libvirt";
+      # after/requires: este servicio necesita que libvirtd este corriendo
       after = [ "libvirtd.service" ];
       requires = [ "libvirtd.service" ];
+      # wantedBy: hace que el servicio arranque automaticamente con el sistema
       wantedBy = [ "multi-user.target" ];
 
       serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;
+        Type = "oneshot";         # Se ejecuta una vez y termina
+        RemainAfterExit = true;   # systemd lo considera "activo" aunque haya terminado
       };
 
+      # El script que se ejecuta (bash)
+      # optionalString solo incluye el bloque si la condicion es true
       script = ''
         # Esperar a que libvirtd este listo
         sleep 2
@@ -181,9 +236,21 @@ in
       '';
     };
 
-    # Script helper para conectar rapidamente
+    # -------------------------------------------------------------------------
+    # PAQUETES Y SCRIPT HELPER
+    # -------------------------------------------------------------------------
+    # environment.systemPackages instala paquetes disponibles para todos los usuarios
     environment.systemPackages = with pkgs; [
-      guestfs-tools  # Para virt-customize (setup-network)
+      guestfs-tools  # Para virt-customize (modificar discos de VM)
+
+      # writeShellScriptBin crea un comando ejecutable
+      # El script vpn-vm simplifica el uso diario de la VM
+      #
+      # NOTA IMPORTANTE sobre sintaxis bash en Nix:
+      # En bash normal escribirias: case "${1:-}" in
+      # Pero en Nix, ${ inicia interpolacion de variables
+      # Para escribir un literal ${ usamos: ''$  seguido de {
+      # Asi que "${1:-}" se escribe como: "''${1:-}"
       (pkgs.writeShellScriptBin "vpn-vm" ''
         set -euo pipefail
 
@@ -222,6 +289,7 @@ in
             ;;
           setup-network)
             # Configura IP estatica en la VM (requiere VM apagada)
+            # Usa virt-customize para inyectar archivos en el disco qcow2
             echo "Configurando red en la VM..."
 
             STATE=$(virsh domstate ${vmName} 2>/dev/null || echo "unknown")
@@ -237,6 +305,7 @@ in
             fi
 
             # Crear archivo netplan temporal
+            # netplan es el sistema de configuracion de red de Ubuntu
             NETPLAN=$(mktemp)
             cat > "$NETPLAN" << 'YAML'
         network:
@@ -255,6 +324,7 @@ in
         YAML
 
             echo "Inyectando configuracion de red en el disco..."
+            # virt-customize modifica el disco sin arrancar la VM
             sudo virt-customize -a "$DISK" \
               --upload "$NETPLAN":/etc/netplan/01-bridge.yaml \
               --run-command 'chmod 600 /etc/netplan/01-bridge.yaml' \
