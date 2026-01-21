@@ -151,28 +151,6 @@ in
 
       # Firewall
       firewall = {
-        # =====================================================================
-        # checkReversePath = false (Reverse Path Filtering deshabilitado)
-        # =====================================================================
-        # NECESARIO para el setup VPN con VM bridge. Sin esto, el kernel
-        # descarta paquetes que vienen de la VM con IPs de redes Vocento
-        # (10.180.x.x, etc.) porque la ruta de entrada (br0) no coincide
-        # con la ruta de salida esperada.
-        #
-        # El flujo es:
-        #   1. Host envia paquete a 10.180.x.x -> via br0 -> VM -> VPN tunnel
-        #   2. Respuesta llega: VPN tunnel -> VM -> br0 -> Host
-        #   3. Kernel verifica: "Si yo enviara a esta IP origen, usaria br0?"
-        #   4. Con RPF estricto: NO (porque 10.180.x.x no esta en br0 subnet)
-        #   5. Kernel descarta el paquete -> conexion rota
-        #
-        # Con checkReversePath = false, el kernel acepta estos paquetes
-        # asimetricos que son normales en configuraciones VPN con bridge.
-        #
-        # Alternativa mas segura (si fuera necesario):
-        #   boot.kernel.sysctl."net.ipv4.conf.br0.rp_filter" = 0;
-        # Esto deshabilitaria RPF solo para br0, no globalmente.
-        # =====================================================================
         checkReversePath = false;
         allowedTCPPorts = [ 53 ];
         allowedUDPPorts = [ 53 ];

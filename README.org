@@ -358,6 +358,194 @@ vpn-vm start
 | Bridge no existe | =sudo systemctl start br0-netdev.service= |
 | VM no arranca | Verificar disco: =ls /var/lib/libvirt/images/*.qcow2= |
 
+*** Arbol del Proyecto VPN
+
+#+BEGIN_SRC text
+dotfiles/
+├── flake.nix                         # Entry point - define las 3 maquinas
+│
+├── modules/
+│   ├── base/
+│   │   └── virtualization.nix        # Habilita libvirtd (REQUERIDO)
+│   │
+│   └── services/
+│       ├── vocento-vpn-bridge.nix    # [VPN] Bridge + NAT + Rutas + DNS
+│       │   ├── options:
+│       │   │   ├── enable
+│       │   │   ├── externalInterface  ← CAMBIAR segun maquina
+│       │   │   ├── hostAddress        (192.168.53.10)
+│       │   │   ├── vmAddress          (192.168.53.12)
+│       │   │   └── vpnRoutes          (10.180.0.0/16, etc.)
+│       │   └── configura:
+│       │       ├── networking.bridges.br0
+│       │       ├── networking.nat
+│       │       └── /etc/resolv.conf
+│       │
+│       └── ivanti-vpn-vm.nix         # [VPN] VM declarativa en libvirt
+│           ├── options:
+│           │   ├── enable
+│           │   ├── networkMode        ("nat" | "bridge")
+│           │   └── vmAddress
+│           └── configura:
+│               ├── systemd.services.define-ivanti-vpn-vm
+│               └── scripts: vpn-vm
+│
+├── hosts/
+│   ├── aurin/default.nix             # NO USA modulos VPN (tiene su propia config)
+│   ├── macbook/default.nix           # USA modulos VPN ✓
+│   └── vespino/default.nix           # PENDIENTE probar modulos VPN
+│
+└── /var/lib/libvirt/images/
+    └── ivanti-vpn-clone.qcow2        # Disco VM (17GB) - EXTERNO AL REPO
+#+END_SRC
+
+*** Disaster Recovery: Recrear VM desde Cero
+
+Si pierdes el disco QCOW2, aqui esta como recrear la VM:
+
+**** 1. Descargar Ubuntu 22.04 LTS
+
+#+BEGIN_SRC bash
+# Desktop (tiene GUI para el cliente Ivanti)
+wget https://releases.ubuntu.com/22.04/ubuntu-22.04.4-desktop-amd64.iso
+#+END_SRC
+
+**** 2. Crear VM en virt-manager
+
+#+BEGIN_SRC text
+- Nombre: ivanti-vpn
+- RAM: 4096 MB
+- CPUs: 2
+- Disco: 20GB (qcow2)
+- Red: Bridge br0 (o NAT para instalar)
+- Instalar Ubuntu con usuario: passh / password: capullo100
+#+END_SRC
+
+**** 3. Configurar Ubuntu
+
+#+BEGIN_SRC bash
+# En la VM:
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y openssh-server net-tools
+
+# Configurar IP fija (si usas bridge)
+sudo tee /etc/netplan/01-bridge.yaml << 'EOF'
+network:
+  version: 2
+  ethernets:
+    ens3:
+      addresses: [192.168.53.12/24]
+      routes:
+        - to: default
+          via: 192.168.53.10
+      nameservers:
+        addresses: [8.8.8.8]
+EOF
+sudo netplan apply
+#+END_SRC
+
+**** 4. Instalar cliente Ivanti/Pulse Secure
+
+#+BEGIN_SRC bash
+# Obtener el .deb de Vocento (pedir a IT o descargar del portal)
+# Tipicamente: ps-pulse-linux-22.x.xxx.deb
+
+sudo dpkg -i ps-pulse-linux-*.deb
+sudo apt --fix-broken install -y
+
+# El cliente queda en /opt/pulsesecure/
+# Lanzar: /opt/pulsesecure/bin/pulseUI
+#+END_SRC
+
+**** 5. Configurar conexion VPN
+
+#+BEGIN_SRC text
+- Abrir pulseUI
+- Añadir conexion:
+  - Nombre: Vocento
+  - URL: (preguntar a IT, tipicamente https://vpn.vocento.com)
+- Conectar con credenciales corporativas + Okta push
+#+END_SRC
+
+**** 6. Verificar funcionamiento
+
+#+BEGIN_SRC bash
+# En la VM:
+ip route | grep tun    # Debe mostrar tun0
+ping 10.180.0.1        # Debe responder (si existe)
+
+# En el host:
+ping 192.168.53.12     # VM alcanzable
+host bitbucket.vocento.com  # DNS funciona
+curl https://bitbucket.vocento.com  # Conectividad OK
+#+END_SRC
+
+*** Backup del Disco (Oro en Pano)
+
+**** Backup a USB
+
+#+BEGIN_SRC bash
+# 1. Apagar la VM
+vpn-vm stop
+
+# 2. Montar USB (ajustar /dev/sdX)
+sudo mount /dev/sdb1 /mnt/usb
+
+# 3. Copiar disco (17GB, tarda un rato)
+sudo cp /var/lib/libvirt/images/ivanti-vpn-clone.qcow2 /mnt/usb/
+# O con progreso:
+sudo rsync -ah --progress /var/lib/libvirt/images/ivanti-vpn-clone.qcow2 /mnt/usb/
+
+# 4. Verificar
+ls -lh /mnt/usb/ivanti-vpn-clone.qcow2
+
+# 5. Desmontar
+sudo umount /mnt/usb
+#+END_SRC
+
+**** Backup comprimido (mas pequeno)
+
+#+BEGIN_SRC bash
+# Comprimir (17GB -> ~6GB)
+sudo qemu-img convert -O qcow2 -c \
+  /var/lib/libvirt/images/ivanti-vpn-clone.qcow2 \
+  /mnt/usb/ivanti-vpn-backup-$(date +%Y%m%d).qcow2
+
+# Restaurar
+sudo cp /mnt/usb/ivanti-vpn-backup-*.qcow2 \
+  /var/lib/libvirt/images/ivanti-vpn-clone.qcow2
+#+END_SRC
+
+**** Ubicaciones de backup recomendadas
+
+| Ubicacion | Prioridad | Notas |
+|-----------+-----------+-------|
+| USB externo | Alta | Portatil, offline |
+| aurin:/backup/ | Media | Acceso rapido por red |
+| NAS/Synology | Baja | Si tienes uno |
+
+*** Cambio de Red WiFi
+
+*Pregunta:* ¿Que pasa si cambio de WiFi y tengo otra IP?
+
+*Respuesta:* *No afecta* porque:
+
+#+BEGIN_SRC text
+Tu IP WiFi cambia (192.168.1.50 → 192.168.2.100)
+                    ↓
+            NO IMPORTA porque:
+                    ↓
+┌─────────────────────────────────────────────────┐
+│ br0: 192.168.53.10  ← IP FIJA (interna)        │
+│ VM:  192.168.53.12  ← IP FIJA (interna)        │
+│ NAT: usa INTERFACE, no IP                       │
+│      (wlp0s20f0u7u4 sigue siendo la misma)     │
+└─────────────────────────────────────────────────┘
+#+END_SRC
+
+*Solo falla si:* Cambias de interface fisica (ej: de WiFi USB a Ethernet).
+En ese caso, cambia =externalInterface= en el config y rebuild.
+
 * Configuraciones Principales
 
 ** Home Manager (~/.config/home-manager/home.nix) *
