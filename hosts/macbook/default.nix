@@ -19,6 +19,9 @@
 }:
 
 {
+  imports = [
+    ../../modules/services/ivanti-vpn-vm.nix  # VM Ubuntu para VPN Ivanti
+  ];
   # ===== POWER MANAGEMENT =====
   # Deshabilitar suspension - el MacBook no se recupera bien de sleep
   services.logind.settings.Login = {
