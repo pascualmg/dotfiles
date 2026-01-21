@@ -32,6 +32,9 @@ let
   vmName = "ivanti-vpn";
   diskPath = "/var/lib/libvirt/images/ivanti-vpn-clone.qcow2";
 
+  # UUID por defecto (generado una vez, estable)
+  defaultUuid = "8b9e4e4b-c2b0-4a60-a78b-c6ff31d328bc";
+
   # Configuracion de red segun modo
   networkConfig = if cfg.networkMode == "bridge" then ''
     <interface type='bridge'>
@@ -53,7 +56,7 @@ let
   vmXml = pkgs.writeText "ivanti-vpn.xml" ''
     <domain type='kvm'>
       <name>${vmName}</name>
-      <uuid>8b9e4e4b-c2b0-4a60-a78b-c6ff31d328bc</uuid>
+      <uuid>${cfg.vmUuid}</uuid>
       <memory unit='KiB'>4194304</memory>
       <currentMemory unit='KiB'>4194304</currentMemory>
       <vcpu placement='static'>2</vcpu>
@@ -128,16 +131,34 @@ in
       '';
     };
 
+    vmUuid = mkOption {
+      type = types.str;
+      default = defaultUuid;
+      description = ''
+        UUID de la VM en libvirt. Cambialo si necesitas multiples instancias
+        o si hay conflictos con una VM existente.
+      '';
+      example = "12345678-1234-1234-1234-123456789abc";
+    };
+
     vmAddress = mkOption {
       type = types.str;
-      default = if cfg.networkMode == "bridge" then "192.168.53.12" else "192.168.122.192";
-      description = "IP de la VM (para SSH y scripts)";
+      default = "192.168.122.192";
+      description = ''
+        IP de la VM (para SSH y scripts).
+        Para modo bridge, tipicamente 192.168.53.12.
+        Para modo NAT, tipicamente 192.168.122.x.
+      '';
     };
 
     hostAddress = mkOption {
       type = types.str;
-      default = if cfg.networkMode == "bridge" then "192.168.53.10" else "192.168.122.1";
-      description = "IP del host/gateway (para configurar red en la VM)";
+      default = "192.168.122.1";
+      description = ''
+        IP del host/gateway (para configurar red en la VM).
+        Para modo bridge, tipicamente 192.168.53.10.
+        Para modo NAT, tipicamente 192.168.122.1.
+      '';
     };
   };
 
@@ -145,6 +166,26 @@ in
   # CONFIG
   # ===========================================================================
   config = mkIf cfg.enable {
+    # -------------------------------------------------------------------------
+    # ASSERTIONS - Validar dependencias
+    # -------------------------------------------------------------------------
+    assertions = [
+      {
+        assertion = config.virtualisation.libvirtd.enable;
+        message = ''
+          services.ivanti-vpn-vm requiere virtualisation.libvirtd.enable = true.
+          Anade esto a tu configuracion o importa modules/base/virtualization.nix.
+        '';
+      }
+      {
+        assertion = cfg.networkMode == "nat" || config.services.vocento-vpn-bridge.enable;
+        message = ''
+          services.ivanti-vpn-vm con networkMode = "bridge" requiere
+          services.vocento-vpn-bridge.enable = true para configurar el bridge br0.
+        '';
+      }
+    ];
+
     # Servicio para definir la VM en libvirt
     systemd.services.define-ivanti-vpn-vm = {
       description = "Define Ivanti VPN VM in libvirt";

@@ -57,7 +57,8 @@
   };
 
   # ===== SECURITY =====
-  # Laptop movil: pedir password para sudo
+  # Laptop movil: NO pedir password para sudo (igual que aurin/vespino)
+  # En un entorno corporativo o multi-usuario se deberia cambiar a true
   security.sudo.wheelNeedsPassword = false;
 
   # ===== STATE VERSION =====
