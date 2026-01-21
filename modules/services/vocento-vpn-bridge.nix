@@ -72,14 +72,15 @@ in
         { address = "10.186.0.0"; prefixLength = 16; }
         { address = "34.175.0.0"; prefixLength = 16; }
         { address = "34.13.0.0"; prefixLength = 16; }
+        { address = "192.168.201.0"; prefixLength = 24; }  # DNS Vocento
       ];
       description = "Redes corporativas a enrutar via la VM VPN";
     };
 
     dnsServers = mkOption {
       type = types.listOf types.str;
-      default = [ "192.168.53.12" "8.8.8.8" ];
-      description = "Servidores DNS (VM primero, fallback publico)";
+      default = [ "192.168.201.38" "192.168.201.43" "8.8.8.8" ];
+      description = "Servidores DNS Vocento + fallback publico";
     };
 
     searchDomains = mkOption {
