@@ -112,6 +112,10 @@ in
       # Esperar a que libvirtd este listo
       sleep 2
 
+      # Asegurar que la red default existe y tiene autostart
+      ${pkgs.libvirt}/bin/virsh net-autostart default 2>/dev/null || true
+      ${pkgs.libvirt}/bin/virsh net-start default 2>/dev/null || true
+
       # Verificar si la VM ya existe
       if ${pkgs.libvirt}/bin/virsh dominfo ${vmName} &>/dev/null; then
         echo "VM ${vmName} ya existe, verificando si necesita actualizacion..."
@@ -134,6 +138,8 @@ in
       case "''${1:-}" in
         start)
           echo "Arrancando VM Ivanti VPN..."
+          # Asegurar que la red default esta activa
+          virsh net-start default 2>/dev/null || true
           virsh start ${vmName} 2>/dev/null || echo "VM ya esta corriendo"
           echo "Abriendo virt-viewer..."
           virt-viewer ${vmName} &
