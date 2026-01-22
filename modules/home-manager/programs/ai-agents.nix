@@ -29,9 +29,20 @@
 let
   homeDir = config.home.homeDirectory;
   dotfilesDir = "${homeDir}/dotfiles";
+  cfg = config.programs.aiAgents;
 in
 
 {
+  # ===========================================================================
+  # Module Options
+  # ===========================================================================
+  options.programs.aiAgents = {
+    opencode.enable = lib.mkEnableOption "OpenCode AI agent" // {
+      default = true;  # Habilitado por defecto en desktop
+    };
+  };
+
+  config = {
   # ===========================================================================
   # Claude Code - Configuration symlinks
   # ===========================================================================
@@ -120,7 +131,8 @@ in
   # Install OpenCode package
   # ===========================================================================
 
-  home.packages = with pkgs; [
-    opencode # Available in nixpkgs 1.1.23
-  ];
+  home.packages = lib.optionals cfg.opencode.enable (with pkgs; [
+    opencode
+  ]);
+  };  # close config
 }

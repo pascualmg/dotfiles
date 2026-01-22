@@ -37,9 +37,6 @@ let
   # Claude-code from master (ARM build, optional)
   hasClaudeCode = pkgsMasterArm != null && (builtins.tryEval pkgsMasterArm.claude-code).success;
 
-  # Opencode available in nixpkgs (aarch64 supported)
-  hasOpencode = (builtins.tryEval pkgs.opencode).success;
-
   # Script para iniciar XMonad con Termux-X11
   start-x11 = pkgs.writeShellScriptBin "start-x11" ''
     export DISPLAY=:0
@@ -73,6 +70,12 @@ in
   imports = [
     ../core.nix
   ];
+
+  # ===========================================================================
+  # OpenCode: DESHABILITADO en Android
+  # ===========================================================================
+  # EPERM: hard links no permitidos en Android sandbox (bun install falla)
+  programs.aiAgents.opencode.enable = false;
 
   # ===========================================================================
   # CLONE-FIRST PACKAGES
@@ -118,8 +121,7 @@ in
     # =========================================================================
     # AI Agents (CLONE-FIRST: mismo stack que desktop)
     # =========================================================================
-    ++ lib.optionals hasClaudeCode [ pkgsMasterArm.claude-code ]
-    ++ lib.optionals hasOpencode [ pkgs.opencode ];
+    ++ lib.optionals hasClaudeCode [ pkgsMasterArm.claude-code ];
 
   # Fish shell con config ligera
   programs.fish = {
