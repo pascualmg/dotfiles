@@ -221,17 +221,12 @@
               system.configurationRevision = if self ? rev then self.rev else "dirty";
               system.nixos.label =
                 let
-                  # Obtener nombre de rama desde variable de entorno (impure)
-                  # O leer directamente .git/HEAD con path absoluto
-                  # Leer nombre de rama desde variable de entorno GIT_BRANCH
-                  # Debe exportarse antes de rebuild: export GIT_BRANCH=$(git -C ~/dotfiles rev-parse --abbrev-ref HEAD)
-                  branchFromEnv = builtins.getEnv "GIT_BRANCH";
-                  branchRaw = if branchFromEnv != "" then branchFromEnv else "nobranch";
-                  # Sanitizar y truncar
-                  branchSanitized = builtins.replaceStrings [ "/" ] [ "-" ] branchRaw;
-                  branch = nixpkgs.lib.strings.substring 0 20 branchSanitized;
+                  # Leer rama desde GIT_BRANCH (opcional, se usa con ./rebuild.sh)
+                  # Formato: rama-hash o solo hash si no hay GIT_BRANCH
+                  branch = builtins.getEnv "GIT_BRANCH";
+                  branchPart = if branch != "" then "${builtins.replaceStrings [ "/" ] [ "-" ] branch}-" else "";
                 in
-                if self ? shortRev then "${branch}-${self.shortRev}" else "${branch}-dirty";
+                if self ? shortRev then "${branchPart}${self.shortRev}" else "${branchPart}dirty";
               # Habilita "comma" (ejecutar programas sin instalar: , htop)
               programs.nix-index-database.comma.enable = true;
             }
