@@ -34,6 +34,19 @@
   - =boot.loader.refind.enable = true=
   - Configurar =resolution 2560 1600= en refind.conf
 
+** Repo como Template (Forkeable)
+- [X] *SECCIÓN BÁSICA AÑADIDA* [2026-01-22] - "Use This Repo (WIP)"
+  - [X] Guía Quick Start para terceros
+  - [X] Checklist de valores hardcoded a cambiar
+  - [X] Tabla "What You Get" vs "What's Personal"
+  - [X] Warning claro: WIP, requiere adaptación manual
+  - [ ] Testing con usuario real (Daniel)
+- [ ] *TEMPLATE COMPLETO* (después de stow + opencode)
+  - [ ] Parametrizar username (mainUser variable)
+  - [ ] Script generator: =./scripts/new-machine.sh=
+  - [ ] Separación clara: personal vs. template
+  - [ ] Secrets management (sops-nix o agenix)
+
 ** Limpieza
 - [ ] Revisar y limpiar configs obsoletas (shell/, composer/)
 - [ ] Documentar scripts utiles en scripts/
@@ -66,6 +79,159 @@ sudo nixos-rebuild test --flake ~/dotfiles#aurin --impure
 # Rollback de emergencia
 sudo nixos-rebuild switch --rollback
 #+END_SRC
+
+* 🚀 Use This Repo (Work in Progress)
+
+*NOTA:* Este repo está diseñado para ser *forkeable*, pero actualmente tiene valores hardcoded (username =passh=, paths, info personal). Si quieres usarlo como base para tu sistema, sigue esta guía y adapta lo necesario.
+
+** Quick Start for Others
+
+*** 1. Fork & Clone
+
+#+BEGIN_SRC bash
+# Fork este repo en GitHub primero, luego:
+git clone https://github.com/TU_USUARIO/dotfiles ~/dotfiles
+cd ~/dotfiles
+#+END_SRC
+
+*** 2. Generar Hardware Config en Tu Máquina
+
+#+BEGIN_SRC bash
+# En tu máquina nueva (booted con NixOS ISO):
+sudo nixos-generate-config --show-hardware-config > \
+  hardware-configuration.nix
+
+# Crear directorio para tu host
+mkdir -p hosts/TU_MAQUINA
+mv hardware-configuration.nix hosts/TU_MAQUINA/
+#+END_SRC
+
+*** 3. Crear Host Config
+
+#+BEGIN_SRC bash
+# Copia un template existente (macbook es el más simple)
+cp hosts/macbook/default.nix hosts/TU_MAQUINA/default.nix
+vim hosts/TU_MAQUINA/default.nix
+#+END_SRC
+
+Adapta según tu hardware:
+- =imports= - Elige módulos hardware (NVIDIA, Apple, etc.)
+- =services= - Habilita/deshabilita según necesites
+- =networking.hostName= - Se configura automáticamente en flake
+
+*** 4. Añadir al flake.nix
+
+#+BEGIN_SRC nix
+# En flake.nix, añade tu máquina:
+nixosConfigurations.TU_MAQUINA = mkSystem {
+  hostname = "TU_MAQUINA";
+  hardware = [
+    # Elige los que necesites:
+    # ./hardware/nvidia/rtx5080.nix
+    # ./hardware/apple/macbook-pro-13-2.nix
+    # etc.
+  ];
+};
+#+END_SRC
+
+*** 5. ⚠️ IMPORTANTE: Personalizar Valores Hardcoded
+
+*CRÍTICO:* Estos archivos tienen info personal que DEBES cambiar:
+
+#+BEGIN_SRC text
+[ ] flake.nix
+    └─ users.passh → users.TU_USUARIO
+
+[ ] modules/home-manager/core.nix
+    ├─ username = "passh" → "TU_USUARIO"
+    ├─ homeDirectory = "/home/passh" → "/home/TU_USUARIO"
+    └─ programs.git.userEmail/userName → TU info
+
+[ ] claude-code/.claude/CLAUDE.md
+    ├─ Eliminar: Red local (IPs, passwords)
+    ├─ Eliminar: GitHub pascualmg → TU_USUARIO
+    └─ Actualizar: Preferencias personales
+
+[ ] claude-code/.claude/agents/
+    └─ Eliminar agentes personales:
+       - vocento-software-architect.md (específico empresa)
+       - carlos-buenosvinos.md (personal)
+       - chema.md (personal)
+       - escriba.md (personal)
+
+[ ] hosts/aurin/default.nix (si copias)
+    └─ Eliminar: VPN Vocento, hosts corporativos
+
+[ ] .gitignore
+    └─ Añadir: tus secrets (.credentials.json, etc.)
+#+END_SRC
+
+*** 6. Build & Install
+
+#+BEGIN_SRC bash
+# Build
+sudo nixos-rebuild switch --flake ~/dotfiles#TU_MAQUINA
+
+# Si falla, verifica:
+nix flake check --show-trace
+#+END_SRC
+
+** What You Get
+
+| Feature | Status |
+|---------+--------|
+| *Clone-first architecture* | ✅ Modular (base + hardware + host) |
+| *Desktop ready* | ✅ GNOME + XMonad + LightDM configured |
+| *AI agents (claude-code)* | ✅ Nixified, portable, customizable |
+| *Home-manager* | ✅ 200+ packages, declarative configs |
+| *Multi-machine support* | ✅ Easy to add new machines |
+| *Hardware support* | ✅ NVIDIA, Apple, pro audio modules |
+| *Wayland compositors* | ⚠️ Available (Hyprland/Niri) but LightDM issue |
+| *Plug-and-play* | ❌ WIP - requires manual adaptation |
+
+** What's Personal (Must Customize)
+
+| Item | Location | Action Required |
+|------+----------+-----------------|
+| *Username* | =flake.nix=, =core.nix= | Change "passh" to yours |
+| *Git config* | =core.nix= | Update email/name |
+| *CLAUDE.md* | =claude-code/.claude/= | Remove IPs/passwords/personal info |
+| *AI agents* | =claude-code/.claude/agents/= | Remove personal agents |
+| *VPN Vocento* | =hosts/aurin/=, =modules/services/= | Remove if not applicable |
+| *Hosts file* | =hosts/aurin/default.nix= | Remove corporate hosts |
+| *Secrets* | Various | Add to =.gitignore= |
+
+** Roadmap: Full Template Support
+
+*Current state:* Functional but requires manual adaptation
+
+*Planned improvements* (after stow elimination + opencode integration):
+- [ ] Parametrized username (=mainUser= variable)
+- [ ] Template generator script (=./scripts/new-machine.sh=)
+- [ ] Secrets management (sops-nix or agenix)
+- [ ] Clean separation: personal vs. template
+- [ ] Testing with real users (feedback loop)
+
+*ETA:* When stow migration complete (~2-3 weeks)
+
+** Community & Contributions
+
+Si usas este repo y mejoras algo:
+
+1. Fork & create branch: =feat/FEATURE=
+2. Keep the clone-first philosophy
+3. Document changes (README + comments)
+4. Submit Pull Request
+
+*Feedback wanted:* Si eres early adopter, abre un issue con tu experiencia.
+
+** Support
+
+*Issues:* [[https://github.com/pascualmg/dotfiles/issues]]
+*Discussions:* [[https://github.com/pascualmg/dotfiles/discussions]]
+
+*Philosophy:* This repo prioritizes *clarity* and *modularity* over convenience.
+You'll need to understand NixOS basics to adapt it successfully.
 
 * Arquitectura Clone-First (2026-01-19)
 

@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Forkeable Repo Guide**: "Use This Repo (WIP)" section in README.org
+  - Quick Start guide for others wanting to use this config as base
+  - Clear checklist of hardcoded values requiring customization
+  - Table showing what's included vs. what's personal
+  - Roadmap for full template support (after stow migration complete)
+  - Transparent about current limitations (manual adaptation needed)
+
 - **AI Agents Nixified (claude-code)**: Complete migration from Stow to home-manager
   - New module `modules/home-manager/programs/ai-agents.nix` for declarative management
   - Symlinks with `mkOutOfStoreSymlink` for editable config in `~/dotfiles/claude-code/`
