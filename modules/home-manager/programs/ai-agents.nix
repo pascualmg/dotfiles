@@ -8,11 +8,15 @@
 #
 # CURRENTLY MANAGED:
 #   - claude-code: ACTIVE (replaces stow)
-#   - opencode: EXPERIMENTAL (commented out, enable after investigation)
+#   - opencode: ACTIVE (branch opencode, WIP)
 #
 # STATE vs CONFIG:
-#   - Config (managed): settings.json, CLAUDE.md, agents/, skills/
-#   - State (not managed): .claude.json, history.jsonl, debug/, etc.
+#   Claude-code:
+#     - Config (managed): settings.json, CLAUDE.md, agents/, skills/
+#     - State (not managed): .claude.json, history.jsonl, debug/, etc.
+#   OpenCode:
+#     - Config (managed): package.json (plugins)
+#     - State (not managed): ~/.local/share/opencode/ (auth, sessions, storage)
 # =============================================================================
 
 {
@@ -73,17 +77,36 @@ in
   '';
 
   # ===========================================================================
-  # OpenCode - EXPERIMENTAL (disabled by default)
+  # OpenCode - Plugin Configuration
   # ===========================================================================
-  # Uncomment after FASE 0 investigation to enable opencode integration.
-  #
-  # home.file.".config/opencode/config.json".source =
-  #   config.lib.file.mkOutOfStoreSymlink
-  #   "${dotfilesDir}/opencode/.opencode/config.json";
-  #
-  # home.activation.setupOpencode = lib.hm.dag.entryAfter ["writeBoundary"] ''
-  #   # TODO: Configure opencode based on investigation findings
-  #   SHARED_DIR="${config.xdg.configHome}/ai-agents"
-  #   echo "⚠️  OpenCode config: Pending FASE 0 investigation"
-  # '';
+  # OpenCode uses TypeScript plugins, configured via package.json.
+  # State (auth, sessions) is kept in ~/.local/share/opencode/ (not managed).
+
+  home.file.".config/opencode/package.json".source =
+    config.lib.file.mkOutOfStoreSymlink "${dotfilesDir}/opencode/.config/opencode/package.json";
+
+  # ===========================================================================
+  # OpenCode - State directories (runtime, not managed by Nix)
+  # ===========================================================================
+  # These directories contain:
+  # - auth.json: OAuth credentials (Anthropic, etc.)
+  # - storage/: Sessions, messages, diffs, todos, projects
+
+  home.activation.createOpencodeState = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    echo "📁 Creando directorios de estado para opencode..."
+    mkdir -p ~/.local/share/opencode/storage/{session,message,session_diff,todo,project,part}
+
+    # Note: auth.json will be created by 'opencode auth login' (manual setup)
+    if [[ ! -f ~/.local/share/opencode/auth.json ]]; then
+      echo "⚠️  OpenCode: Run 'opencode auth login' to authenticate"
+    fi
+  '';
+
+  # ===========================================================================
+  # Install OpenCode package
+  # ===========================================================================
+
+  home.packages = with pkgs; [
+    opencode # Available in nixpkgs 1.1.23
+  ];
 }
