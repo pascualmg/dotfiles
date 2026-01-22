@@ -14,13 +14,22 @@
 # Para config de desktop, ver passh.nix que importa este core.
 # =============================================================================
 
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 let
   isAarch64 = pkgs.stdenv.hostPlatform.isAarch64;
 in
 
 {
+  imports = [
+    ./programs/ai-agents.nix # AI agents config (claude-code, opencode, etc.)
+  ];
+
   # Home Manager basico
   programs.home-manager.enable = true;
 
@@ -33,44 +42,47 @@ in
     # =========================================================================
     # PAQUETES CORE - CLI que funciona en todos lados
     # =========================================================================
-    packages = with pkgs; [
-      # Core utils
-      git
-      gh
-      ripgrep
-      fd
-      wget
-      curl
-      neovim
-      tree
-      unzip
-      zip
-      gzip
-      file
-      eza
-      direnv
-      jq
-      bat
-      htop
-      btop
+    packages =
+      with pkgs;
+      [
+        # Core utils
+        git
+        gh
+        ripgrep
+        fd
+        wget
+        curl
+        neovim
+        tree
+        unzip
+        zip
+        gzip
+        file
+        eza
+        direnv
+        jq
+        bat
+        htop
+        btop
 
-      # Shells
-      fish
+        # Shells
+        fish
 
-      # Development basics
-      gnumake
-      gcc
+        # Development basics
+        gnumake
+        gcc
 
-      # Formatters/Linters CLI
-      nixfmt
-      shfmt
-      shellcheck
+        # Formatters/Linters CLI
+        nixfmt
+        shfmt
+        shellcheck
 
-      # Network tools
-      openssh
-    ] ++ lib.optionals (!isAarch64) [
-      dig  # bind.dnsutils puede fallar en ARM
-    ];
+        # Network tools
+        openssh
+      ]
+      ++ lib.optionals (!isAarch64) [
+        dig # bind.dnsutils puede fallar en ARM
+      ];
 
     sessionVariables = {
       # mkDefault permite que emacs.nix override esto en desktop
@@ -121,24 +133,24 @@ in
   # =========================================================================
   # Crear config SSH con permisos correctos
   home.activation.createSshConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    rm -f ~/.ssh/config 2>/dev/null || true
-    cat > ~/.ssh/config << 'SSHEOF'
-Host *
-  AddKeysToAgent yes
-  ServerAliveInterval 30
-  ServerAliveCountMax 5
-  TCPKeepAlive yes
+        rm -f ~/.ssh/config 2>/dev/null || true
+        cat > ~/.ssh/config << 'SSHEOF'
+    Host *
+      AddKeysToAgent yes
+      ServerAliveInterval 30
+      ServerAliveCountMax 5
+      TCPKeepAlive yes
 
-Host aurin
-  HostName campo.zapto.org
-  Port 2222
-  User passh
-  ControlMaster auto
-  ControlPath ~/.ssh/sockets/%r@%h-%p
-  ControlPersist 600
-SSHEOF
-    mkdir -p ~/.ssh/sockets
-    chmod 700 ~/.ssh/sockets
-    chmod 600 ~/.ssh/config
+    Host aurin
+      HostName campo.zapto.org
+      Port 2222
+      User passh
+      ControlMaster auto
+      ControlPath ~/.ssh/sockets/%r@%h-%p
+      ControlPersist 600
+    SSHEOF
+        mkdir -p ~/.ssh/sockets
+        chmod 700 ~/.ssh/sockets
+        chmod 600 ~/.ssh/config
   '';
 }

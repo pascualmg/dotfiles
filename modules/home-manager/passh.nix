@@ -12,11 +12,17 @@
 #        va aqui. Lo portable va en core.nix.
 # =============================================================================
 
-{ config, pkgs, pkgsMaster, lib, ... }:
+{
+  config,
+  pkgs,
+  pkgsMaster,
+  lib,
+  ...
+}:
 
 {
   imports = [
-    ./core.nix  # Config comun a todas las plataformas
+    ./core.nix # Config comun a todas las plataformas
   ];
 
   # Desactivamos gestion de configs que manejaremos con stow
@@ -36,191 +42,195 @@
     # xmobar se instala via programs/xmobar.nix cuando enable=true
     # emacs se instala via programs/emacs.nix (wrapper inteligente X11/Wayland)
     # =========================================================================
-    packages = with pkgs; [
-      # Desktop utils (no estan en core)
-      killall
-      stow
-      lsof
-      v4l-utils
-      guvcview
-      docker-compose
-      lazydocker
-      filezilla
-      dysk
+    packages =
+      with pkgs;
+      [
+        # Desktop utils (no estan en core)
+        killall
+        stow
+        lsof
+        v4l-utils
+        guvcview
+        docker-compose
+        lazydocker
+        filezilla
+        dysk
 
-      # Shells adicionales
-      zsh
-      bash
+        # Shells adicionales
+        zsh
+        bash
 
-      # XMonad y dependencias
-      # xmonad-with-packages  # DISABLED: xmonad configurado a nivel de sistema (modules/xmonad.nix)
-      # xmobar  # MIGRATED: ahora via programs/xmobar.nix
-      # trayer  # DISABLED: build failure in nixpkgs-unstable (panel.c compilation error)
-      dmenu
-      xwinwrap
-      xscreensaver
+        # XMonad y dependencias
+        # xmonad-with-packages  # DISABLED: xmonad configurado a nivel de sistema (modules/xmonad.nix)
+        # xmobar  # MIGRATED: ahora via programs/xmobar.nix
+        # trayer  # DISABLED: build failure in nixpkgs-unstable (panel.c compilation error)
+        dmenu
+        xwinwrap
+        xscreensaver
 
-      # GNOME extras
-      gnome-tweaks
-      dconf-editor
+        # GNOME extras
+        gnome-tweaks
+        dconf-editor
 
-      # KDE/Qt extras
-      # NOTA: kde-gtk-config removido (no existe en nixpkgs-unstable actual)
-      # libsForQt5.kde-gtk-config
-      # libsForQt5.breeze-gtk  # REMOVED: no existe en nixpkgs actual
-      kdePackages.breeze-gtk  # Version Qt6
-      nitrogen
-      picom
-      xfce4-clipman-plugin  # Fixed: moved to top-level
-      stalonetray           # Standalone systray for xfce4-clipman
-      flameshot
-      # alttab  # DISABLED: build failure in nixpkgs-unstable (getOffendingModifiersMask compilation error)
+        # KDE/Qt extras
+        # NOTA: kde-gtk-config removido (no existe en nixpkgs-unstable actual)
+        # libsForQt5.kde-gtk-config
+        # libsForQt5.breeze-gtk  # REMOVED: no existe en nixpkgs actual
+        kdePackages.breeze-gtk # Version Qt6
+        nitrogen
+        picom
+        xfce4-clipman-plugin # Fixed: moved to top-level
+        stalonetray # Standalone systray for xfce4-clipman
+        flameshot
+        # alttab  # DISABLED: build failure in nixpkgs-unstable (getOffendingModifiersMask compilation error)
 
-      # X utils
-      xorg.setxkbmap
-      xorg.xmodmap
-      xorg.xinput
-      xorg.xset
-      xorg.xrandr
-      xorg.xev
+        # X utils
+        xorg.setxkbmap
+        xorg.xmodmap
+        xorg.xinput
+        xorg.xset
+        xorg.xrandr
+        xorg.xev
 
-      # Emacs dependencias (emacs binarios via programs/emacs.nix)
-      # MIGRATED: emacs-pgtk -> programs/emacs.nix (wrapper inteligente X11/Wayland)
-      nodejs_22  # nodejs_24 puede no existir, usar 22 LTS
-      # claude-code -> ahora via pkgsMaster (ver abajo)
-      tdlib
-      tree-sitter
-      cmake
-      gnumake
-      graphviz
-      gcc
-      libtool
-      pkg-config
+        # Emacs dependencias (emacs binarios via programs/emacs.nix)
+        # MIGRATED: emacs-pgtk -> programs/emacs.nix (wrapper inteligente X11/Wayland)
+        nodejs_22 # nodejs_24 puede no existir, usar 22 LTS
+        # claude-code -> ahora via pkgsMaster (ver abajo)
+        tdlib
+        tree-sitter
+        cmake
+        gnumake
+        graphviz
+        gcc
+        libtool
+        pkg-config
 
-      # Formatters y Linters
-      jq
-      nixfmt
-      shfmt
-      shellcheck
-      nodePackages.js-beautify
-      nodePackages.stylelint
-      html-tidy  # HTML/XML formatter (doom :lang web)
+        # Formatters y Linters
+        jq
+        nixfmt
+        shfmt
+        shellcheck
+        nodePackages.js-beautify
+        nodePackages.stylelint
+        html-tidy # HTML/XML formatter (doom :lang web)
 
-      # Language Servers
-      nodePackages.intelephense
-      nodePackages.typescript-language-server
-      clang-tools
-      glslang  # GLSL validator (doom :lang cc)
+        # Language Servers
+        nodePackages.intelephense
+        nodePackages.typescript-language-server
+        clang-tools
+        glslang # GLSL validator (doom :lang cc)
 
-      # System monitoring
-      mission-center
+        # System monitoring
+        mission-center
 
-      # Java & PlantUML
-      plantuml
+        # Java & PlantUML
+        plantuml
 
-      # Audio
-      alsa-utils
-      pulseaudio
-      pavucontrol
+        # Audio
+        alsa-utils
+        pulseaudio
+        pavucontrol
 
-      # Python
-      python3
+        # Python
+        python3
 
-      # Haskell toolchain
-      haskellPackages.ghc
-      haskell-language-server
-      haskellPackages.cabal-install
-      stack
-      haskellPackages.ormolu
-      haskellPackages.fourmolu
-      haskellPackages.stylish-haskell
-      haskellPackages.hlint
-      # haskellPackages.apply-refact  # DISABLED: marked as broken in nixpkgs
-      haskellPackages.ghcid
-      haskellPackages.hoogle
-      haskellPackages.implicit-hie
-      haskellPackages.cabal-fmt
-      # haskellPackages.retrie  # DISABLED: marked as broken in nixpkgs
-      gmp
-      zlib
+        # Haskell toolchain
+        haskellPackages.ghc
+        haskell-language-server
+        haskellPackages.cabal-install
+        stack
+        haskellPackages.ormolu
+        haskellPackages.fourmolu
+        haskellPackages.stylish-haskell
+        haskellPackages.hlint
+        # haskellPackages.apply-refact  # DISABLED: marked as broken in nixpkgs
+        haskellPackages.ghcid
+        haskellPackages.hoogle
+        haskellPackages.implicit-hie
+        haskellPackages.cabal-fmt
+        # haskellPackages.retrie  # DISABLED: marked as broken in nixpkgs
+        gmp
+        zlib
 
-      # System tools
-      btop
-      s-tui
-      pciutils
-      usbutils
+        # System tools
+        btop
+        s-tui
+        pciutils
+        usbutils
 
-      # Clipboard
-      xclip
-      xsel
-      xorg.xkill
+        # Clipboard
+        xclip
+        xsel
+        xorg.xkill
 
-      # Browsers
-      firefox
-      google-chrome
-      qutebrowser
+        # Browsers
+        firefox
+        google-chrome
+        qutebrowser
 
-      # Markdown
-      pandoc
-      bat
+        # Markdown
+        pandoc
+        bat
 
-      # IDEs
-      pkgsMaster.jetbrains-toolbox
+        # IDEs
+        pkgsMaster.jetbrains-toolbox
 
-      # Office/Communication
-      slack
-      teams-for-linux
-      telegram-desktop
-      postman
+        # Office/Communication
+        slack
+        teams-for-linux
+        telegram-desktop
+        postman
 
-      # Media
-      simplescreenrecorder
-      vlc
-      mpv
-      (obs-studio.override { cudaSupport = true; })
-      ffmpeg-full
-      spotify
+        # Media
+        simplescreenrecorder
+        vlc
+        mpv
+        (obs-studio.override { cudaSupport = true; })
+        ffmpeg-full
+        spotify
 
-      # Torrents & Media Server
-      qbittorrent
-      jellyfin
+        # Torrents & Media Server
+        qbittorrent
+        jellyfin
 
-      # Security
-      openssl
-      nmap
-      wireshark
-      etherape
-      traceroute
-      tcpdump
-      gnupg
-      pinentry-gnome3  # Fixed: pinentry deprecated, need specific variant
+        # Security
+        openssl
+        nmap
+        wireshark
+        etherape
+        traceroute
+        tcpdump
+        gnupg
+        pinentry-gnome3 # Fixed: pinentry deprecated, need specific variant
 
-      # Network
-      dig
+        # Network
+        dig
 
-      # AI
-      # open-webui  # DISABLED: ctranslate2 build failure in nixpkgs-unstable
+        # AI
+        # open-webui  # DISABLED: ctranslate2 build failure in nixpkgs-unstable
 
-      # Gaming
-      # duckstation  # TEMP: hash mismatch in nixpkgs-unstable (2026-01-14)
-      prismlauncher
-      jdk21
-    ] ++ (with pkgs.python3Packages; [
-      pip
-      black
-      flake8
-      pylint
-      pytest
-      pynvim
-      pyttsx3
-      ipython
-      pyflakes
-      isort
-      setuptools
-    ]) ++ [
-      # Paquetes de nixpkgs-master (bleeding-edge)
-      pkgsMaster.claude-code  # 2.1.6 (master) vs 2.1.2 (unstable)
-    ];
+        # Gaming
+        # duckstation  # TEMP: hash mismatch in nixpkgs-unstable (2026-01-14)
+        prismlauncher
+        jdk21
+      ]
+      ++ (with pkgs.python3Packages; [
+        pip
+        black
+        flake8
+        pylint
+        pytest
+        pynvim
+        pyttsx3
+        ipython
+        pyflakes
+        isort
+        setuptools
+      ])
+      ++ [
+        # Paquetes de nixpkgs-master (bleeding-edge)
+        pkgsMaster.claude-code # 2.1.6 (master) vs 2.1.2 (unstable)
+      ];
 
     # Session variables adicionales para desktop
     # (las basicas como EDITOR, ORG_DIRECTORY estan en core.nix)
@@ -247,9 +257,10 @@
     activation.linkDotfiles = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
       echo "Linkeando dotfiles residuales con stow..."
       cd ${config.home.homeDirectory}/dotfiles
-      # Solo quedan: xmonad (Haskell), composer (PHP), claude-code (local)
+      # Solo quedan: xmonad (Haskell), composer (PHP)
+      # claude-code → Migrado a home-manager (modules/home-manager/programs/ai-agents.nix)
       ${pkgs.stow}/bin/stow -v -R -t ${config.home.homeDirectory} \
-        composer xmonad claude-code
+        composer xmonad
     '';
   };
 
@@ -281,8 +292,7 @@
       PartOf = [ "graphical-session.target" ];
     };
     Service = {
-      ExecStart =
-        "${pkgs.picom}/bin/picom --config ${config.home.homeDirectory}/.config/picom/picom.conf";
+      ExecStart = "${pkgs.picom}/bin/picom --config ${config.home.homeDirectory}/.config/picom/picom.conf";
       Restart = "on-failure";
     };
     Install.WantedBy = [ "graphical-session.target" ];
@@ -294,8 +304,14 @@
   dconf.settings = {
     "org/gnome/desktop/input-sources" = {
       sources = [
-        (lib.hm.gvariant.mkTuple ["xkb" "us"])
-        (lib.hm.gvariant.mkTuple ["xkb" "es"])
+        (lib.hm.gvariant.mkTuple [
+          "xkb"
+          "us"
+        ])
+        (lib.hm.gvariant.mkTuple [
+          "xkb"
+          "es"
+        ])
       ];
     };
   };
