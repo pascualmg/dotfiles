@@ -42,7 +42,7 @@ in
       #################################
       #           Corners             #
       #################################
-      corner-radius = 16;
+      corner-radius = 0;
       rounded-corners-exclude = [
         "class_g = 'Polybar'",
         "class_g = 'xmobar'",

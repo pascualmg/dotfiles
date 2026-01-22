@@ -262,9 +262,9 @@ main = do
         -- =========================================
         { modMask            = mod4Mask          -- Mod = Super/Windows key
         , terminal           = "alacritty"       -- Terminal por defecto (Mod+Shift+Enter)
-        , borderWidth        = 1                 -- Ancho del borde de ventanas (px)
+        , borderWidth        = 7                 -- Ancho del borde de ventanas (px)
         , normalBorderColor  = "#002b36"         -- Color borde ventana inactiva (Solarized)
-        , focusedBorderColor = "#268bd2"         -- Color borde ventana activa (azul)
+        , focusedBorderColor = "#d75fd7"         -- Color borde ventana activa (magenta Spacemacs)
 
         -- =========================================
         -- HOOKS
