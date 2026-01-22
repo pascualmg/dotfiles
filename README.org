@@ -1316,13 +1316,14 @@ xmobar &
 
 *Scripts utiles del sistema*
 
-| Script                            | Descripcion                    |
-|-----------------------------------+--------------------------------|
-| =ubuntu-vm-ivanti-configurator.sh= | Configurador VM Ubuntu Ivanti  |
-| =hdmon.sh=                        | Monitor discos duros?          |
-| =vm-backupeitor.sh=               | Backup VMs?                    |
-
-*Nota:* Puede que algunos esten obsoletos o sean especificos de otro setup
+| Script                 | Descripcion                               |
+|------------------------+-------------------------------------------|
+| =vm-backupeitor.sh=    | Backup/restore VMs libvirt (XML + QCOW2) |
+| =bootstrap-doom.sh=    | Setup inicial Doom Emacs en máquinas nuevas |
+| =sync-wallpapers.sh=   | Sincronizar wallpapers                    |
+| =xmobar-*.sh=          | Scripts de monitorización para xmobar     |
+| =trayer-*.sh=          | Gestión de trayer (system tray)           |
+| =wireless-mouse.sh=    | Monitor batería ratón wireless            |
 
 ** Wallpapers (~/wallpapers/) .
 

@@ -463,11 +463,10 @@ nat = {
 - Pulse Secure client installed in `/opt/pulsesecure/`
 
 **CRITICAL FACTS:**
-1. The script `ubuntu-vm-ivanti-configurator.sh` was an ATTEMPT to document the config - **IT WAS NEVER ACTUALLY TESTED**
-2. The real VM was configured by **trial and error reverse engineering**
-3. **If you restart the VM, the configuration is LOST** → must use snapshots
-4. Every new NixOS machine (like the new Mac) requires repeating this manual nightmare
-5. The configuration is **not reproducible** - it's held together by snapshots
+1. The real VM was configured by **trial and error reverse engineering**
+2. **If you restart the VM, the configuration is LOST** → must use snapshots
+3. Every new NixOS machine (like the new Mac) requires repeating this manual nightmare
+4. The configuration is **not reproducible** - it's held together by snapshots
 
 ### SACRED RULES FOR VPN NETWORKING
 
@@ -504,7 +503,6 @@ nat = {
 
 - `/home/passh/dotfiles/nixos-aurin/etc/nixos/configuration.nix` (lines ~182-268 networking)
 - `/home/passh/dotfiles/nixos-aurin/etc/nixos/modules/virtualization.nix`
-- `/home/passh/dotfiles/scripts/scripts/ubuntu-vm-ivanti-configurator.sh` (UNTESTED attempt)
 - `/home/passh/dotfiles/scripts/vm-backupeitor.sh` (backup/restore VMs)
 - `/home/passh/src/pulse-secure-nixos/` - **Native NixOS package (outside dotfiles, ready for integration)**
 
