@@ -81,9 +81,7 @@ in
   # ===========================================================================
   # OpenCode uses TypeScript plugins, configured via package.json.
   # State (auth, sessions) is kept in ~/.local/share/opencode/ (not managed).
-
-  home.file.".config/opencode/package.json".source =
-    config.lib.file.mkOutOfStoreSymlink "${dotfilesDir}/opencode/.config/opencode/package.json";
+  # Using activation script due to home.file.source not respecting mkOutOfStoreSymlink
 
   # ===========================================================================
   # OpenCode - State directories (runtime, not managed by Nix)
@@ -92,8 +90,24 @@ in
   # - auth.json: OAuth credentials (Anthropic, etc.)
   # - storage/: Sessions, messages, diffs, todos, projects
 
-  home.activation.createOpencodeState = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    echo "📁 Creando directorios de estado para opencode..."
+  home.activation.setupOpencode = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    echo "📁 Configurando opencode..."
+
+    # Create config directory
+    mkdir -p ~/.config/opencode
+
+    # Create symlink to dotfiles (editable, not in store)
+    if [[ -L ~/.config/opencode/package.json ]] && [[ "$(readlink ~/.config/opencode/package.json)" == *"/nix/store/"* ]]; then
+      echo "🧹 Limpiando symlink incorrecto de nix store..."
+      rm ~/.config/opencode/package.json
+    fi
+
+    if [[ ! -e ~/.config/opencode/package.json ]]; then
+      echo "🔗 Creando symlink: package.json -> dotfiles"
+      ln -sf "${dotfilesDir}/opencode/.config/opencode/package.json" ~/.config/opencode/package.json
+    fi
+
+    # Create state directories
     mkdir -p ~/.local/share/opencode/storage/{session,message,session_diff,todo,project,part}
 
     # Note: auth.json will be created by 'opencode auth login' (manual setup)
