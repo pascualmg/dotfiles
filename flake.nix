@@ -223,22 +223,10 @@
                 let
                   # Obtener nombre de rama desde variable de entorno (impure)
                   # O leer directamente .git/HEAD con path absoluto
+                  # Leer nombre de rama desde variable de entorno GIT_BRANCH
+                  # Debe exportarse antes de rebuild: export GIT_BRANCH=$(git -C ~/dotfiles rev-parse --abbrev-ref HEAD)
                   branchFromEnv = builtins.getEnv "GIT_BRANCH";
-                  branchRaw =
-                    if branchFromEnv != "" then
-                      branchFromEnv
-                    else
-                      let
-                        # Leer .git/HEAD con path absoluto (requiere --impure)
-                        gitHeadPath = /home/passh/dotfiles/.git/HEAD;
-                        gitHeadContent =
-                          if builtins.pathExists gitHeadPath then
-                            builtins.readFile gitHeadPath
-                          else
-                            "ref: refs/heads/unknown\n";
-                        withPrefix = nixpkgs.lib.strings.removePrefix "ref: refs/heads/" gitHeadContent;
-                      in
-                      nixpkgs.lib.strings.removeSuffix "\n" withPrefix;
+                  branchRaw = if branchFromEnv != "" then branchFromEnv else "nobranch";
                   # Sanitizar y truncar
                   branchSanitized = builtins.replaceStrings [ "/" ] [ "-" ] branchRaw;
                   branch = nixpkgs.lib.strings.substring 0 20 branchSanitized;
