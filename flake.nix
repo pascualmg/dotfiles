@@ -134,18 +134,7 @@
   #   - nixpkgs: el input llamado nixpkgs
   #   - ...: otros inputs que no nombramos explicitamente
   #   - @inputs: captura TODOS los inputs en la variable "inputs"
-  outputs =
-    {
-      self,
-      nixpkgs,
-      nixpkgs-master,
-      home-manager,
-      nixos-hardware,
-      alacritty-themes,
-      nix-on-droid,
-      nix-index-database,
-      ...
-    }@inputs:
+  outputs = { self, nixpkgs, nixpkgs-master, home-manager, nixos-hardware, alacritty-themes, nix-on-droid, nix-index-database, ... }@inputs:
     let
       # Sistema comun para todas las maquinas x86_64
       system = "x86_64-linux";
@@ -153,7 +142,7 @@
       # Importamos nixpkgs con allowUnfree = true
       # Esto permite instalar paquetes propietarios (nvidia, chrome, etc)
       pkgs = import nixpkgs {
-        inherit system; # Equivalente a: system = system;
+        inherit system;  # Equivalente a: system = system;
         config.allowUnfree = true;
       };
 
@@ -181,126 +170,115 @@
       #   - hardware/ contiene modulos especificos de hardware
       #   - hosts/hostname/ contiene overrides especificos del host
       # =========================================================================
-      mkSystem =
-        {
-          hostname, # Nombre de la maquina (aurin, macbook, vespino)
-          hardware ? [ ], # Lista de modulos hardware (opcional, default [])
-          extra ? [ ], # Modulos extra (opcional, default [])
-        }:
-        nixpkgs.lib.nixosSystem {
-          inherit system;
+      mkSystem = {
+        hostname,           # Nombre de la maquina (aurin, macbook, vespino)
+        hardware ? [],      # Lista de modulos hardware (opcional, default [])
+        extra ? [],         # Modulos extra (opcional, default [])
+      }: nixpkgs.lib.nixosSystem {
+        inherit system;
 
-          # specialArgs pasa variables a TODOS los modulos
-          # Cualquier modulo puede recibir estos como argumentos
-          specialArgs = {
-            inherit inputs;
-            inherit home-manager nixos-hardware;
-            inherit alacritty-themes;
-            inherit pkgsMaster;
-          };
-
-          # Lista de modulos que componen la configuracion
-          # El orden importa: los modulos posteriores pueden override anteriores
-          modules = [
-            # Base comun a todas las maquinas
-            ./modules/base
-
-            # Hardware-configuration.nix generado por nixos-generate-config
-            ./hosts/${hostname}/hardware-configuration.nix
-
-            # Config especifica del host (overrides, servicios locales)
-            ./hosts/${hostname}
-
-            # Establecemos el hostname
-            { networking.hostName = hostname; }
-
-            # nix-index-database para command-not-found mejorado
-            nix-index-database.nixosModules.nix-index
-            {
-              # Etiqueta la configuracion con el commit de git
-              system.configurationRevision = if self ? rev then self.rev else "dirty";
-              system.nixos.label =
-                let
-                  # Leer rama desde GIT_BRANCH (opcional, se usa con ./rebuild.sh)
-                  # Formato: rama-hash o solo hash si no hay GIT_BRANCH
-                  branch = builtins.getEnv "GIT_BRANCH";
-                  branchPart = if branch != "" then "${builtins.replaceStrings [ "/" ] [ "-" ] branch}-" else "";
-                in
-                if self ? shortRev then "${branchPart}${self.shortRev}" else "${branchPart}dirty";
-              # Habilita "comma" (ejecutar programas sin instalar: , htop)
-              programs.nix-index-database.comma.enable = true;
-            }
-
-            # Home Manager integrado en NixOS
-            home-manager.nixosModules.home-manager
-            {
-              home-manager = {
-                # Usa los mismos pkgs del sistema (no descarga otra vez)
-                useGlobalPkgs = true;
-                useUserPackages = true;
-                # Variables disponibles en la config de home-manager
-                extraSpecialArgs = {
-                  inherit inputs pkgsMaster alacritty-themes;
-                  hostname = hostname;
-                };
-                # Configuracion de home-manager para el usuario passh
-                users.passh = import ./modules/home-manager;
-                # Si hay conflicto con archivo existente, renombralo a .backup
-                backupFileExtension = "backup";
-              };
-            }
-          ]
-          # ++ concatena listas: modules ++ hardware ++ extra
-          ++ hardware
-          ++ extra;
+        # specialArgs pasa variables a TODOS los modulos
+        # Cualquier modulo puede recibir estos como argumentos
+        specialArgs = {
+          inherit inputs;
+          inherit home-manager nixos-hardware;
+          inherit alacritty-themes;
+          inherit pkgsMaster;
         };
+
+        # Lista de modulos que componen la configuracion
+        # El orden importa: los modulos posteriores pueden override anteriores
+        modules = [
+          # Base comun a todas las maquinas
+          ./modules/base
+
+          # Hardware-configuration.nix generado por nixos-generate-config
+          ./hosts/${hostname}/hardware-configuration.nix
+
+          # Config especifica del host (overrides, servicios locales)
+          ./hosts/${hostname}
+
+          # Establecemos el hostname
+          { networking.hostName = hostname; }
+
+          # nix-index-database para command-not-found mejorado
+          nix-index-database.nixosModules.nix-index
+          {
+            # Etiqueta la configuracion con el commit de git
+            system.configurationRevision =
+              if self ? rev then self.rev else "dirty";
+            system.nixos.label =
+              if self ? shortRev then "flake-${self.shortRev}" else "flake-dirty";
+            # Habilita "comma" (ejecutar programas sin instalar: , htop)
+            programs.nix-index-database.comma.enable = true;
+          }
+
+          # Home Manager integrado en NixOS
+          home-manager.nixosModules.home-manager
+          {
+            home-manager = {
+              # Usa los mismos pkgs del sistema (no descarga otra vez)
+              useGlobalPkgs = true;
+              useUserPackages = true;
+              # Variables disponibles en la config de home-manager
+              extraSpecialArgs = {
+                inherit inputs pkgsMaster alacritty-themes;
+                hostname = hostname;
+              };
+              # Configuracion de home-manager para el usuario passh
+              users.passh = import ./modules/home-manager;
+              # Si hay conflicto con archivo existente, renombralo a .backup
+              backupFileExtension = "backup";
+            };
+          }
+        ]
+        # ++ concatena listas: modules ++ hardware ++ extra
+        ++ hardware ++ extra;
+      };
 
       # =========================================================================
       # mkDroid - Crear configuracion nix-on-droid (Android)
       # =========================================================================
-      mkDroid =
-        {
-          hostname,
-          extra ? [ ],
-        }:
-        nix-on-droid.lib.nixOnDroidConfiguration {
-          pkgs = import nixpkgs {
-            system = "aarch64-linux";
-            config.allowUnfree = true;
-          };
-
-          extraSpecialArgs = {
-            inherit inputs;
-            inherit pkgsMasterArm;
-            inherit alacritty-themes;
-          };
-
-          modules = [
-            ./droid/common.nix
-            ./droid/${hostname}
-
-            {
-              home-manager = {
-                useGlobalPkgs = true;
-                backupFileExtension = "backup";
-                extraSpecialArgs = {
-                  inherit inputs;
-                  inherit pkgsMasterArm;
-                  inherit alacritty-themes;
-                  hostname = hostname;
-                };
-                config = ./modules/home-manager/machines/android.nix;
-                sharedModules = [
-                  nix-index-database.hmModules.nix-index
-                  { programs.nix-index-database.comma.enable = true; }
-                ];
-              };
-            }
-          ]
-          ++ extra;
+      mkDroid = {
+        hostname,
+        extra ? [],
+      }: nix-on-droid.lib.nixOnDroidConfiguration {
+        pkgs = import nixpkgs {
+          system = "aarch64-linux";
+          config.allowUnfree = true;
         };
 
-      # Fin del bloque "let", ahora el attrset que devuelve outputs
+        extraSpecialArgs = {
+          inherit inputs;
+          inherit pkgsMasterArm;
+          inherit alacritty-themes;
+        };
+
+        modules = [
+          ./droid/common.nix
+          ./droid/${hostname}
+
+          {
+            home-manager = {
+              useGlobalPkgs = true;
+              backupFileExtension = "backup";
+              extraSpecialArgs = {
+                inherit inputs;
+                inherit pkgsMasterArm;
+                inherit alacritty-themes;
+                hostname = hostname;
+              };
+              config = ./modules/home-manager/machines/android.nix;
+              sharedModules = [
+                nix-index-database.hmModules.nix-index
+                { programs.nix-index-database.comma.enable = true; }
+              ];
+            };
+          }
+        ] ++ extra;
+      };
+
+    # Fin del bloque "let", ahora el attrset que devuelve outputs
     in
     {
       # -----------------------------------------------------------------------
@@ -381,13 +359,13 @@
       # Uso: nix develop (dentro del repo)
       devShells.${system}.default = pkgs.mkShell {
         buildInputs = with pkgs; [
-          nil # LSP para Nix
-          nixd # LSP alternativo
-          nixfmt # Formateador
-          nixpkgs-fmt # Formateador estilo nixpkgs
-          statix # Linter
-          deadnix # Detecta codigo muerto
-          nix-tree # Visualizar dependencias
+          nil            # LSP para Nix
+          nixd           # LSP alternativo
+          nixfmt         # Formateador
+          nixpkgs-fmt    # Formateador estilo nixpkgs
+          statix         # Linter
+          deadnix        # Detecta codigo muerto
+          nix-tree       # Visualizar dependencias
         ];
 
         # Este hook se ejecuta al entrar al shell

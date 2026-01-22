@@ -26,13 +26,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **NixOS generation labels**: Etiquetas ahora incluyen nombre de rama + hash
-  - Antes: `flake-a1b2c3d` o `flake-dirty`
-  - Ahora: `main-a1b2c3d`, `feat-ai-agents-f3e8a12`, `main-dirty`
-  - Usa IFD (Import From Derivation) para leer rama durante eval
-  - Rama sanitizada (/ → -) y truncada a 20 chars para bootloader
-  - Mejora trazabilidad en menú GRUB
-
 - **Removed claude-code from Stow**: Only xmonad and composer remain in transition
   - `passh.nix` line ~252: removed `claude-code` from stow command
   - Transition helper added in `ai-agents.nix` to clean old stow symlinks
