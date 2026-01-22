@@ -1,7 +1,8 @@
 # Análisis: Nix-on-Droid (Android) - Estado Actual
 
 **Fecha**: 2026-01-22  
-**Status**: 🪦 ABANDONADO - Requiere revisión y decisión
+**Status**: 🔥 ACTIVO - Clone-first aplicado  
+**Decisión**: Opción C (Mantener) con mejoras clone-first
 
 ---
 
@@ -215,3 +216,41 @@ Una vez decidido, implementar en rama separada y testear en el móvil real.
 - Nix-on-Droid: https://github.com/nix-community/nix-on-droid
 - F-Droid Nix-on-Droid app: https://f-droid.org/packages/com.termux.nix/
 - Termux-X11 (si mantener X11): https://github.com/termux/termux-x11
+
+---
+
+## ACTUALIZACIÓN 2026-01-22 (Tarde)
+
+**Decisión tomada**: **Opción C - Mantener con enfoque clone-first**
+
+### Implementación
+
+✅ **Clone-first aplicado**:
+- Móvil = CLON completo de desktop
+- Mismo stack: core tools, AI agents (opencode), Doom Emacs, XMonad
+- Solo difiere en: hardware (ARM aarch64) y form factor (móvil)
+
+✅ **OpenCode añadido**:
+- Disponible en nixpkgs para aarch64
+- Mismo que desktop (aurin, macbook, vespino)
+- Claude-code optional (desde pkgsMasterArm)
+
+✅ **Filosofía confirmada**:
+- NO adaptar por "ser móvil"
+- Mantener capabilities completas
+- XMonad + Emacs útiles con pantalla externa
+- Si funciona en desktop → debe funcionar en móvil
+
+### Cambios Realizados
+
+```nix
+# android.nix
+let
+  hasOpencode = (builtins.tryEval pkgs.opencode).success;
+in
+home.packages = [
+  # ... stack completo ...
+] ++ lib.optionals hasOpencode [ pkgs.opencode ];
+```
+
+**Status**: LISTO para usar - Config actualizado y funcional 🚀

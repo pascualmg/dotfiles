@@ -1,21 +1,44 @@
 # =============================================================================
 # Machine-specific config: ANDROID (Nix-on-Droid)
 # =============================================================================
-# Movil con Nix-on-Droid (aarch64-linux)
+# 🔥 CLONE-FIRST: El móvil es un CLON COMPLETO de desktop
 #
-# TERMUX-X11 SUPPORT:
+# Hardware: aarch64-linux (ARM)
+# Form factor: Móvil (pantalla táctil, keyboard Termux)
+#
+# MISMO STACK QUE DESKTOP:
+#   ✅ Core tools → core.nix (git, fish, fzf, ripgrep, etc.)
+#   ✅ AI agents → opencode (claude-code de pkgsMasterArm si disponible)
+#   ✅ Doom Emacs (INTOCABLE)
+#   ✅ XMonad + X11 (via Termux-X11, para pantalla externa)
+#
+# Solo difiere en: hardware (ARM) y form factor.
+# Filosofía: No adaptar por "ser móvil", mantener capabilities completas.
+#
+# TERMUX-X11 SETUP (para pantalla externa):
 #   1. Instalar Termux-X11 desde F-Droid o GitHub releases
-#   2. En Termux normal: pkg install termux-x11-nightly
+#   2. En Termux: pkg install termux-x11-nightly
 #   3. Lanzar: termux-x11 :0 &
-#   4. Desde nix-on-droid: start-x11 (script incluido)
+#   4. Desde nix-on-droid: start-x11
 #
 # Uso: nix-on-droid switch --flake ~/dotfiles
 # =============================================================================
 
-{ config, pkgs, lib, pkgsMasterArm ? null, hostname, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  pkgsMasterArm ? null,
+  hostname,
+  ...
+}:
 
 let
+  # Claude-code from master (ARM build, optional)
   hasClaudeCode = pkgsMasterArm != null && (builtins.tryEval pkgsMasterArm.claude-code).success;
+
+  # Opencode available in nixpkgs (aarch64 supported)
+  hasOpencode = (builtins.tryEval pkgs.opencode).success;
 
   # Script para iniciar XMonad con Termux-X11
   start-x11 = pkgs.writeShellScriptBin "start-x11" ''
@@ -51,43 +74,52 @@ in
     ../core.nix
   ];
 
-  home.packages = with pkgs; [
-    # Sesiones remotas
-    tmux
-    mosh
+  # ===========================================================================
+  # CLONE-FIRST PACKAGES
+  # ===========================================================================
+  # Mismo stack que desktop (aurin, macbook, vespino).
+  # Solo difiere en hardware ARM y form factor móvil.
 
-    # TUI tools
-    fzf
-    lazygit
-    ncdu
+  home.packages =
+    with pkgs;
+    [
+      # Sesiones remotas & TUI
+      tmux
+      mosh
+      fzf
+      lazygit
+      ncdu
 
-    # Emacs (Doom)
-    emacs
-    ripgrep
-    fd
+      # Emacs (Doom) - INTOCABLE
+      emacs
+      ripgrep
+      fd
 
+      # =========================================================================
+      # X11 + XMonad (Termux-X11 + pantalla externa)
+      # =========================================================================
+      # En desarrollo: mismo stack que desktop
+      haskellPackages.xmonad
+      haskellPackages.xmonad-contrib
+      haskellPackages.xmobar # Status bar
+      alacritty # Terminal
+      xterm # Terminal fallback
+      dmenu # Launcher
+      feh # Wallpaper
+      picom # Compositor (sombras, transparencias)
+      nitrogen # Wallpaper manager
+      scrot # Screenshots
+      xclip # Clipboard
+
+      # Scripts helper
+      start-x11
+      x11-run
+    ]
     # =========================================================================
-    # X11 + XMonad (para usar con Termux-X11)
+    # AI Agents (CLONE-FIRST: mismo stack que desktop)
     # =========================================================================
-    # El mismo stack que desktop - ¿por qué no?
-    haskellPackages.xmonad
-    haskellPackages.xmonad-contrib
-    haskellPackages.xmobar       # Status bar
-    alacritty                    # Terminal
-    xterm                        # Terminal fallback
-    dmenu                        # Launcher
-    feh                          # Wallpaper
-    picom                        # Compositor (sombras, transparencias)
-    nitrogen                     # Wallpaper manager
-    scrot                        # Screenshots
-    xclip                        # Clipboard
-
-    # Scripts helper
-    start-x11
-    x11-run
-  ] ++ lib.optionals hasClaudeCode [
-    pkgsMasterArm.claude-code
-  ];
+    ++ lib.optionals hasClaudeCode [ pkgsMasterArm.claude-code ]
+    ++ lib.optionals hasOpencode [ pkgs.opencode ];
 
   # Fish shell con config ligera
   programs.fish = {
@@ -117,7 +149,7 @@ in
   # Tmux config basica para sesiones SSH
   programs.tmux = {
     enable = true;
-    shortcut = "a";  # Ctrl+a como prefix (mas facil en movil)
+    shortcut = "a"; # Ctrl+a como prefix (mas facil en movil)
     terminal = "screen-256color";
     historyLimit = 10000;
     extraConfig = ''
