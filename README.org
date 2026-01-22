@@ -1,10 +1,29 @@
 #+TITLE: Dotfiles - passh (Multi-Machine NixOS)
 #+AUTHOR: passh
-#+DATE: 2026-01-20
+#+DATE: 2026-01-22
 #+STARTUP: overview
 
 * TODO Tareas Pendientes
 
+** AI Agents (claude-code, opencode)
+- [X] *CLAUDE-CODE NIXIFICADO* [2026-01-22] - Migrado de stow a home-manager
+  - [X] Crear modulo =modules/home-manager/programs/ai-agents.nix=
+  - [X] Integrar en =core.nix= (portable)
+  - [X] Eliminar claude-code de stow en =passh.nix=
+  - [X] Aplicar en aurin
+  - [ ] Aplicar en macbook
+  - [ ] Aplicar en vespino
+- [ ] *OPENCODE EXPERIMENTAL* - Investigar e integrar
+  - [ ] FASE 0: Investigar formato de agentes (¿compatible con claude-code?)
+  - [ ] FASE 0: Investigar MCP servers config
+  - [ ] Descomentar bloque opencode en =ai-agents.nix=
+  - [ ] Probar en aurin
+- [ ] *SHARED AGENTS* - Config multi-cliente (futuro)
+  - [ ] Investigar compatibilidad entre clientes
+  - [ ] Diseñar arquitectura =ai-agents/= compartida
+  - [ ] Implementar adaptadores per-client
+
+** Infraestructura
 - [ ] *VPN VOCENTO EXPERIMENTAL* - Probar modulos en vespino antes de aurin
   - Copiar disco QCOW2 a vespino
   - Configurar =services.vocento-vpn-bridge= con interface correcta
@@ -14,9 +33,12 @@
 - [ ] *rEFInd* - Bootloader para fix geometria TTY en MacBook
   - =boot.loader.refind.enable = true=
   - Configurar =resolution 2560 1600= en refind.conf
+
+** Limpieza
 - [ ] Revisar y limpiar configs obsoletas (shell/, composer/)
 - [ ] Documentar scripts utiles en scripts/
-- [ ] Migrar xmonad a home-manager (si merece la pena)
+- [ ] Migrar xmonad a home-manager (cuando composer migre, eliminar stow)
+- [ ] Archivar =dotfiles/claude-code/= (mantener histórico)
 - [ ] Considerar sops-nix para secretos
 
 * TL;DR - Setup Rapido
@@ -545,6 +567,403 @@ Tu IP WiFi cambia (192.168.1.50 → 192.168.2.100)
 
 *Solo falla si:* Cambias de interface fisica (ej: de WiFi USB a Ethernet).
 En ese caso, cambia =externalInterface= en el config y rebuild.
+
+** AI Agents (claude-code, opencode) - NIXIFICADO [2026-01-22]
+
+*** El Problema: Stow → Home-Manager Migration
+
+Históricamente, las configuraciones de =claude-code= se gestionaban con GNU Stow:
+- Symlinks manuales desde =~/dotfiles/claude-code/.claude/= a =~/.claude/=
+- No portable entre máquinas
+- Stow es deprecated, se está eliminando progresivamente
+- Difícil de versionar cambios de forma declarativa
+
+*Objetivo:* Nixificar toda la config AI para que sea:
+- *Declarativa* - Gestionada por home-manager, no scripts
+- *Portable* - Clone-first: misma config en aurin, macbook, vespino
+- *Versionada* - Cambios trackeados en git
+- *Multi-cliente* - Soportar claude-code, opencode, gemini-cli, etc.
+
+*** La Solución: Módulo home-manager Unificado
+
+#+BEGIN_SRC text
+┌─────────────────────────────────────────────────────────────────────┐
+│                    ARQUITECTURA AI AGENTS                           │
+│                                                                     │
+│  dotfiles/claude-code/.claude/    ← SOURCE (git versionado)        │
+│         ├── CLAUDE.md                                               │
+│         ├── settings.json                                           │
+│         ├── agents/                                                 │
+│         │   ├── nixos-guru.md                                       │
+│         │   ├── vocento-software-architect.md                       │
+│         │   └── ... (10 agentes)                                    │
+│         └── skills/                                                 │
+│                                                                     │
+│                    ▼ (home-manager symlinks)                        │
+│                                                                     │
+│  ~/.claude/                       ← RUNTIME (symlinkado)           │
+│         ├── CLAUDE.md        → dotfiles/claude-code/.claude/...    │
+│         ├── settings.json    → dotfiles/claude-code/.claude/...    │
+│         ├── agents/          → dotfiles/claude-code/.claude/agents/│
+│         ├── skills/          → dotfiles/claude-code/.claude/skills/│
+│         │                                                           │
+│         └── [STATE - NO GESTIONADO]                                │
+│             ├── .claude.json        (stats, history - 698 líneas)  │
+│             ├── history.jsonl       (conversaciones)               │
+│             ├── debug/              (logs)                          │
+│             └── cache/              (temp files)                    │
+└─────────────────────────────────────────────────────────────────────┘
+#+END_SRC
+
+*** Separación: Config vs State
+
+*CRÍTICO:* Nix solo gestiona CONFIGURACIÓN, no estado runtime.
+
+| Tipo | Archivos | Gestionado por Nix |
+|------+----------+--------------------|
+| *Config* | =settings.json=, =CLAUDE.md=, =agents/=, =skills/= | ✅ SÍ (symlinks) |
+| *State* | =.claude.json=, =history.jsonl=, =debug/=, =cache/= | ❌ NO (runtime) |
+
+*Por qué?*
+- Config: Definiciones estáticas (preferencias, agentes)
+- State: Datos mutables (historial, estadísticas, sesiones)
+
+Si gestionaras state con Nix, cada =nixos-rebuild= resetearía tu historial.
+
+*** Módulo: modules/home-manager/programs/ai-agents.nix
+
+*Ubicación:* Importado en =core.nix= (portable, no en =passh.nix= desktop-only)
+
+#+BEGIN_SRC nix
+# modules/home-manager/programs/ai-agents.nix
+{ config, lib, pkgs, ... }:
+
+let
+  homeDir = config.home.homeDirectory;
+  dotfilesDir = "${homeDir}/dotfiles";
+in
+{
+  # ===========================================================================
+  # Claude Code - Configuration symlinks
+  # ===========================================================================
+  
+  home.file = {
+    ".claude/settings.json".source = 
+      config.lib.file.mkOutOfStoreSymlink 
+      "${dotfilesDir}/claude-code/.claude/settings.json";
+    
+    ".claude/CLAUDE.md".source =
+      config.lib.file.mkOutOfStoreSymlink
+      "${dotfilesDir}/claude-code/.claude/CLAUDE.md";
+    
+    ".claude/agents".source =
+      config.lib.file.mkOutOfStoreSymlink
+      "${dotfilesDir}/claude-code/.claude/agents";
+    
+    ".claude/skills".source =
+      config.lib.file.mkOutOfStoreSymlink
+      "${dotfilesDir}/claude-code/.claude/skills";
+  };
+  
+  # ===========================================================================
+  # State directories (runtime, not managed by Nix)
+  # ===========================================================================
+  
+  home.activation.createClaudeState = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    mkdir -p ~/.claude/{debug,file-history,session-env,todos,cache,projects}
+  '';
+  
+  # ===========================================================================
+  # Transition helper: Clean old stow symlinks
+  # ===========================================================================
+  
+  home.activation.cleanOldClaudeStow = lib.hm.dag.entryBefore ["checkLinkTargets"] ''
+    for link in ~/.claude/{settings.json,CLAUDE.md,agents,skills}; do
+      if [[ -L "$link" ]] && [[ "$(readlink "$link")" == *"/dotfiles/claude-code/"* ]]; then
+        rm -f "$link"
+      fi
+    done
+  '';
+}
+#+END_SRC
+
+*** Integración en core.nix
+
+#+BEGIN_SRC nix
+# modules/home-manager/core.nix
+{ config, pkgs, lib, ... }:
+
+{
+  imports = [
+    ./programs/ai-agents.nix  # AI agents config (portable)
+  ];
+  
+  # ... resto de config core ...
+}
+#+END_SRC
+
+*** Eliminar claude-code de Stow
+
+#+BEGIN_SRC nix
+# modules/home-manager/passh.nix (línea ~252)
+
+# ANTES:
+${pkgs.stow}/bin/stow -v -R -t ${config.home.homeDirectory} \
+  composer xmonad claude-code
+
+# DESPUÉS:
+${pkgs.stow}/bin/stow -v -R -t ${config.home.homeDirectory} \
+  composer xmonad
+# claude-code → Migrado a home-manager (modules/home-manager/programs/ai-agents.nix)
+#+END_SRC
+
+*** ¿Por qué mkOutOfStoreSymlink?
+
+*Comparación de métodos:*
+
+#+BEGIN_SRC nix
+# ❌ MAL - Copia al Nix store (read-only, duplicado)
+home.file.".claude/CLAUDE.md".source = ./claude-code/.claude/CLAUDE.md;
+# Resultado: /nix/store/hash-CLAUDE.md (inmutable)
+
+# ✅ BIEN - Symlink fuera del store (mutable, single source of truth)
+home.file.".claude/CLAUDE.md".source = 
+  config.lib.file.mkOutOfStoreSymlink "${homeDir}/dotfiles/...";
+# Resultado: ~/.claude/CLAUDE.md → ~/dotfiles/claude-code/.claude/CLAUDE.md
+#+END_SRC
+
+*Ventajas:*
+- Replica exactamente el comportamiento de stow
+- Cambios en dotfiles son inmediatos (no rebuild necesario)
+- Source of truth sigue siendo =~/dotfiles/=
+- Editable con cualquier editor (no read-only)
+
+*** Aplicar la Configuración
+
+#+BEGIN_SRC bash
+# 1. Git pull (si ya está en origin)
+cd ~/dotfiles
+git pull
+
+# 2. Aplicar (aurin)
+sudo nixos-rebuild switch --flake ~/dotfiles#aurin --impure
+
+# 3. Verificar symlinks
+ls -la ~/.claude/
+readlink ~/.claude/CLAUDE.md
+# → /home/passh/dotfiles/claude-code/.claude/CLAUDE.md
+
+# 4. Verificar que no hay symlinks rotos
+find ~/.claude -xtype l
+# → (vacío = todo OK)
+#+END_SRC
+
+*** Reproducir en Máquina Nueva
+
+#+BEGIN_SRC bash
+# 1. Clonar dotfiles
+git clone <repo> ~/dotfiles
+cd ~/dotfiles
+
+# 2. Rebuild (automáticamente configura AI agents)
+sudo nixos-rebuild switch --flake ~/dotfiles#macbook
+
+# 3. LISTO - claude-code funcionando con tus agentes y config
+claude-code
+#+END_SRC
+
+*No se requiere:*
+- ❌ Ejecutar =stow=
+- ❌ Copiar archivos manualmente
+- ❌ Configurar nada adicional
+
+*Clone-first en acción:* Misma config en aurin, macbook, vespino.
+
+*** Estado Actual: Multi-Cliente Preparado
+
+| Cliente | Estado | Ubicación en ai-agents.nix |
+|---------+--------+----------------------------|
+| *claude-code* | ✅ ACTIVO | Symlinks configurados |
+| *opencode* | ⏳ EXPERIMENTAL | Comentado (pending FASE 0) |
+| *gemini-cli* | 📋 FUTURO | No implementado |
+| *github-copilot* | 🤔 INVESTIGAR | Usa =~/.config/github-copilot/= |
+
+*** Plan Futuro: Shared Agents (Multi-Cliente)
+
+*Actualmente:* Cada cliente tiene su propia config en =dotfiles/CLIENTE/=
+
+#+BEGIN_SRC text
+dotfiles/
+├── claude-code/.claude/    ← Solo claude-code
+└── opencode/.opencode/     ← Solo opencode (futuro)
+#+END_SRC
+
+*Propuesta investigar:* Config compartida (si clientes son compatibles)
+
+#+BEGIN_SRC text
+dotfiles/
+├── ai-agents/              ← SHARED entre todos los clientes
+│   ├── GLOBAL.md          ← Instrucciones universales
+│   ├── agents/            ← Agentes compartidos
+│   └── mcp-servers.json   ← MCP (Model Context Protocol)
+├── claude-code/           ← Solo overrides específicos
+└── opencode/              ← Solo overrides específicos
+#+END_SRC
+
+*Requisitos para implementar:*
+1. *Investigar compatibilidad* - ¿opencode lee formato .md de claude-code?
+2. *Probar MCP* - ¿opencode soporta mismo formato MCP?
+3. *Arquitectura adaptadores* - Módulo que traduce shared → per-client
+
+*Estado:* ON HOLD hasta investigar opencode (FASE 0)
+
+*** Comandos Útiles
+
+#+BEGIN_SRC bash
+# Ver symlinks de claude-code
+ls -la ~/.claude/
+readlink ~/.claude/CLAUDE.md
+
+# Ver agentes disponibles
+ls ~/dotfiles/claude-code/.claude/agents/
+
+# Editar agente (cambios inmediatos, no rebuild)
+vim ~/dotfiles/claude-code/.claude/agents/nixos-guru.md
+
+# Verificar que claude-code lee la config
+cat ~/.claude/settings.json
+
+# Backup del estado (antes de rebuild)
+cp ~/.claude.json ~/backup/.claude.json.$(date +%Y%m%d-%H%M)
+
+# Rollback si algo falla
+sudo nixos-rebuild switch --rollback
+#+END_SRC
+
+*** Troubleshooting
+
+| Problema | Solución |
+|----------+----------|
+| Symlinks rotos después de rebuild | =find ~/.claude -xtype l= + eliminar manualmente |
+| claude-code no lee config nueva | Reiniciar terminal / =hash -r= |
+| Cambios en agentes no se aplican | Symlinks apuntan fuera del store, son inmediatos |
+| =.claude.json= se resetea | *NO DEBE PASAR* - no gestionado por Nix, verificar |
+| Error al hacer rebuild | =nix flake check= + revisar sintaxis |
+
+*** Arquitectura Detallada: Flujo de Configuración
+
+#+BEGIN_SRC text
+                         FLUJO DE CONFIGURACIÓN
+                         ─────────────────────
+
+┌────────────────────────────────────────────────────────────────────┐
+│ 1. SOURCE (git)                                                    │
+│    ~/dotfiles/claude-code/.claude/                                 │
+│         ├── CLAUDE.md              ← Editable con cualquier editor │
+│         ├── settings.json                                          │
+│         ├── agents/                                                │
+│         └── skills/                                                │
+└────────────────────────────────────────────────────────────────────┘
+                              │
+                              │ git commit + push
+                              ▼
+┌────────────────────────────────────────────────────────────────────┐
+│ 2. GIT REMOTE (github.com/pascualmg/dotfiles)                      │
+│    Versionado, histórico, branches                                 │
+└────────────────────────────────────────────────────────────────────┘
+                              │
+                              │ git pull (en otra máquina)
+                              ▼
+┌────────────────────────────────────────────────────────────────────┐
+│ 3. NIX BUILD (nixos-rebuild switch)                                │
+│    modules/home-manager/programs/ai-agents.nix                     │
+│         └─> Genera symlinks con mkOutOfStoreSymlink                │
+└────────────────────────────────────────────────────────────────────┘
+                              │
+                              │ home.activation
+                              ▼
+┌────────────────────────────────────────────────────────────────────┐
+│ 4. RUNTIME (symlinks activos)                                      │
+│    ~/.claude/CLAUDE.md → ~/dotfiles/claude-code/.claude/CLAUDE.md  │
+│    ~/.claude/agents → ~/dotfiles/claude-code/.claude/agents        │
+│                                                                    │
+│    + State directories creados (debug/, cache/, etc.)              │
+│    + Old stow symlinks limpiados (transition helper)               │
+└────────────────────────────────────────────────────────────────────┘
+                              │
+                              │ claude-code lee config
+                              ▼
+┌────────────────────────────────────────────────────────────────────┐
+│ 5. AI CLIENT (claude-code)                                         │
+│    Lee: ~/.claude/CLAUDE.md (via symlink)                          │
+│    Lee: ~/.claude/agents/* (via symlink)                           │
+│    Escribe: ~/.claude.json (state, NO gestionado por Nix)          │
+└────────────────────────────────────────────────────────────────────┘
+#+END_SRC
+
+*** Comparación: Antes vs Después
+
+*ANTES (Stow):*
+#+BEGIN_SRC bash
+cd ~/dotfiles
+stow -v -R -t ~ claude-code
+# → Symlinks manuales, no versionados en sistema
+# → Difícil de replicar en nueva máquina
+# → No integrado con NixOS rebuild
+#+END_SRC
+
+*DESPUÉS (Home-Manager):*
+#+BEGIN_SRC bash
+sudo nixos-rebuild switch --flake ~/dotfiles#aurin --impure
+# → Todo declarativo en Nix
+# → Reproducible en cualquier máquina (clone-first)
+# → Rollback automático si falla
+#+END_SRC
+
+*** Notas del NixOS Guru
+
+*Puntos fuertes:*
+- ✅ Separación config/state correcta
+- ✅ =mkOutOfStoreSymlink= apropiado para dotfiles editables
+- ✅ Transition helper para limpiar stow (temporal, removible después)
+- ✅ Integrado en =core.nix= (portable, no desktop-only)
+- ✅ Clone-first: funciona igual en todas las máquinas
+
+*Mejoras sugeridas:*
+- Considerar =programs.ai-agents.enable= si quieres opt-in por máquina
+- Añadir assertions para verificar que =dotfiles/= existe
+- Documentar formato de agentes .md (para contribuidores)
+
+*Warnings:*
+- ⚠️ NO commitear =.claude.json= (contiene history + stats)
+- ⚠️ NO commitear =.credentials.json= (auth tokens)
+- ⚠️ Symlinks son inmutables post-activation (no editables vía GUI)
+
+*** Logs de Implementación
+
+*Fecha:* 2026-01-22
+*Ejecutor:* opencode CLI
+*Tiempo:* ~10 minutos
+*Commit:* =4c32211= feat: nixify claude-code config (remove stow dependency)
+
+*Cambios:*
+- ✅ Creado =modules/home-manager/programs/ai-agents.nix=
+- ✅ Modificado =modules/home-manager/core.nix= (import)
+- ✅ Modificado =modules/home-manager/passh.nix= (stow cleanup)
+- ✅ Verificado con =nix flake check=
+- ✅ Aplicado en aurin (test + switch)
+- ✅ Pushed a origin/master
+
+*Testing:*
+#+BEGIN_SRC bash
+# Verificación post-aplicación
+ls -la ~/.claude/
+readlink ~/.claude/CLAUDE.md
+find ~/.claude -xtype l  # → vacío (sin symlinks rotos)
+cat ~/.claude/settings.json  # → lee correctamente
+#+END_SRC
+
+*Resultado:* ✅ ÉXITO - claude-code nixificado completamente
 
 * Configuraciones Principales
 

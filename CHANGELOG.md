@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2026-01-22
+
+### Added
+
+- **AI Agents Nixified (claude-code)**: Complete migration from Stow to home-manager
+  - New module `modules/home-manager/programs/ai-agents.nix` for declarative management
+  - Symlinks with `mkOutOfStoreSymlink` for editable config in `~/dotfiles/claude-code/`
+  - Clear separation between config (managed) and state (runtime)
+  - Clone-first: Same config on aurin, macbook, vespino
+  - Comprehensive documentation in README.org (architecture, flow, troubleshooting)
+  - Prepared for multi-client (opencode, gemini-cli) with commented blocks
+
+### Changed
+
+- **Removed claude-code from Stow**: Only xmonad and composer remain in transition
+  - `passh.nix` line ~252: removed `claude-code` from stow command
+  - Transition helper added in `ai-agents.nix` to clean old stow symlinks
+
+### Fixed
+
+- **Portable config**: `ai-agents.nix` imported in `core.nix` (not `passh.nix`)
+  - Works on desktop, Android (nix-on-droid), and any system with home-manager
+
+### Technical Details
+
+- **Commit**: `4c32211` - feat: nixify claude-code config (remove stow dependency)
+- **Implementation time**: ~10 minutes (via opencode CLI)
+- **Testing**: `nix flake check` + `nixos-rebuild test` + symlink verification
+- **Files modified**: 3 (ai-agents.nix created, core.nix + passh.nix updated)
+
 ## [1.0.0] - 2026-01-19
 
 ### Added
