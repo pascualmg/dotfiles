@@ -37,6 +37,11 @@
 
   home = {
     # =========================================================================
+    # PATH - Add scripts directory
+    # =========================================================================
+    # Scripts used by xmonad, xmobar, and other tools
+    sessionPath = [ "${config.home.homeDirectory}/dotfiles/scripts" ];
+    # =========================================================================
     # PAQUETES DESKTOP - Requieren GUI o son pesados
     # =========================================================================
     # Los paquetes CLI basicos estan en core.nix

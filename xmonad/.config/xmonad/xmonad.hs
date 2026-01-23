@@ -336,13 +336,13 @@ main = do
         -- -----------------------------------------
         -- Utilidades
         -- -----------------------------------------
-        , ("M-t", spawn "trayer-toggle.sh")  -- Toggle systray
+        , ("M-t", spawn "/home/passh/dotfiles/scripts/trayer-toggle.sh")  -- Toggle systray
         , ("<Print>", spawn "flameshot gui")     -- Captura de pantalla
         , ("M-c", spawn "xfce4-popup-clipman")   -- Historial clipboard
         , ("M-s", goToSelected def)              -- Selector visual de ventanas
         , ("M1-<Tab>", spawn "alttab -w 1 -d 0") -- Alt-Tab clásico
         , ("M-S-w", spawn "nitrogen --random --set-zoom-fill ~/wallpapers")  -- Wallpaper random
-        , ("M-S-m", spawn "glmatrix-bg.sh")    -- Matrix de fondo
+        , ("M-S-m", spawn "/home/passh/dotfiles/scripts/glmatrix-bg.sh")    -- Matrix de fondo
         , ("M-S-s", sinkAll)                     -- Unfloat todas las ventanas
 
         -- -----------------------------------------
