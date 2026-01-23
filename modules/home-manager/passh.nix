@@ -23,6 +23,7 @@
 {
   imports = [
     ./core.nix # Config comun a todas las plataformas
+    ./programs/xmonad.nix # XMonad configuration
   ];
 
   # Desactivamos gestion de configs que manejaremos con stow
@@ -248,19 +249,20 @@
     #   [OK] picom    - Migrado (modules/home-manager/programs/picom.nix)
     #   [OK] fish     - Migrado (modules/home-manager/programs/fish.nix)
     #   [OK] emacs    - Migrado (modules/home-manager/programs/emacs.nix)
-    #   [..] xmonad   - Pendiente (config Haskell compleja)
+    #   [OK] xmonad   - Migrado (modules/home-manager/programs/xmonad.nix) 🎉
     #   [..] composer - Pendiente (bajo riesgo, simple)
-    #   [OK] claude-code - Se mantiene en stow (local, no compartir entre maquinas)
+    #   [OK] claude-code - Migrado (modules/home-manager/programs/ai-agents.nix)
+    #   [OK] opencode - Migrado (modules/home-manager/programs/ai-agents.nix)
     #
-    # PLAN: Cuando xmonad y composer migren, eliminar este bloque completamente.
+    # PLAN: Cuando composer migre, eliminar stow completamente.
     # ==========================================================================
     activation.linkDotfiles = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
       echo "Linkeando dotfiles residuales con stow..."
       cd ${config.home.homeDirectory}/dotfiles
-      # Solo quedan: xmonad (Haskell), composer (PHP)
-      # claude-code → Migrado a home-manager (modules/home-manager/programs/ai-agents.nix)
+      # Solo queda: composer (PHP config)
+      # xmonad → Migrado a home-manager (modules/home-manager/programs/xmonad.nix)
       ${pkgs.stow}/bin/stow -v -R -t ${config.home.homeDirectory} \
-        composer xmonad
+        composer
     '';
   };
 
