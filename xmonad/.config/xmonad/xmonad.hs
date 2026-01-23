@@ -174,10 +174,10 @@ myStartupHook = do
     spawnOnce "nitrogen --random --set-zoom-fill ~/wallpapers"
 
     -- Compositor (transparencias, sombras, animaciones)
-    spawnOnce "/home/passh/.nix-profile/bin/picom -b"
+    spawnOnce "picom -b"
 
     -- Aplicaciones de inicio
-    spawnOnce "/home/passh/.nix-profile/bin/jetbrains-toolbox"
+    spawnOnce "jetbrains-toolbox"
     spawnOnce "emacs --daemon || emacsclient -e '(kill-emacs)' && emacs --daemon"
     spawnOnce "xfce4-clipman"  -- Gestor de portapapeles
 
@@ -323,14 +323,7 @@ main = do
         -- -----------------------------------------
         -- Aplicaciones
         -- -----------------------------------------
-        , ("M-t", spawn "xsel -o | python3 ~/.config/xmonad/my-scripts/tts.py")  -- TTS
         , ("M-i", spawn "$(which idea)")         -- IntelliJ IDEA
-
-        -- -----------------------------------------
-        -- Teclado
-        -- -----------------------------------------
-        , ("M-ñ", spawn "~/.config/xmonad/my-scripts/toggle-keyboard-layout.sh")  -- Toggle US/ES
-        , ("M-;", spawn "~/.config/xmonad/my-scripts/toggle-keyboard-layout.sh")  -- Alias para US kbd
 
         -- -----------------------------------------
         -- Scratchpads (ventanas flotantes toggle)
@@ -343,13 +336,13 @@ main = do
         -- -----------------------------------------
         -- Utilidades
         -- -----------------------------------------
-        , ("M-t", spawn "/home/passh/dotfiles/scripts/trayer-toggle.sh")  -- Toggle systray
+        , ("M-t", spawn "trayer-toggle.sh")  -- Toggle systray
         , ("<Print>", spawn "flameshot gui")     -- Captura de pantalla
         , ("M-c", spawn "xfce4-popup-clipman")   -- Historial clipboard
         , ("M-s", goToSelected def)              -- Selector visual de ventanas
         , ("M1-<Tab>", spawn "alttab -w 1 -d 0") -- Alt-Tab clásico
         , ("M-S-w", spawn "nitrogen --random --set-zoom-fill ~/wallpapers")  -- Wallpaper random
-        , ("M-S-m", spawn "~/.config/xmonad/my-scripts/glmatrix-bg.sh")    -- Matrix de fondo
+        , ("M-S-m", spawn "glmatrix-bg.sh")    -- Matrix de fondo
         , ("M-S-s", sinkAll)                     -- Unfloat todas las ventanas
 
         -- -----------------------------------------
