@@ -1314,13 +1314,13 @@ readlink ~/.config/aider/config.yaml
 
 **** 🚀 Agentes Actuales
 
-| Agente | Líneas Nix | Config | Estado |
-|--------+------------+--------+--------|
-| =claude-code= | 85 | =.claude/= | ✅ Activo |
-| =crush= | 49 | =.config/crush/= | ✅ Activo |
-| =opencode= | 83 | =.config/opencode/= | ✅ Activo |
+| Agente | Líneas Nix | Config | Package Source | Estado |
+|--------+------------+--------+----------------|--------|
+| =claude-code= | 85 | =.claude/= | nixpkgs | ✅ Activo |
+| =crush= | 90 | =.config/crush/= | NUR (fetchGit) | ✅ Activo (v0.35.0+) |
+| =opencode= | 83 | =.config/opencode/= | nixpkgs | ✅ Activo |
 
-*Total módulos:* 3 agentes = 217 líneas Nix (vs 139 monolítico anterior)
+*Total módulos:* 3 agentes = 258 líneas Nix (vs 139 monolítico anterior)
 
 *Próximos fáciles de añadir:* =aider=, =cursor=, =continue= (~30 líneas cada uno)
 
@@ -1358,7 +1358,17 @@ Crush usa el mismo patrón que claude-code y opencode:
 - Módulo en =modules/home-manager/programs/ai-agents/crush.nix= (symlink)
 - Habilitado por defecto en todas las máquinas
 
-***** Módulo Nix
+***** Módulo Nix (NUR Charmbracelet)
+
+Crush usa NUR (Nix User Repository) de Charmbracelet para versión actualizada (0.35.0+).
+
+****** Por qué NUR y no nixpkgs:
+
+- nixpkgs: =crush 0.22.1= (antigua)
+- NUR Charmbracelet: =crush 0.35.0+= (latest)
+- Crush tiene licencia unfree (=fsl11Mit=)
+
+****** Solución: fetchGit + callPackage (sin modificar flake)
 
 #+BEGIN_SRC nix
 # modules/home-manager/programs/ai-agents/crush.nix
@@ -1367,18 +1377,43 @@ Crush usa el mismo patrón que claude-code y opencode:
 let
   homeDir = config.home.homeDirectory;
   dotfilesDir = "${homeDir}/dotfiles";
+  
+  # Fetch NUR Charmbracelet (NO requiere añadir al flake.nix)
+  charm-nur = builtins.fetchGit {
+    url = "https://github.com/charmbracelet/nur";
+    ref = "master";
+  };
+  
+  # Rebuild crush con NUESTRO pkgs (hereda allowUnfree del flake)
+  crush = pkgs.callPackage "${charm-nur}/pkgs/crush" {};
 in
 {
+  # Instalar crush desde NUR
+  home.packages = [ crush ];  # v0.35.0+
+  
   # Symlink config desde dotfiles (editable)
   home.activation.setupCrush = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     mkdir -p ~/.config/crush
-    
     if [[ ! -e ~/.config/crush/crush.json ]]; then
       ln -sf "${dotfilesDir}/crush/.config/crush/crush.json" ~/.config/crush/crush.json
     fi
   '';
 }
 #+END_SRC
+
+****** Por qué funciona:
+
+1. =fetchGit= descarga NUR sin modificar flake.nix
+2. =pkgs.callPackage= rebuilda usando NUESTRO pkgs
+3. Nuestro pkgs tiene =allowUnfree = true= (flake.nix)
+4. Crush hereda allowUnfree → se instala sin problemas
+5. Clone-first: funciona igual en todas las máquinas
+
+****** Alternativas rechazadas:
+
+- ❌ Añadir =charm-nur= al flake → overlays complejos
+- ❌ Usar =pkgs.crush= de nixpkgs → versión antigua (0.22.1)
+- ❌ =NIXPKGS_ALLOW_UNFREE=1= → no declarativo
 
 ***** Config Actual (Ollama Remoto)
 
