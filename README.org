@@ -1151,6 +1151,179 @@ cat ~/.claude/settings.json  # → lee correctamente
 
 *Resultado:* ✅ ÉXITO - claude-code nixificado completamente
 
+*** AI Agents - Arquitectura Clone-First [2026-01-23]
+
+**** 📁 Esquema de Directorios
+
+#+BEGIN_EXAMPLE
+dotfiles/
+│
+├── modules/home-manager/programs/ai-agents/
+│   ├── default.nix           # Imports: claude-code, crush, opencode
+│   ├── claude-code.nix       # 85 líneas - Symlinks + state dirs
+│   ├── crush.nix             # 49 líneas - Symlink config
+│   └── opencode.nix          # 83 líneas - Symlink + state dirs
+│
+├── claude-code/              # ← EDITAMOS AQUÍ (config versionado)
+│   └── .claude/
+│       ├── settings.json     # Config Claude
+│       ├── CLAUDE.md         # Instructions
+│       ├── agents/           # Custom agents
+│       └── skills/           # Custom skills
+│
+├── crush/                    # ← EDITAMOS AQUÍ (config versionado)
+│   └── .config/crush/
+│       └── crush.json        # Config Crush (providers, models)
+│
+└── opencode/                 # ← EDITAMOS AQUÍ (config versionado)
+    └── .config/opencode/
+        └── package.json      # Config OpenCode (plugins TypeScript)
+#+END_EXAMPLE
+
+**** 🔗 Symlinks Generados (home-manager)
+
+#+BEGIN_EXAMPLE
+~/.claude/settings.json         → ~/dotfiles/claude-code/.claude/settings.json
+~/.claude/CLAUDE.md             → ~/dotfiles/claude-code/.claude/CLAUDE.md
+~/.claude/agents                → ~/dotfiles/claude-code/.claude/agents
+~/.claude/skills                → ~/dotfiles/claude-code/.claude/skills
+
+~/.config/crush/crush.json      → ~/dotfiles/crush/.config/crush/crush.json
+
+~/.config/opencode/package.json → ~/dotfiles/opencode/.config/opencode/package.json
+#+END_EXAMPLE
+
+*IMPORTANTE:* Los symlinks apuntan a =~/dotfiles= (editable), NO al nix store.
+
+**** 📊 Estado vs Config
+
+**Config (gestionado por Nix):**
+- Versionado en git
+- En =~/dotfiles/<agent>/=
+- Symlinkeado a =~/=
+- Editable directamente
+
+**Estado (runtime, NO gestionado):**
+
+#+BEGIN_EXAMPLE
+~/.claude/
+├── debug/                  # Logs de debug
+├── cache/                  # Cache de sesiones
+├── history.jsonl           # Historial de comandos
+├── file-history/           # Archivos editados
+└── ...                     # Más dirs de estado
+
+~/.local/share/opencode/
+├── auth.json               # OAuth tokens (Anthropic, OpenAI)
+└── storage/                # Sessions, messages, diffs
+
+# Crush no tiene estado persistente
+#+END_EXAMPLE
+
+**** 🔄 Workflow: Añadir Nuevo Agente (ej: "aider")
+
+**Paso 1: Crear config en dotfiles**
+
+#+BEGIN_SRC bash
+mkdir -p ~/dotfiles/aider/.config/aider
+vim ~/dotfiles/aider/.config/aider/config.yaml
+# Editar configuración del agente
+#+END_SRC
+
+**Paso 2: Crear módulo Nix (~30 líneas)**
+
+#+BEGIN_SRC nix
+# modules/home-manager/programs/ai-agents/aider.nix
+{ config, lib, pkgs, ... }:
+
+let
+  dotfilesDir = "${config.home.homeDirectory}/dotfiles";
+in
+{
+  home.activation.setupAider = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    echo "📁 Configurando aider..."
+    mkdir -p ~/.config/aider
+    
+    # Remove nix store symlink if exists
+    if [[ -L ~/.config/aider/config.yaml ]] && [[ "$(readlink ~/.config/aider/config.yaml)" == *"/nix/store/"* ]]; then
+      rm ~/.config/aider/config.yaml
+    fi
+    
+    # Create symlink to dotfiles (editable, not in store)
+    if [[ ! -e ~/.config/aider/config.yaml ]]; then
+      ln -sf "${dotfilesDir}/aider/.config/aider/config.yaml" ~/.config/aider/config.yaml
+    fi
+  '';
+}
+#+END_SRC
+
+**Paso 3: Añadir import (1 línea)**
+
+#+BEGIN_SRC nix
+# modules/home-manager/programs/ai-agents/default.nix
+{
+  imports = [
+    ./claude-code.nix
+    ./crush.nix
+    ./opencode.nix
+    ./aider.nix        # ← Añadir esta línea
+  ];
+}
+#+END_SRC
+
+**Paso 4: Deploy**
+
+#+BEGIN_SRC bash
+cd ~/dotfiles
+git add .
+git commit -m "feat(ai-agents): Add aider agent"
+git push
+
+# En cualquier máquina
+git pull
+sudo nixos-rebuild switch --flake ~/dotfiles#$(hostname) --impure
+
+# Verificar
+readlink ~/.config/aider/config.yaml
+# → /home/passh/dotfiles/aider/.config/aider/config.yaml ✅
+#+END_SRC
+
+**** ✅ Beneficios Clone-First
+
+| Aspecto | Implementación |
+|---------+----------------|
+| *Config* | En =~/dotfiles/<agent>/= (versionado git) |
+| *Módulo* | Symlink simple (~30-85 líneas) |
+| *Escalabilidad* | Añadir agente = create file + 1 import |
+| *Edición* | Editas JSON/YAML directo (fuera de nix store) |
+| *Deploy* | =git pull && nixos-rebuild= en todas las máquinas |
+| *Portabilidad* | Misma config en aurin, macbook, vespino, android |
+
+**** 🎯 Filosofía
+
+#+BEGIN_QUOTE
+*"Config en dotfiles/, Nix solo hace symlinks"*
+
+- ❌ NO: Parametrización Nix (=programs.crush.enable=, =settings= options)
+- ✅ SÍ: Symlinks simples (activation scripts)
+- ✅ SÍ: Config editable directamente (JSON, YAML, Markdown)
+- ✅ SÍ: Clone-first (mismo código en todas las máquinas)
+
+*Añadir nuevo agente = 30 líneas .nix + 1 import. Done.*
+#+END_QUOTE
+
+**** 🚀 Agentes Actuales
+
+| Agente | Líneas Nix | Config | Estado |
+|--------+------------+--------+--------|
+| =claude-code= | 85 | =.claude/= | ✅ Activo |
+| =crush= | 49 | =.config/crush/= | ✅ Activo |
+| =opencode= | 83 | =.config/opencode/= | ✅ Activo |
+
+*Total módulos:* 3 agentes = 217 líneas Nix (vs 139 monolítico anterior)
+
+*Próximos fáciles de añadir:* =aider=, =cursor=, =continue= (~30 líneas cada uno)
+
 *** OpenCode / Crush - Investigación [2026-01-23]
 
 **** Estado del Ecosistema
