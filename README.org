@@ -83,14 +83,15 @@ cd ~/dotfiles
 
 # Aplicar NixOS config (FLAKES - metodo actual)
 # IMPORTANTE: Ejecutar 'hostname' primero para saber en que maquina estas
+# IMPORTANTE: Todas las maquinas necesitan --impure (ver seccion abajo)
 
-# Aurin - necesita --impure (hosts Vocento)
+# Aurin
 sudo nixos-rebuild switch --flake ~/dotfiles#aurin --impure
 
 # MacBook
-sudo nixos-rebuild switch --flake ~/dotfiles#macbook
+sudo nixos-rebuild switch --flake ~/dotfiles#macbook --impure
 
-# Vespino - necesita --impure (hosts Vocento)
+# Vespino
 sudo nixos-rebuild switch --flake ~/dotfiles#vespino --impure
 
 # Test sin aplicar cambios permanentes
@@ -99,6 +100,72 @@ sudo nixos-rebuild test --flake ~/dotfiles#aurin --impure
 # Rollback de emergencia
 sudo nixos-rebuild switch --rollback
 #+END_SRC
+
+** ¿Por qué --impure? (Pure vs Impure en Nix)
+
+*** El Concepto
+
+Nix es *reproducible* por defecto: dado el mismo input, produce el mismo output.
+Esto se llama *evaluación pura* (pure evaluation).
+
+*Impure* significa que el resultado puede variar dependiendo de factores externos.
+
+*** Cuándo necesitas --impure
+
+| Caso | Ejemplo | Por qué es impure |
+|------+---------+-------------------|
+| *Leer archivos externos* | =builtins.readFile "/etc/hosts"= | El archivo puede cambiar |
+| *fetchGit con branch* | =ref = "master"= | La branch cambia con commits |
+| *Paths fuera del flake* | =./../../archivo.txt= | No está en el flake lockfile |
+| *Variables de entorno* | =builtins.getEnv "HOME"= | Depende del sistema |
+
+*** En este repo usamos --impure por:
+
+1. *Hosts Vocento* (aurin/vespino):
+   #+BEGIN_SRC nix
+   # hosts/aurin/default.nix
+   networking.extraHosts = builtins.readFile "/home/passh/src/vocento/autoenv/hosts_all.txt";
+   #+END_SRC
+   Lee un archivo externo al flake → impure.
+
+2. *Crush NUR* (todas las máquinas):
+   #+BEGIN_SRC nix
+   # modules/home-manager/programs/ai-agents/crush.nix
+   charm-nur = builtins.fetchGit {
+     url = "https://github.com/charmbracelet/nur";
+     ref = "master";  # ← Branch que cambia = IMPURE
+   };
+   #+END_SRC
+   Fetch de una branch que evoluciona → impure.
+
+*** Cómo hacer fetchGit PURE (si quisieras)
+
+#+BEGIN_SRC nix
+# IMPURE - branch que cambia
+charm-nur = builtins.fetchGit {
+  url = "https://github.com/charmbracelet/nur";
+  ref = "master";  # ← Cambia con nuevos commits
+};
+
+# PURE - commit fijo (hash inmutable)
+charm-nur = builtins.fetchGit {
+  url = "https://github.com/charmbracelet/nur";
+  rev = "a1b2c3d4e5f6...";  # ← Siempre el mismo contenido
+};
+#+END_SRC
+
+*Trade-off:*
+- =ref = "master"= → Siempre última versión, pero necesita --impure
+- =rev = "hash"= → Reproducible sin --impure, pero hay que actualizar manualmente
+
+*** Resumen
+
+| Modo | Comando | Cuándo usar |
+|------+---------+-------------|
+| *Pure* | =nixos-rebuild switch --flake .#host= | Cuando TODO está en flake.lock |
+| *Impure* | =nixos-rebuild switch --flake .#host --impure= | Cuando lees archivos externos o fetch branches |
+
+*En este repo:* Siempre usa =--impure=. Es seguro y necesario.
 
 * 🚀 Use This Repo (Work in Progress)
 
