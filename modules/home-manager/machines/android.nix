@@ -69,6 +69,7 @@ in
 {
   imports = [
     ../core.nix
+    ../programs/xmonad.nix # XMonad config (for Termux-X11 + external display)
   ];
 
   # ===========================================================================
@@ -101,7 +102,8 @@ in
       # =========================================================================
       # X11 + XMonad (Termux-X11 + pantalla externa)
       # =========================================================================
-      # En desarrollo: mismo stack que desktop
+      # Config gestionada por programs/xmonad.nix (mismo que desktop)
+      # Binarios instalados aquí para acceso directo
       haskellPackages.xmonad
       haskellPackages.xmonad-contrib
       haskellPackages.xmobar # Status bar

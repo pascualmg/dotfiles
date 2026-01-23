@@ -2,7 +2,7 @@
 
 **Date**: 2026-01-23 (Viernes)  
 **Machine**: aurin (PROD)  
-**Status**: ✅ COMPLETED on aurin, pending macbook/vespino
+**Status**: ✅ COMPLETED on aurin, pending macbook/vespino/android
 
 ---
 
@@ -232,6 +232,65 @@ ${pkgs.stow}/bin/stow -v -R -t ${config.home.homeDirectory} \
 **Optional later**:
 - Apply to vespino (when online)
 - Phase 3 refactor (portability)
+
+---
+
+## 📱 Android (nix-on-droid) Deployment
+
+**Status**: ✅ Config updated (import added)
+
+### What Changed:
+- Added `../programs/xmonad.nix` import to `machines/android.nix`
+- XMonad config now managed by home-manager (same as desktop)
+- `start-x11` script still works (compiles config automatically)
+
+### Deployment Steps:
+
+1. **Pull changes**:
+   ```bash
+   # On Android (Termux)
+   cd ~/dotfiles
+   git pull origin master
+   ```
+
+2. **Apply config**:
+   ```bash
+   nix-on-droid switch --flake ~/dotfiles
+   ```
+
+3. **Test XMonad** (if using Termux-X11):
+   ```bash
+   # Start Termux-X11 app first
+   start-x11
+   
+   # Test keybindings:
+   # M-t → trayer-toggle (will fail gracefully if trayer not installed)
+   # M-S-m → glmatrix-bg.sh
+   # M-p → dmenu
+   ```
+
+### Expected Behavior:
+
+**Before**:
+- XMonad binary installed, config manual
+
+**After**:
+- `~/.config/xmonad/xmonad.hs` → managed by home-manager (symlink to nix store)
+- Same config as aurin/macbook/vespino
+- `start-x11` detects and compiles config automatically
+
+### Notes:
+
+- **Clone-first philosophy**: Android gets same XMonad config as desktop
+- **Termux-X11 use case**: External display, DeX mode, etc.
+- **Fallback**: If you don't use X11, config is there but doesn't interfere
+- **Scripts**: Absolute paths work (same as desktop)
+
+### Android-Specific Considerations:
+
+- **No xmobar.nix import**: Android doesn't need machine-specific xmobar config
+- **start-x11 script**: Already handles XMonad compilation
+- **OpenCode disabled**: Still disabled (EPERM issue), unrelated to XMonad
 
 ---
 
