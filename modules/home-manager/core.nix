@@ -27,7 +27,7 @@ in
 
 {
   imports = [
-    ./programs/ai-agents.nix # AI agents config (claude-code, opencode, etc.)
+    ./programs/ai-agents # AI agents modular config (claude-code, crush, opencode)
   ];
 
   # Home Manager basico
