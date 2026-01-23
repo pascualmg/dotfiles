@@ -1151,6 +1151,135 @@ cat ~/.claude/settings.json  # → lee correctamente
 
 *Resultado:* ✅ ÉXITO - claude-code nixificado completamente
 
+*** OpenCode / Crush - Investigación [2026-01-23]
+
+**** Estado del Ecosistema
+
+| Herramienta | Estado | nixpkgs | Versión |
+|-------------+--------+---------+---------|
+| =claude-code= | ✅ Activo | =pkgs.claude-code= | Latest |
+| =opencode= | ⚠️ Archivado (Sep 2025) | =pkgs.opencode= | 1.1.23 (última) |
+| =crush= | ✅ Activo | NUR Charmbracelet | 0.34.1+ |
+
+**** OpenCode: Funciona con OAuth Anthropic Max
+
+A pesar de estar "archivado", =opencode= en nixpkgs *FUNCIONA* correctamente:
+- Versión 1.1.23 en nixpkgs es estable
+- OAuth con Anthropic Max funciona
+- Multi-provider (Anthropic, OpenAI, OpenRouter, etc.)
+
+#+BEGIN_SRC bash
+# Ya instalado via home-manager
+opencode --version  # 1.1.23
+#+END_SRC
+
+**** Crush: Sucesor de OpenCode (via NUR)
+
+Crush es mantenido por *Charmbracelet* (creadores de Bubble Tea, Gum, etc.).
+Tiene su propio NUR oficial con módulos para NixOS y Home Manager.
+
+***** Instalación via NUR Charmbracelet
+
+#+BEGIN_SRC nix
+# En flake.nix - añadir input
+inputs = {
+  # ... otros inputs ...
+  charm-nur = {
+    url = "github:charmbracelet/nur";
+    inputs.nixpkgs.follows = "nixpkgs";
+  };
+};
+
+# Para Home Manager:
+outputs = { charm-nur, ... }: {
+  homeConfigurations.user = {
+    modules = [
+      charm-nur.homeModules.crush
+      { programs.crush.enable = true; }
+    ];
+  };
+};
+
+# Para NixOS:
+outputs = { charm-nur, ... }: {
+  nixosConfigurations.machine = {
+    modules = [
+      charm-nur.nixosModules.crush
+      { programs.crush.enable = true; }
+    ];
+  };
+};
+#+END_SRC
+
+***** Opciones de Configuración
+
+| Opción | Tipo | Descripción |
+|--------+------+-------------|
+| =programs.crush.enable= | bool | Habilitar crush |
+| =programs.crush.package= | package | Override del paquete |
+| =programs.crush.settings= | attrs | Configuración adicional |
+
+**** Ollama: Modelos Locales para Agentes
+
+***** Modelos con Soporte de Tools (Agénticos)
+
+*IMPORTANTE:* Solo estos modelos soportan function calling para agentes AI:
+
+| Modelo | VRAM | Tools | Notas |
+|--------+------+-------+-------|
+| =qwen3:14b= | ~9GB | ✅ | Recomendado, ligero |
+| =gpt-oss:20b= | ~13GB | ✅ | Buen balance |
+| =devstral-small-2:latest= | ~15GB | ✅ | Límite 16GB VRAM |
+| =qwen3-coder:30b= | ~18GB | ✅ | Mejor para código |
+
+***** Modelos SIN soporte de tools (no sirven para agentes):
+
+- =qwen2.5-coder:*= - Sin tool calling
+- =deepseek-r1:*= - Solo reasoning, sin tools
+- =gemma3:*= - Sin tools
+- =mistral:latest= - Versión antigua sin tools
+- =llama3.1:latest= - Sin tools
+
+***** Configuración Crush para Ollama Remoto
+
+#+BEGIN_SRC json
+{
+  "providers": {
+    "ollama-aurin": {
+      "name": "Ollama (Aurin RTX 5080)",
+      "base_url": "http://campo.zapto.org:11434/v1/",
+      "type": "openai-compat",
+      "models": [
+        {"name": "Qwen3 14B", "id": "qwen3:14b", "context_window": 32768},
+        {"name": "GPT-OSS 20B", "id": "gpt-oss:20b", "context_window": 32768},
+        {"name": "Devstral Small 2", "id": "devstral-small-2:latest", "context_window": 32768}
+      ]
+    }
+  }
+}
+#+END_SRC
+
+***** Instalar Modelos con Tools
+
+#+BEGIN_SRC bash
+# En la máquina con Ollama (aurin):
+ollama pull qwen3:14b
+ollama pull gpt-oss:20b
+ollama pull devstral-small-2
+
+# Modelos adicionales recomendados:
+ollama pull qwen3-coder:30b    # Mejor para código
+ollama pull mistral-small3.2   # Buen tool calling
+#+END_SRC
+
+**** Referencias AI Agents
+
+- *Crush*: https://github.com/charmbracelet/crush
+- *Charm NUR*: https://github.com/charmbracelet/nur
+- *OpenCode (archivado)*: https://github.com/opencode-ai/opencode
+- *Ollama Tools Models*: https://ollama.com/search?c=tools
+- *Agent Skills*: https://agentskills.io
+
 * Configuraciones Principales
 
 ** Home Manager (~/.config/home-manager/home.nix) *
