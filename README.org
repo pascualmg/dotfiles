@@ -212,77 +212,6 @@ LLM: *Lee README.org + ai-agents/ pattern*
 
 ---
 
-* TODO Tareas Pendientes
-
-** AI Agents (claude-code, opencode)
-- [X] *CLAUDE-CODE NIXIFICADO* [2026-01-22] - Migrado de stow a home-manager
-  - [X] Crear modulo =modules/home-manager/programs/ai-agents.nix=
-  - [X] Integrar en =core.nix= (portable)
-  - [X] Eliminar claude-code de stow en =passh.nix=
-  - [X] Aplicar en aurin
-  - [ ] Aplicar en macbook
-  - [ ] Aplicar en vespino
-- [ ] *OPENCODE EXPERIMENTAL* - Investigar e integrar
-  - [ ] FASE 0: Investigar formato de agentes (¿compatible con claude-code?)
-  - [ ] FASE 0: Investigar MCP servers config
-  - [ ] Descomentar bloque opencode en =ai-agents.nix=
-  - [ ] Probar en aurin
-- [ ] *SHARED AGENTS* - Config multi-cliente (futuro)
-  - [ ] Investigar compatibilidad entre clientes
-  - [ ] Diseñar arquitectura =ai-agents/= compartida
-  - [ ] Implementar adaptadores per-client
-
-** Infraestructura
-- [ ] *VPN VOCENTO EXPERIMENTAL* - Probar modulos en vespino antes de aurin
-  - Copiar disco QCOW2 a vespino
-  - Configurar =services.vocento-vpn-bridge= con interface correcta
-  - Validar que funciona igual que en macbook
-- [ ] *WAYLAND ROTO* - LightDM no soporta sesiones Wayland (GNOME, niri, Hyprland)
-  - Investigar: greetd, SDDM, o login directo desde TTY
-- [ ] *rEFInd* - Bootloader para fix geometria TTY en MacBook
-  - =boot.loader.refind.enable = true=
-  - Configurar =resolution 2560 1600= en refind.conf
-
-** Repo como Template (Forkeable)
-- [X] *SECCIÓN BÁSICA AÑADIDA* [2026-01-22] - "Use This Repo (WIP)"
-  - [X] Guía Quick Start para terceros
-  - [X] Checklist de valores hardcoded a cambiar
-  - [X] Tabla "What You Get" vs "What's Personal"
-  - [X] Warning claro: WIP, requiere adaptación manual
-  - [ ] Testing con usuario real (Daniel)
-- [ ] *TEMPLATE COMPLETO* (después de stow + opencode)
-  - [ ] Parametrizar username (mainUser variable)
-  - [ ] Script generator: =./scripts/new-machine.sh=
-  - [ ] Separación clara: personal vs. template
-  - [ ] Secrets management (sops-nix o agenix)
-
-** XMonad Migration (Home-Manager)
-- [X] *PHASE 1: CLEANUP* [2026-01-23] - Limpieza de xmonad.hs
-  - [X] Remover dead keybindings (TTS, keyboard layout)
-  - [X] Fix hardcoded paths (picom, jetbrains-toolbox)
-  - [X] Mover glmatrix-bg.sh a scripts/
-- [X] *PHASE 2: HOME-MANAGER MODULE* [2026-01-23] - Migración a home-manager
-  - [X] Crear =modules/home-manager/programs/xmonad.nix=
-  - [X] Usar =.source= para hot-reload (10s compile)
-  - [X] Absolute paths para scripts (reliability)
-  - [X] Aplicar en aurin (TESTED & WORKING)
-  - [ ] Aplicar en macbook
-  - [ ] Aplicar en vespino
-- [X] *PHASE 3: REJECTED* [2026-01-23] - Templates consideradas dañinas
-  - [X] Intentado: =.text= template (365 lines in Nix)
-  - [X] Resultado: Indentation bugs, xmobar broken
-  - [X] Revertido: Commit cff214e
-  - [X] Lección: =.source= > templates (pragmatismo > pureza)
-  - [X] Documentado en =XMONAD-MIGRATION-SUMMARY.md=
-
-** Limpieza
-- [ ] Revisar y limpiar configs obsoletas (shell/, composer/)
-- [ ] Documentar scripts utiles en scripts/
-- [X] Migrar xmonad a home-manager - DONE (Phase 2)
-- [ ] Eliminar stow cuando composer migre (CRÍTICO: composer en PROD Vocento)
-- [ ] Archivar =dotfiles/claude-code/= (mantener histórico)
-- [ ] Considerar sops-nix para secretos
-
 * TL;DR - Setup Rapido
 
 #+BEGIN_SRC bash
@@ -3281,6 +3210,373 @@ stow nueva-app
 #+END_SRC
 
 Esto crea: =~/.config/nueva-app/config.conf= -> =~/dotfiles/nueva-app/.config/nueva-app/config.conf=
+
+* Gestión Segura de Secretos con SOPS-NIX 🔐
+
+** ¿Qué es SOPS?
+
+SOPS (Secrets OPerationS) es una herramienta de Mozilla para encriptar archivos de configuración.
+- Encripta *solo los valores*, no las claves (puedes ver qué secretos tienes, pero no su contenido)
+- Usa age o GPG para encriptación
+- Integración nativa con NixOS via =sops-nix=
+
+** El Problema Actual
+
+Actualmente tenemos passwords hardcodeadas en texto plano en archivos que van a GitHub:
+
+#+BEGIN_EXAMPLE
+┌─────────────────────────────────────────┐
+│ hosts/aurin/default.nix (PÚBLICO)       │
+├─────────────────────────────────────────┤
+│ services.miniflux = {                   │
+│   adminCredentialsFile = {              │
+│     password = "MiPassword123";  ← 🔥 VISIBLE│
+│   };                                    │
+│ };                                      │
+└─────────────────────────────────────────┘
+                  │
+                  ├─── git push
+                  │
+                  ▼
+          ┌──────────────┐
+          │   GitHub     │  ← TODO EL MUNDO PUEDE VER
+          │  (PÚBLICO)   │     tu password
+          └──────────────┘
+#+END_EXAMPLE
+
+*Secretos actualmente expuestos en este repo:*
+- Passwords de servicios (Miniflux, Syncthing, VM Ubuntu)
+- Email corporativo
+- Paths a archivos externos (hosts Vocento)
+- IPs y redes internas
+
+** La Solución: SOPS-NIX
+
+#+BEGIN_EXAMPLE
+┌──────────────────────────────────────────────────┐
+│ secrets.yaml (ENCRIPTADO con tu clave age/GPG)   │
+├──────────────────────────────────────────────────┤
+│ miniflux_password: ENC[AES256_GCM,data:Qw==,...] │ ← Encriptado
+│ router_password: ENC[AES256_GCM,data:Ab==,...]   │
+│ syncthing_key: ENC[AES256_GCM,data:Xy==,...]     │
+└──────────────────────────────────────────────────┘
+                  │
+                  ├─── git push (SEGURO!)
+                  │
+                  ▼
+          ┌──────────────┐
+          │   GitHub     │  ← Solo ve texto encriptado
+          │  (PÚBLICO)   │     Nadie puede leerlo
+          └──────────────┘
+
+EN TU MÁQUINA (cuando haces nixos-rebuild):
+┌─────────────────────────────────────────┐
+│ 1. sops-nix detecta secrets.yaml        │
+│ 2. Desencripta con TU clave privada     │
+│ 3. Crea archivos en /run/secrets/       │
+│    (solo root puede leer)               │
+│ 4. NixOS usa esos archivos              │
+└─────────────────────────────────────────┘
+#+END_EXAMPLE
+
+** ¿Cómo Funciona? (Paso a Paso)
+
+*** 1. Generar Clave Age
+
+#+BEGIN_SRC bash
+# Instalar age
+nix-shell -p age
+
+# Generar clave
+mkdir -p ~/.config/sops/age
+age-keygen -o ~/.config/sops/age/keys.txt
+
+# Output:
+# Public key: age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p
+#             └─ Guarda esta clave pública
+#+END_SRC
+
+*** 2. Crear Archivo de Secretos (Sin Encriptar Todavía)
+
+#+BEGIN_SRC yaml
+# secrets.yaml (TEMPORAL - lo encriptarás en el paso 4)
+miniflux_password: SuperSecretPass123
+router_password: OtraPasswordSegura456
+syncthing_api_key: abc123def456ghi789
+vm_ubuntu_password: MiPasswordVM2024
+#+END_SRC
+
+*** 3. Configurar .sops.yaml
+
+#+BEGIN_SRC yaml
+# .sops.yaml - Define qué clave usar
+keys:
+  - &passh age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p
+    # └─ TU clave pública del paso 1
+creation_rules:
+  - path_regex: secrets\.yaml$
+    key_groups:
+      - age:
+          - *passh
+#+END_SRC
+
+*** 4. Encriptar el Archivo
+
+#+BEGIN_SRC bash
+nix-shell -p sops
+sops secrets.yaml  # Se abre editor, guardas, y queda encriptado
+
+# Ahora secrets.yaml tiene:
+# miniflux_password: ENC[AES256_GCM,data:Qw==,iv:...,tag:...,type:str]
+#+END_SRC
+
+*** 5. Usar los Secretos en NixOS
+
+#+BEGIN_SRC nix
+# flake.nix - Añadir input
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    sops-nix.url = "github:Mic92/sops-nix";
+  };
+  
+  outputs = { nixpkgs, sops-nix, ... }: {
+    nixosConfigurations.aurin = nixpkgs.lib.nixosSystem {
+      modules = [
+        sops-nix.nixosModules.sops
+        ./hosts/aurin
+      ];
+    };
+  };
+}
+
+# hosts/aurin/default.nix
+{
+  sops = {
+    defaultSopsFile = ../../secrets.yaml;
+    age.keyFile = "/home/passh/.config/sops/age/keys.txt";
+    
+    secrets = {
+      miniflux_password = {};  # Crea /run/secrets/miniflux_password
+      router_password = {};
+    };
+  };
+  
+  # Usar el secreto
+  services.miniflux = {
+    adminCredentialsFile = {
+      passwordFile = config.sops.secrets.miniflux_password.path;
+      # └─ Apunta a /run/secrets/miniflux_password (solo root)
+    };
+  };
+}
+#+END_SRC
+
+** Diagrama Completo del Flujo
+
+#+BEGIN_EXAMPLE
+TU MÁQUINA                        GITHUB (PÚBLICO)
+===========                       ================
+
+1. EDITAR SECRETOS
+   ┌──────────────┐
+   │ sops secrets │               
+   │   .yaml      │──┐            
+   └──────────────┘  │ Desencripta con tu clave
+                     │ Abre editor
+                     │ Editas password123 → nueva_pass
+                     │ Guardas → Re-encripta
+                     ▼
+   ┌──────────────────────────────┐
+   │ secrets.yaml (ENCRIPTADO)     │
+   │ password: ENC[AES256...]      │
+   └──────────────────────────────┘
+                     │
+2. GIT PUSH          │
+   git add secrets.yaml
+   git push          │
+                     ▼
+                ┌─────────────────┐
+                │  GitHub Repo    │
+                │  (PÚBLICO)      │  ← Solo cifrado
+                └─────────────────┘
+                     │
+3. REBUILD EN        │ git pull
+   OTRA MÁQUINA      │
+                     ▼
+   ┌──────────────────────────────┐
+   │ nixos-rebuild switch         │
+   │   ↓                          │
+   │ sops-nix desencripta         │
+   │   ↓                          │
+   │ Crea /run/secrets/password   │
+   └──────────────────────────────┘
+#+END_EXAMPLE
+
+** Ventajas vs Problemas
+
+| Aspecto | SIN sops-nix (AHORA) | CON sops-nix |
+|---------+----------------------+--------------|
+| Passwords en repo | ❌ Texto plano visible | ✅ Encriptado |
+| Git push seguro | ❌ Expones secretos | ✅ Solo cifrado sube |
+| Multi-máquina | ❌ Cambiar en 3 sitios | ✅ 1 archivo, sync auto |
+| Rotación passwords | ❌ Editar 10 archivos | ✅ =sops secrets.yaml= |
+| Complejidad inicial | ✅ Cero setup | ⚠️ 30 min setup |
+| Mantenimiento | ⚠️ Buscar/reemplazar | ✅ Centralizado |
+
+** ¿Es Difícil?
+
+*NO.* El setup inicial es simple:
+
+| Paso | Tiempo | Dificultad |
+|------+--------+------------|
+| 1. Generar clave age | 10 segundos | ⭐ Trivial |
+| 2. Crear =.sops.yaml= | 2 minutos | ⭐ Copy/paste |
+| 3. Crear =secrets.yaml= | 5 minutos | ⭐⭐ Listar secretos |
+| 4. Añadir sops-nix a flake | 5 minutos | ⭐⭐ 3 líneas código |
+| 5. Migrar passwords | 15 minutos | ⭐⭐⭐ Buscar/reemplazar |
+| *TOTAL* | *~30 minutos* | *Una sola vez* |
+
+** Plan de Implementación Propuesto
+
+*** FASE 1: Setup Inicial (Lectura, SIN Cambios)
+- [ ] Leer documentación oficial sops-nix
+- [ ] Identificar TODOS los secretos en el repo
+- [ ] Diseñar estructura de =secrets.yaml=
+- [ ] Decidir: age vs GPG (recomendado: age)
+
+*** FASE 2: Implementación
+- [ ] Generar clave age
+- [ ] Crear =.sops.yaml= y =secrets.yaml=
+- [ ] Añadir sops-nix al flake.nix
+- [ ] Migrar passwords uno por uno:
+  - [ ] Miniflux (aurin, vespino)
+  - [ ] Syncthing
+  - [ ] VM Ubuntu
+- [ ] Eliminar passwords hardcoded del código
+- [ ] Test en aurin: =sudo nixos-rebuild test --flake .#aurin --impure=
+- [ ] Commit & push (secrets.yaml encriptado)
+
+*** FASE 3: Limpieza (Opcional)
+- [ ] Git history rewrite (borrar passwords del historial antiguo)
+- [ ] Documentar en README cómo añadir secretos nuevos
+- [ ] Aplicar en macbook y vespino
+
+** Secretos Actualmente en el Repo
+
+Lista de secretos que necesitan migrarse (VALORES SANITIZADOS - no reales):
+
+| Secreto | Ubicación | Acción |
+|---------+-----------+--------|
+| VM Ubuntu password | README.org | Migrar a sops |
+| Miniflux password (aurin) | hosts/aurin/default.nix | Migrar a sops |
+| Miniflux password (vespino) | hosts/vespino/default.nix | Migrar a sops |
+| Syncthing password | aurin-system-notes.org | Migrar a sops |
+| Router password | CLAUDE.md | ⚠️ NO en NixOS - cambiar manualmente |
+| Email corporativo | modules/home-manager/core.nix | ⚠️ Considerar si es secreto |
+| Vocento hosts file (path) | hosts/*/default.nix | Evaluar si necesita sops |
+
+#+BEGIN_QUOTE
+*NOTA IMPORTANTE:* El router NO se gestiona con NixOS, así que su password debe cambiarse manualmente en la interfaz web del router.
+
+*ADVERTENCIA:* Los valores mostrados en esta documentación son EJEMPLOS. Los valores reales están hardcodeados en varios archivos del repo y deben migrarse a sops-nix para mayor seguridad.
+#+END_QUOTE
+
+** Referencias
+
+- [[https://github.com/Mic92/sops-nix][sops-nix - GitHub]]
+- [[https://github.com/mozilla/sops][SOPS - Mozilla]]
+- [[https://github.com/FiloSottile/age][age - Encryption Tool]]
+- [[https://nixos.wiki/wiki/Sops-nix][NixOS Wiki - sops-nix]]
+
+* TODO Tareas Pendientes
+
+** AI Agents (claude, opencode, crush)
+- [X] *REFACTOR MODULAR* [2026-01-24] - Arquitectura modular para AI agents
+  - [X] Crear =modules/home-manager/programs/ai-agents/= directory
+  - [X] Separar en archivos: =default.nix=, =claude-code.nix=, =opencode.nix=, =crush.nix=
+  - [X] Cada agente en módulo independiente (~80-90 líneas)
+  - [X] Escalable: añadir nuevo agente = crear archivo + 1 import
+- [X] *CLAUDE-CODE INTEGRADO* [2026-01-22] - Migrado de stow a home-manager
+  - [X] Crear módulo =claude-code.nix= (config symlinks)
+  - [X] Integrar en =core.nix= (portable)
+  - [X] Eliminar claude-code de stow en =passh.nix=
+  - [X] Aplicar en aurin (TESTED: =claude --version= v2.1.12)
+  - [ ] Aplicar en macbook
+  - [ ] Aplicar en vespino
+- [X] *OPENCODE INTEGRADO* [2026-01-24] - No experimental, funcional
+  - [X] Crear módulo =opencode.nix= (package + config symlinks)
+  - [X] Config en =~/dotfiles/opencode/.config/opencode/=
+  - [X] Aplicar en aurin (TESTED & WORKING - usando ahora mismo!)
+  - [ ] Aplicar en macbook
+  - [ ] Aplicar en vespino
+- [X] *CRUSH AÑADIDO* [2026-01-24] - Desde Charmbracelet NUR
+  - [X] Crear módulo =crush.nix= con patrón =fetchGit + callPackage=
+  - [X] Instalar desde NUR (no nixpkgs) para version reciente
+  - [X] Config remota: Mac usa GPU desktop via =campo.zapto.org:11434=
+  - [X] Aplicar en aurin (TESTED: =crush --version= v0.35.0)
+  - [X] Aplicar en macbook (TESTED: usa desktop Ollama remotamente)
+  - [ ] Aplicar en vespino
+- [ ] *SHARED AGENTS* - Config multi-cliente (futuro)
+  - [ ] Investigar compatibilidad entre clientes
+  - [ ] Considerar shared agents directory si claude/opencode lo soportan
+
+** Infraestructura
+- [ ] *VPN VOCENTO EXPERIMENTAL* - Probar modulos en vespino antes de aurin
+  - Copiar disco QCOW2 a vespino
+  - Configurar =services.vocento-vpn-bridge= con interface correcta
+  - Validar que funciona igual que en macbook
+- [ ] *WAYLAND ROTO* - LightDM no soporta sesiones Wayland (GNOME, niri, Hyprland)
+  - Investigar: greetd, SDDM, o login directo desde TTY
+- [ ] *rEFInd* - Bootloader para fix geometria TTY en MacBook
+  - =boot.loader.refind.enable = true=
+  - Configurar =resolution 2560 1600= en refind.conf
+
+** Repo como Template (Forkeable)
+- [X] *MANIFIESTO HHKB* [2026-01-24] - Documentación filosófica
+  - [X] Historia personal HHKB (extensión de manos → extensión de cerebro)
+  - [X] Cita exacta Eiiti Wada (cowboys + saddle)
+  - [X] Problemas universales (formatear, nuevo portátil, 3 máquinas)
+  - [X] Énfasis: hardware totalmente diferente (Intel MacBook vs Desktop RTX)
+  - [X] Legibilidad humana primero, LLM-friendly como bonus
+- [X] *SECCIÓN BÁSICA AÑADIDA* [2026-01-22] - "Use This Repo (WIP)"
+  - [X] Guía Quick Start para terceros
+  - [X] Checklist de valores hardcoded a cambiar
+  - [X] Tabla "What You Get" vs "What's Personal"
+  - [X] Warning claro: WIP, requiere adaptación manual
+  - [ ] Testing con usuario real (Daniel)
+- [ ] *TEMPLATE COMPLETO* (después de stow migración completa)
+  - [ ] Parametrizar username (mainUser variable)
+  - [ ] Script generator: =./scripts/new-machine.sh=
+  - [ ] Separación clara: personal vs. template
+  - [ ] Secrets management (sops-nix o agenix)
+
+** XMonad Migration (Home-Manager)
+- [X] *PHASE 1: CLEANUP* [2026-01-23] - Limpieza de xmonad.hs
+  - [X] Remover dead keybindings (TTS, keyboard layout)
+  - [X] Fix hardcoded paths (picom, jetbrains-toolbox)
+  - [X] Mover glmatrix-bg.sh a scripts/
+- [X] *PHASE 2: HOME-MANAGER MODULE* [2026-01-23] - Migración a home-manager
+  - [X] Crear =modules/home-manager/programs/xmonad.nix=
+  - [X] Usar =.source= para hot-reload (10s compile)
+  - [X] Absolute paths para scripts (reliability)
+  - [X] Aplicar en aurin (TESTED & WORKING)
+  - [ ] Aplicar en macbook
+  - [ ] Aplicar en vespino
+- [X] *PHASE 3: REJECTED* [2026-01-23] - Templates consideradas dañinas
+  - [X] Intentado: =.text= template (365 lines in Nix)
+  - [X] Resultado: Indentation bugs, xmobar broken
+  - [X] Revertido: Commit cff214e
+  - [X] Lección: =.source= > templates (pragmatismo > pureza)
+  - [X] Documentado en =XMONAD-MIGRATION-SUMMARY.md=
+
+** Limpieza
+- [ ] Revisar y limpiar configs obsoletas (shell/, composer/)
+- [ ] Documentar scripts utiles en scripts/
+- [X] Migrar xmonad a home-manager - DONE (Phase 2)
+- [ ] Eliminar stow cuando composer migre (CRÍTICO: composer en PROD Vocento)
+- [ ] Archivar =dotfiles/claude-code/= (mantener histórico)
+- [ ] Considerar sops-nix para secretos
 
 * Referencias
 
