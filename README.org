@@ -3503,12 +3503,16 @@ Lista de secretos que necesitan migrarse (VALORES SANITIZADOS - no reales):
 
 | Categoría | Completadas | Pendientes | Estado |
 |-----------+-------------+------------+--------|
-| AI Agents | 4/5 (80%) | 1 | ✅ Funcionando |
-| XMonad Migration | 3/3 (100%) | 0 | ✅ Completado |
+| AI Agents | 4/5 (80%) | 1 | ✅ Funcionando (aurin + macbook) |
+| XMonad Migration | 3/3 (100%) | 0 | ✅ Completado (aurin + macbook) |
 | Repo Template | 2/3 (67%) | 1 | ⚠️ En progreso |
 | Seguridad (SOPS) | 1/2 (50%) | 1 | 📖 Documentado |
 | Infraestructura | 0/3 (0%) | 3 | 🔮 Futuro |
 | Limpieza | 1/3 (33%) | 2 | ⚠️ En progreso |
+
+#+BEGIN_QUOTE
+*Nota:* vespino está esperando =git pull && nixos-rebuild= para aplicar todos los cambios recientes (AI agents modular, XMonad migration, SOPS docs). ¡Va a flipar! 😄
+#+END_QUOTE
 
 ** AI Agents (claude, opencode, crush)
 - [X] *REFACTOR MODULAR* [2026-01-24] - Arquitectura modular para AI agents
@@ -3521,14 +3525,14 @@ Lista de secretos que necesitan migrarse (VALORES SANITIZADOS - no reales):
   - [X] Integrar en =core.nix= (portable)
   - [X] Eliminar claude-code de stow en =passh.nix=
   - [X] Aplicar en aurin (TESTED: =claude --version= v2.1.12)
-  - [ ] Aplicar en macbook
-  - [ ] Aplicar en vespino
+  - [X] Aplicar en macbook (TESTED: =claude --version= v2.1.12)
+  - [ ] Aplicar en vespino (el abandonado - esperando =git pull=)
 - [X] *OPENCODE INTEGRADO* [2026-01-24] - No experimental, funcional
   - [X] Crear módulo =opencode.nix= (package + config symlinks)
   - [X] Config en =~/dotfiles/opencode/.config/opencode/=
-  - [X] Aplicar en aurin (TESTED & WORKING - usando ahora mismo!)
-  - [ ] Aplicar en macbook
-  - [ ] Aplicar en vespino
+  - [X] Aplicar en aurin (TESTED & WORKING - usado para esta sesión!)
+  - [X] Aplicar en macbook (TESTED & WORKING)
+  - [ ] Aplicar en vespino (esperando =git pull=)
 - [X] *CRUSH AÑADIDO* [2026-01-24] - Desde Charmbracelet NUR
   - [X] Crear módulo =crush.nix= con patrón =fetchGit + callPackage=
   - [X] Instalar desde NUR (no nixpkgs) para version reciente
@@ -3580,8 +3584,8 @@ Lista de secretos que necesitan migrarse (VALORES SANITIZADOS - no reales):
   - [X] Usar =.source= para hot-reload (10s compile)
   - [X] Absolute paths para scripts (reliability)
   - [X] Aplicar en aurin (TESTED & WORKING)
-  - [ ] Aplicar en macbook
-  - [ ] Aplicar en vespino
+  - [X] Aplicar en macbook (TESTED & WORKING)
+  - [ ] Aplicar en vespino (esperando =git pull=)
 - [X] *PHASE 3: REJECTED* [2026-01-23] - Templates consideradas dañinas
   - [X] Intentado: =.text= template (365 lines in Nix)
   - [X] Resultado: Indentation bugs, xmobar broken
