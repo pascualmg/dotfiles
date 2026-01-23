@@ -71,6 +71,7 @@ in
         # Development basics
         gnumake
         gcc
+        nodejs_22 # Node.js LTS (Doom Emacs LSP, desarrollo general)
 
         # Formatters/Linters CLI
         nixfmt

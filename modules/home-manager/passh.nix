@@ -100,7 +100,7 @@
 
         # Emacs dependencias (emacs binarios via programs/emacs.nix)
         # MIGRATED: emacs-pgtk -> programs/emacs.nix (wrapper inteligente X11/Wayland)
-        nodejs_22 # nodejs_24 puede no existir, usar 22 LTS
+        # nodejs_22 -> MOVED to core.nix (portable, needed everywhere)
         # claude-code -> ahora via pkgsMaster (ver abajo)
         tdlib
         tree-sitter
