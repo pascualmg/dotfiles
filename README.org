@@ -1,7 +1,188 @@
 #+TITLE: Dotfiles - passh (Multi-Machine NixOS)
 #+AUTHOR: passh
-#+DATE: 2026-01-22
+#+DATE: 2026-01-23
 #+STARTUP: overview
+
+* La Filosofía HHKB Aplicada al Sistema Operativo
+
+#+BEGIN_QUOTE
+"No cambies de caballo - lleva tu montura"
+— Filosofía HHKB (Happy Hacking Keyboard)
+#+END_QUOTE
+
+** El Problema que Todos Hemos Vivido
+
+Imagina este escenario (que has vivido 100 veces):
+
+1. *Reinstalar Windows/Mac/Linux*
+   - "Joder, ¿dónde estaba esa config de VSCode?"
+   - "¿Cómo se llamaba ese plugin de Vim?"
+   - "Ah coño, ¿cómo configuré el Docker Compose?"
+   - *3 horas después:* "Creo que ya está... pero falta algo"
+
+2. *Nuevo portátil del trabajo*
+   - Teams, Slack, Docker, IntelliJ, Postman, DBeaver...
+   - "¿En serio tengo que configurar TODO otra vez?"
+   - *2 días perdidos* configurando herramientas
+
+3. *Tu máquina de casa + portátil + servidor*
+   - Cada una configurada diferente
+   - Cambias algo en una → tienes que recordar cambiarlo en las otras
+   - *Caos total* - nunca sabes qué funciona en cuál
+
+** La Solución: Sistema Operativo Declarativo (NixOS)
+
+#+BEGIN_SRC bash
+# Máquina nueva (desktop gaming con RTX 5080)
+git clone https://github.com/tu-usuario/dotfiles ~/dotfiles
+sudo nixos-rebuild switch --flake ~/dotfiles#aurin
+
+# 20 minutos después:
+# ✅ Nvidia drivers configurados
+# ✅ Docker + compose funcionando
+# ✅ IntelliJ IDEA con tus plugins
+# ✅ Fish shell con tu config
+# ✅ XMonad con tus keybindings
+# ✅ Claude AI agent con tus custom agents
+# ✅ Crush AI apuntando a tu Ollama
+# ✅ Alacritty con tu colorscheme
+# ✅ TODO exactamente como lo tenías
+
+# Portátil (MacBook Pro)
+git pull  # Actualizas cambios del desktop
+sudo nixos-rebuild switch --flake ~/dotfiles#macbook
+
+# 15 minutos después:
+# ✅ MISMA configuración
+# ✅ MISMO entorno
+# ✅ Solo difiere en hardware (HiDPI, batería, WiFi)
+#+END_SRC
+
+** El Momento "Aha!" - Caso Real de Esta Semana
+
+*Viernes noche, 23 enero 2026:*
+
+1. *En desktop (aurin)*: "Voy a probar Crush, un nuevo AI agent"
+   - Creo =crush.nix= (90 líneas)
+   - Añado config =crush.json= con Ollama local
+   - =git commit && git push=
+
+2. *En MacBook (10 minutos después)*:
+   - =git pull=
+   - =sudo nixos-rebuild switch=
+   - *Magia*: Crush instalado, MISMA config
+   - Como la config apunta a =campo.zapto.org:11434= (mi casa)...
+   - *¡Uso la GPU del desktop desde el portátil!* 🤯
+
+3. *Lo que NO tuve que hacer*:
+   - ❌ Reinstalar Crush en Mac
+   - ❌ Reconfigurar providers/models
+   - ❌ Copiar API keys manualmente
+   - ❌ Recordar qué versión instalé en aurin
+   - ✅ Solo: =git pull && rebuild=
+
+** No Es Solo "Dotfiles" - Es Tu Sistema Completo
+
+#+BEGIN_SRC nix
+# modules/home-manager/programs/ai-agents/crush.nix
+# 90 líneas que instalan Crush en TODAS tus máquinas
+let
+  charm-nur = builtins.fetchGit {
+    url = "https://github.com/charmbracelet/nur";
+    ref = "master";
+  };
+  crush = pkgs.callPackage "${charm-nur}/pkgs/crush" {};
+in
+{
+  home.packages = [ crush ];
+  # Config symlinkeado desde ~/dotfiles/crush/.config/crush/crush.json
+  # Editas UNA VEZ → funciona en TODAS las máquinas
+}
+#+END_SRC
+
+** El Patrón: Clone-First Architecture
+
+*REGLA DE ORO:* Todas las máquinas son CLONES IDÉNTICOS. Solo difieren en hardware.
+
+#+BEGIN_EXAMPLE
+dotfiles/
+├── modules/base/           ← COMÚN a TODAS las máquinas
+│   ├── desktop.nix         (XMonad, GNOME, LightDM)
+│   └── virtualization.nix  (Docker, libvirt)
+├── hardware/               ← Hardware-ESPECÍFICO
+│   ├── nvidia/rtx5080.nix  (aurin)
+│   └── apple/macbook-pro.nix (macbook)
+└── hosts/                  ← Overrides MÍNIMOS
+    ├── aurin/              (VPN Vocento, FiiO DAC)
+    └── macbook/            (casi vacío - todo viene de base/)
+
+AI Agents (añadir nuevo = 30 líneas):
+├── claude-code.nix         (85 líneas)
+├── crush.nix               (90 líneas)
+└── opencode.nix            (83 líneas)
+
+¿Quieres aider? → Creas aider.nix (30 líneas) + 1 import
+¿Quieres cursor? → Creas cursor.nix (30 líneas) + 1 import
+#+END_EXAMPLE
+
+** Para Quién Es Esto
+
+*Este repo es para ti si:*
+
+1. *Tienes múltiples máquinas* (desktop + laptop + servidor)
+2. *Odias reinstalar/reconfigurar* herramientas
+3. *Quieres reproducibilidad* ("funcionaba ayer, ¿por qué no hoy?")
+4. *Valoras tu tiempo* más que 2 días configurando Teams/Slack/Docker
+5. *Te gusta la filosofía HHKB*: tu entorno es TU montura, llévala contigo
+
+*NO es para ti si:*
+
+- Usas Windows/Mac y no quieres cambiar (aunque... ¿seguro?)
+- "Me gusta configurar todo a mano cada vez" (respetable, pero raro)
+- Tienes miedo a =git= y archivos de texto (tranqui, hay tutoriales)
+
+** El Secreto: LLM como Asistente Experto
+
+*Este repo está diseñado para trabajar con LLMs* (Claude, ChatGPT, etc.):
+
+#+BEGIN_SRC text
+Tú: "Quiero añadir Neovim con mi config personalizada"
+
+LLM: *Lee README.org + ai-agents/ pattern*
+     "Voy a crear neovim.nix siguiendo el patrón:
+     
+     1. fetchGit de tu config (si está en GitHub)
+     2. Symlink desde ~/dotfiles/nvim/
+     3. Añadir import en default.nix
+     4. Rebuild en todas las máquinas
+     
+     ¿Continúo?"
+
+*5 minutos después:* Neovim configurado en desktop, laptop y servidor.
+#+END_SRC
+
+*Patrones documentados:*
+- ✅ Cómo añadir AI agents (fetchGit + callPackage)
+- ✅ Cómo gestionar configs (symlinks editables)
+- ✅ Cómo manejar licencias unfree (ejemplo: Crush)
+- ✅ Cómo separar hardware vs config base
+- ✅ Clone-first philosophy (todo en comments)
+
+** Empieza Aquí
+
+1. *Curiosea el repo* - lee los módulos, están comentados a muerte
+2. *Forkea y adapta* - cambia =passh= por tu usuario, ajusta hardware
+3. *Pregunta a un LLM* - "¿Cómo añado X siguiendo el patrón de este repo?"
+4. *Disfruta* - nunca más "joder, ¿cómo configuré esto?"
+
+#+BEGIN_QUOTE
+*"No es solo un sistema operativo declarativo.*
+*Es llevarte tu caballo, tu montura, tus riendas y el mapa del camino."*
+
+— La filosofía del repo, 2026
+#+END_QUOTE
+
+---
 
 * TODO Tareas Pendientes
 
