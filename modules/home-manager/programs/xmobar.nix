@@ -35,13 +35,16 @@
 let
   cfg = config.dotfiles.xmobar;
 
+  # Portable scripts directory
+  scriptsDir = "${config.home.homeDirectory}/dotfiles/scripts";
+
   # Comando GPU segun tipo
   gpuCommand = {
     nvidia = ''
-      Run Com "/home/passh/dotfiles/scripts/xmobar-gpu-nvidia.sh" [] "gpu" 10
+      Run Com "${scriptsDir}/xmobar-gpu-nvidia.sh" [] "gpu" 10
     '';
     intel = ''
-      Run Com "/home/passh/dotfiles/scripts/xmobar-gpu-intel.sh" [] "gpu" 20
+      Run Com "${scriptsDir}/xmobar-gpu-intel.sh" [] "gpu" 20
     '';
     none = "";
   };
@@ -89,41 +92,41 @@ let
             -- CPU frecuencia y governor (click abre cpupower-gui)
             ${
               lib.optionalString (cfg.gpuType != "none") ","
-            }Run Com "/home/passh/dotfiles/scripts/xmobar-cpu-freq.sh" [] "cpufreq" 20
+            }Run Com "${scriptsDir}/xmobar-cpu-freq.sh" [] "cpufreq" 20
 
             -- CPU uso, temperatura y consumo (script externo)
-            , Run Com "/home/passh/dotfiles/scripts/xmobar-cpu.sh" [] "cpu" 20
+            , Run Com "${scriptsDir}/xmobar-cpu.sh" [] "cpu" 20
 
             -- Memoria con color dinámico (script externo)
-            , Run Com "/home/passh/dotfiles/scripts/xmobar-memory.sh" [] "memory" 20
+            , Run Com "${scriptsDir}/xmobar-memory.sh" [] "memory" 20
 
             -- Red genérica (auto-detecta eth/wifi, muestra IP)
-            , Run Com "/home/passh/dotfiles/scripts/xmobar-network.sh" [] "network" 10
+            , Run Com "${scriptsDir}/xmobar-network.sh" [] "network" 10
 
             -- Docker containers (click abre lazydocker)
-            , Run Com "/home/passh/dotfiles/scripts/xmobar-docker.sh" [] "docker" 50
+            , Run Com "${scriptsDir}/xmobar-docker.sh" [] "docker" 50
 
             -- Fecha y hora con calendario
             , Run Date "<action=`gsimplecal`><fn=1>\xf017</fn> %a %d %b %H:%M</action>" "date" 10
 
             ${lib.optionalString (cfg.alsaMixer != null) ''
               -- Volumen con color gradiente (script externo)
-              , Run Com "/home/passh/dotfiles/scripts/xmobar-volume.sh" [] "volume" 10
+              , Run Com "${scriptsDir}/xmobar-volume.sh" [] "volume" 10
             ''}
 
             ${lib.optionalString cfg.showDiskMonitor ''
               -- Monitor de discos genérico (NVMe + SATA + USB)
-              , Run Com "/home/passh/dotfiles/scripts/xmobar-disks.sh" [] "disks" 60
+              , Run Com "${scriptsDir}/xmobar-disks.sh" [] "disks" 60
             ''}
 
             -- Bateria con color dinámico (script externo)
             ${lib.optionalString cfg.showBattery ''
-              , Run Com "/home/passh/dotfiles/scripts/xmobar-battery.sh" [] "battery" 50
+              , Run Com "${scriptsDir}/xmobar-battery.sh" [] "battery" 50
             ''}
 
             -- Raton wireless (Logitech hidpp)
             ${lib.optionalString cfg.showWirelessMouse ''
-              , Run Com "/home/passh/dotfiles/scripts/wireless-mouse.sh" [] "mouse" 100
+              , Run Com "${scriptsDir}/wireless-mouse.sh" [] "mouse" 100
             ''}
 
             -- XMonad Workspaces y Layout
@@ -131,7 +134,7 @@ let
 
             ${lib.optionalString cfg.showTrayer ''
               -- Bandeja del sistema
-              , Run Com "/home/passh/dotfiles/scripts/trayer-padding-icon.sh" [] "trayerpad" 10
+              , Run Com "${scriptsDir}/trayer-padding-icon.sh" [] "trayerpad" 10
             ''}
         ]
 
