@@ -3491,6 +3491,25 @@ Lista de secretos que necesitan migrarse (VALORES SANITIZADOS - no reales):
 
 * TODO Tareas Pendientes
 
+#+BEGIN_QUOTE
+*Leyenda:*
+- [X] = Completado
+- [ ] = Pendiente (activo o futuro)
+- *MAYÚSCULAS* = Título de tarea principal
+- Fechas [YYYY-MM-DD] = Cuándo se completó
+#+END_QUOTE
+
+** Resumen de Estado
+
+| Categoría | Completadas | Pendientes | Estado |
+|-----------+-------------+------------+--------|
+| AI Agents | 4/5 (80%) | 1 | ✅ Funcionando |
+| XMonad Migration | 3/3 (100%) | 0 | ✅ Completado |
+| Repo Template | 2/3 (67%) | 1 | ⚠️ En progreso |
+| Seguridad (SOPS) | 1/2 (50%) | 1 | 📖 Documentado |
+| Infraestructura | 0/3 (0%) | 3 | 🔮 Futuro |
+| Limpieza | 1/3 (33%) | 2 | ⚠️ En progreso |
+
 ** AI Agents (claude, opencode, crush)
 - [X] *REFACTOR MODULAR* [2026-01-24] - Arquitectura modular para AI agents
   - [X] Crear =modules/home-manager/programs/ai-agents/= directory
@@ -3570,13 +3589,23 @@ Lista de secretos que necesitan migrarse (VALORES SANITIZADOS - no reales):
   - [X] Lección: =.source= > templates (pragmatismo > pureza)
   - [X] Documentado en =XMONAD-MIGRATION-SUMMARY.md=
 
+** Seguridad (SOPS-NIX)
+- [X] *DOCUMENTACIÓN SOPS-NIX* [2026-01-24] - Guía completa añadida
+  - [X] Documentar qué es SOPS y por qué usarlo
+  - [X] Diagramas de flujo (problema → solución)
+  - [X] Guía paso a paso (5 pasos)
+  - [X] Plan de implementación (3 fases)
+  - [X] Auditoría de secretos actuales
+- [ ] *IMPLEMENTACIÓN SOPS-NIX* (pendiente, cuando convenga)
+  - [ ] FASE 1: Setup inicial (generar keys age, .sops.yaml)
+  - [ ] FASE 2: Migrar passwords (Miniflux, Syncthing, VM Ubuntu)
+  - [ ] FASE 3: Limpieza (git history, docs)
+
 ** Limpieza
 - [ ] Revisar y limpiar configs obsoletas (shell/, composer/)
 - [ ] Documentar scripts utiles en scripts/
 - [X] Migrar xmonad a home-manager - DONE (Phase 2)
 - [ ] Eliminar stow cuando composer migre (CRÍTICO: composer en PROD Vocento)
-- [ ] Archivar =dotfiles/claude-code/= (mantener histórico)
-- [ ] Considerar sops-nix para secretos
 
 * Referencias
 
