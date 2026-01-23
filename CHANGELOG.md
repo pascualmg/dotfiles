@@ -5,7 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 2026-01-22
+## [Unreleased] - 2026-01-23
+
+### Added
+
+- **XMonad Migration to Home-Manager (Phase 1-2)**: Completed migration from Stow
+  - Phase 1: Cleanup xmonad.hs (removed dead code, fixed paths)
+  - Phase 2: Created `modules/home-manager/programs/xmonad.nix` module
+  - Phase 2.1: Fixed script paths (absolute paths for reliability)
+  - Uses `.source` for hot-reload (10s recompile vs 3-5min nixos-rebuild)
+  - Only `xmonad` and `composer` remain in Stow transition
+  - Comprehensive migration guide in `XMONAD-MIGRATION-SUMMARY.md`
+
+### Rejected
+
+- **XMonad Phase 3 (Templates)**: Attempted and reverted (commit cff214e)
+  - Attempted: Full template with `.text` (365 lines embedded in Nix)
+  - Problem: Indentation bugs, xmobar broken, sobreingeniería
+  - Lesson learned: `.source` files > templates for config hot-reload
+  - Decision: Phase 2 is the correct solution (pragmatism > purity)
+  - See `XMONAD-MIGRATION-SUMMARY.md` Phase 3 section for full analysis
+
+## [1.1.0] - 2026-01-22
 
 ### Added
 

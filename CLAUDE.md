@@ -227,8 +227,10 @@ services.xserver.xkb = {
 - **Home-manager esta integrado en NixOS flake** - NO usar `home-manager switch`
 - Para aplicar cambios: `sudo nixos-rebuild switch --flake ~/dotfiles#<hostname> --impure`
 - El comando correcto es: `sudo nixos-rebuild switch --flake ~/dotfiles#<hostname> --impure`
-- Configs migradas a home-manager: alacritty, fish, picom, xmobar
-- Configs aun con stow: xmonad
+- Configs migradas a home-manager: alacritty, fish, picom, xmobar, xmonad, ai-agents (claude-code)
+- **Configs aun con stow** (en transicion):
+  - `xmonad` - source files en `xmonad/.config/xmonad/` (hot-reload con `.source`)
+  - `composer` - CRÍTICO PROD (Vocento Toran repo) - **NO TOCAR**
 
 ## Comandos utiles
 

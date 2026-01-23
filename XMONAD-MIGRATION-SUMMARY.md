@@ -143,27 +143,65 @@ Should work out of the box.
 
 ---
 
-## 🟡 TODO Phase 3 (Optional - Portability)
+## ❌ Phase 3 Rejected - Templates Considered Harmful
 
-**Annotated in code** - see:
-- `modules/home-manager/programs/xmonad.nix` (lines 20-26)
-- `modules/home-manager/programs/xmobar.nix` (lines 19-25)
+**Date**: 2026-01-23 (tarde del viernes)  
+**Status**: ❌ REJECTED - reverted (commit cff214e)
 
-**Changes needed**:
-1. Replace `/home/passh/` with `${config.home.homeDirectory}` in:
-   - xmobar.nix (all script paths)
-   - xmonad.nix (template xmonad.hs with `.text`)
-2. Add scripts to fish.nix PATH:
-   ```fish
-   set -x PATH $HOME/dotfiles/scripts $PATH
-   ```
+### What We Tried:
 
-**Priority**: Low (only affects portability, works fine now)
+Attempted full portability refactor:
+1. Template xmonad.hs with `.text` instead of `.source` (365 lines embedded in Nix)
+2. Replace `/home/passh/` with `${config.home.homeDirectory}` 
+3. Make dotfiles "portable" for public sharing
 
-**When to do it**:
-- Adding another user to the system
-- Making repo a template
-- Bored and want to polish 😎
+### What Went Wrong:
+
+1. **Indentation bugs**: Haskell syntax errors from Nix multiline strings
+   - Comas mal indentadas en listas
+   - `lib.optionalString` rompe el espaciado
+   - xmobar no arrancaba (se quedaba bloqueado silenciosamente)
+
+2. **Sobreingeniería**:
+   - 365 líneas de xmonad.hs metidas en un string de Nix
+   - Debug imposible (errores de sintaxis Haskell dentro de Nix)
+   - Código ilegible y frágil
+
+3. **Peor UX**:
+   - Hot-reload desaparece (10s → 3-5 min nixos-rebuild)
+   - Workflow edit → test → persist es una mierda
+   - Perder compilación rápida de XMonad no vale la pena
+
+### Lección Aprendida:
+
+**"No todo tiene que ser template"**
+
+✅ **Phase 2 es la solución correcta**:
+- `.source` files → hot-reload instantáneo
+- Absolute paths `/home/passh/dotfiles/scripts/...` → funcionan perfectamente
+- Menos código → menos bugs
+- XMonad compila en 10s → desarrollo ágil
+
+❌ **Templates solo añaden complejidad**:
+- Portabilidad teórica vs funcionalidad práctica
+- "Make it portable" ≠ "Make it good"
+- Para compartir dotfiles: README con `s/passh/<tu-usuario>/g`
+
+### Commits:
+
+- `c29e1a2` - Phase 3 attempt (BUGGY - xmobar broken)
+- `cff214e` - **Revert Phase 3** ← Current state (WORKING)
+
+**Priority**: NEVER - feature closed permanently
+
+**Alternative for portability** (si algún día hace falta):
+- Variables de entorno en scripts
+- Helper script: `scripts/setup.sh` que hace find/replace
+- O simplemente: "cambiar passh por tu usuario" en el README
+
+### Decision Final:
+
+**Pragmatismo > Pureza**. Phase 2 funciona, es simple, es rápido. Case closed. 🍺
 
 ---
 

@@ -47,10 +47,30 @@
   - [ ] Separación clara: personal vs. template
   - [ ] Secrets management (sops-nix o agenix)
 
+** XMonad Migration (Home-Manager)
+- [X] *PHASE 1: CLEANUP* [2026-01-23] - Limpieza de xmonad.hs
+  - [X] Remover dead keybindings (TTS, keyboard layout)
+  - [X] Fix hardcoded paths (picom, jetbrains-toolbox)
+  - [X] Mover glmatrix-bg.sh a scripts/
+- [X] *PHASE 2: HOME-MANAGER MODULE* [2026-01-23] - Migración a home-manager
+  - [X] Crear =modules/home-manager/programs/xmonad.nix=
+  - [X] Usar =.source= para hot-reload (10s compile)
+  - [X] Absolute paths para scripts (reliability)
+  - [X] Aplicar en aurin (TESTED & WORKING)
+  - [ ] Aplicar en macbook
+  - [ ] Aplicar en vespino
+- [X] *PHASE 3: REJECTED* [2026-01-23] - Templates consideradas dañinas
+  - [X] Intentado: =.text= template (365 lines in Nix)
+  - [X] Resultado: Indentation bugs, xmobar broken
+  - [X] Revertido: Commit cff214e
+  - [X] Lección: =.source= > templates (pragmatismo > pureza)
+  - [X] Documentado en =XMONAD-MIGRATION-SUMMARY.md=
+
 ** Limpieza
 - [ ] Revisar y limpiar configs obsoletas (shell/, composer/)
 - [ ] Documentar scripts utiles en scripts/
-- [ ] Migrar xmonad a home-manager (cuando composer migre, eliminar stow)
+- [X] Migrar xmonad a home-manager - DONE (Phase 2)
+- [ ] Eliminar stow cuando composer migre (CRÍTICO: composer en PROD Vocento)
 - [ ] Archivar =dotfiles/claude-code/= (mantener histórico)
 - [ ] Considerar sops-nix para secretos
 
