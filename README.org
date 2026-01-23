@@ -83,10 +83,11 @@ sudo nixos-rebuild switch --flake ~/dotfiles#macbook
 # ✅ Solo difiere en hardware (HiDPI, batería, WiFi)
 #+END_SRC
 
-** El Momento "Aha!" - Caso Real de Esta Semana
+** El Momento "OMG wtf is magic 🪄 XD!" - Caso Real de Esta Semana
 
 *Viernes noche, 23 enero 2026:*
 
+El ejemplo viene por que es con lo que estoy jugando esta semana, probando todos las uis alternativas a claude code y a ver si por fin alguna me deja conectarme en local con ollama. el Hype es el Hype :)
 1. *En desktop (aurin)*: "Voy a probar Crush, un nuevo AI agent"
    - Creo =crush.nix= (90 líneas)
    - Añado config =crush.json= con Ollama local
@@ -97,7 +98,7 @@ sudo nixos-rebuild switch --flake ~/dotfiles#macbook
    - =sudo nixos-rebuild switch=
    - *Magia*: Crush instalado, MISMA config
    - Como la config apunta a =campo.zapto.org:11434= (mi casa)...
-   - *¡Uso la GPU del desktop desde el portátil!* 🤯
+   - *¡Uso la GPU 5080 de mi workstation (con mis 72 cores chinos ) desde el portátil!* 🤯
 
 3. *Lo que NO tuve que hacer*:
    - ❌ Reinstalar Crush en Mac
@@ -148,6 +149,8 @@ AI Agents (añadir nuevo = 30 líneas):
 
 ¿Quieres aider? → Creas aider.nix (30 líneas) + 1 import
 ¿Quieres cursor? → Creas cursor.nix (30 líneas) + 1 import
+¿Quieres foo? → Creas foo.nix (XX líneas) + 1 import y ya esta :)
+
 #+END_EXAMPLE
 
 ** Para Quién Es Esto
@@ -162,7 +165,7 @@ AI Agents (añadir nuevo = 30 líneas):
 
 *NO es para ti si:*
 
-- Usas Windows/Mac y no quieres cambiar (aunque... ¿seguro?)
+- Usas Windows/Mac y no quieres cambiar (aunque... ¿seguro?) 
 - "Me gusta configurar todo a mano cada vez" (respetable, pero raro)
 - Tienes miedo a =git= y archivos de texto (tranqui, hay tutoriales)
 
