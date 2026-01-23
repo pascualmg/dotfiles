@@ -1180,35 +1180,76 @@ Tiene su propio NUR oficial con módulos para NixOS y Home Manager.
 
 ***** Instalación via NUR Charmbracelet
 
+****** Paso 1: Añadir input en flake.nix
+
 #+BEGIN_SRC nix
-# En flake.nix - añadir input
-inputs = {
-  # ... otros inputs ...
-  charm-nur = {
-    url = "github:charmbracelet/nur";
-    inputs.nixpkgs.follows = "nixpkgs";
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    
+    # Añadir Charm NUR
+    charm-nur = {
+      url = "github:charmbracelet/nur";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
-};
+}
+#+END_SRC
 
-# Para Home Manager:
-outputs = { charm-nur, ... }: {
-  homeConfigurations.user = {
+****** Paso 2: Pasar a módulos via specialArgs
+
+#+BEGIN_SRC nix
+outputs = { self, nixpkgs, charm-nur, ... }@inputs:
+{
+  nixosConfigurations.aurin = nixpkgs.lib.nixosSystem {
+    system = "x86_64-linux";
+    specialArgs = { inherit charm-nur; };  # <- Pasar a módulos
     modules = [
-      charm-nur.homeModules.crush
-      { programs.crush.enable = true; }
+      charm-nur.nixosModules.crush  # <- Módulo NixOS
+      ./hosts/aurin
     ];
   };
 };
+#+END_SRC
 
-# Para NixOS:
-outputs = { charm-nur, ... }: {
-  nixosConfigurations.machine = {
-    modules = [
-      charm-nur.nixosModules.crush
-      { programs.crush.enable = true; }
-    ];
+****** Paso 3: Habilitar en host config
+
+#+BEGIN_SRC nix
+# En hosts/aurin/default.nix
+{ config, pkgs, ... }:
+{
+  programs.crush = {
+    enable = true;
+    settings = {
+      providers = {
+        ollama = {
+          name = "Ollama (Aurin)";
+          base_url = "http://localhost:11434/v1/";
+          type = "openai-compat";
+          models = [
+            { name = "Qwen3 14B"; id = "qwen3:14b"; context_window = 32768; }
+          ];
+        };
+      };
+    };
   };
-};
+}
+#+END_SRC
+
+****** Alternativa: Home Manager
+
+#+BEGIN_SRC nix
+# En flake.nix con home-manager integrado
+home-manager.nixosModules.home-manager
+{
+  home-manager = {
+    extraSpecialArgs = { inherit charm-nur; };
+    users.passh = { ... }: {
+      imports = [ charm-nur.homeModules.crush ];
+      programs.crush.enable = true;
+    };
+  };
+}
 #+END_SRC
 
 ***** Opciones de Configuración
@@ -1217,7 +1258,20 @@ outputs = { charm-nur, ... }: {
 |--------+------+-------------|
 | =programs.crush.enable= | bool | Habilitar crush |
 | =programs.crush.package= | package | Override del paquete |
-| =programs.crush.settings= | attrs | Configuración adicional |
+| =programs.crush.settings= | attrs | Configuración JSON (providers, lsp, mcp) |
+
+***** Ejemplo settings con LSP
+
+#+BEGIN_SRC nix
+programs.crush.settings = {
+  providers.ollama = { /* ... */ };
+  lsp = {
+    nix = { command = "nil"; };
+    go = { command = "gopls"; };
+    typescript = { command = "typescript-language-server"; args = ["--stdio"]; };
+  };
+};
+#+END_SRC
 
 **** Ollama: Modelos Locales para Agentes
 
