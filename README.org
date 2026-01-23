@@ -1173,104 +1173,74 @@ A pesar de estar "archivado", =opencode= en nixpkgs *FUNCIONA* correctamente:
 opencode --version  # 1.1.23
 #+END_SRC
 
-**** Crush: Sucesor de OpenCode (via NUR)
+**** Crush: AI Agent (Clone-First)
 
 Crush es mantenido por *Charmbracelet* (creadores de Bubble Tea, Gum, etc.).
-Tiene su propio NUR oficial con módulos para NixOS y Home Manager.
+Soporta múltiples providers: Ollama, Anthropic, OpenAI, OpenRouter.
 
-***** Instalación via NUR Charmbracelet
+***** Implementación (Clone-First)
 
-****** Paso 1: Añadir input en flake.nix
+Crush usa el mismo patrón que claude-code y opencode:
+- Config en =~/dotfiles/crush/.config/crush/crush.json= (editable)
+- Módulo en =modules/home-manager/programs/ai-agents/crush.nix= (symlink)
+- Habilitado por defecto en todas las máquinas
+
+***** Módulo Nix
 
 #+BEGIN_SRC nix
+# modules/home-manager/programs/ai-agents/crush.nix
+{ config, lib, pkgs, ... }:
+
+let
+  homeDir = config.home.homeDirectory;
+  dotfilesDir = "${homeDir}/dotfiles";
+in
 {
-  inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  # Symlink config desde dotfiles (editable)
+  home.activation.setupCrush = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    mkdir -p ~/.config/crush
     
-    # Añadir Charm NUR
-    charm-nur = {
-      url = "github:charmbracelet/nur";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-  };
+    if [[ ! -e ~/.config/crush/crush.json ]]; then
+      ln -sf "${dotfilesDir}/crush/.config/crush/crush.json" ~/.config/crush/crush.json
+    fi
+  '';
 }
 #+END_SRC
 
-****** Paso 2: Pasar a módulos via specialArgs
+***** Config Actual (Ollama Remoto)
 
-#+BEGIN_SRC nix
-outputs = { self, nixpkgs, charm-nur, ... }@inputs:
+#+BEGIN_SRC json
+// ~/dotfiles/crush/.config/crush/crush.json
 {
-  nixosConfigurations.aurin = nixpkgs.lib.nixosSystem {
-    system = "x86_64-linux";
-    specialArgs = { inherit charm-nur; };  # <- Pasar a módulos
-    modules = [
-      charm-nur.nixosModules.crush  # <- Módulo NixOS
-      ./hosts/aurin
-    ];
-  };
-};
-#+END_SRC
-
-****** Paso 3: Habilitar en host config
-
-#+BEGIN_SRC nix
-# En hosts/aurin/default.nix
-{ config, pkgs, ... }:
-{
-  programs.crush = {
-    enable = true;
-    settings = {
-      providers = {
-        ollama = {
-          name = "Ollama (Aurin)";
-          base_url = "http://localhost:11434/v1/";
-          type = "openai-compat";
-          models = [
-            { name = "Qwen3 14B"; id = "qwen3:14b"; context_window = 32768; }
-          ];
-        };
-      };
-    };
-  };
+  "providers": {
+    "ollama-aurin": {
+      "name": "Ollama (Aurin RTX 5080)",
+      "base_url": "http://campo.zapto.org:11434/v1/",
+      "type": "openai-compat",
+      "models": [
+        {"name": "Qwen3 14B", "id": "qwen3:14b", "context_window": 32768},
+        {"name": "GPT-OSS 20B", "id": "gpt-oss:20b", "context_window": 32768},
+        {"name": "Devstral Small 2", "id": "devstral-small-2:latest", "context_window": 32768}
+      ]
+    }
+  }
 }
 #+END_SRC
 
-****** Alternativa: Home Manager
+***** Uso
 
-#+BEGIN_SRC nix
-# En flake.nix con home-manager integrado
-home-manager.nixosModules.home-manager
-{
-  home-manager = {
-    extraSpecialArgs = { inherit charm-nur; };
-    users.passh = { ... }: {
-      imports = [ charm-nur.homeModules.crush ];
-      programs.crush.enable = true;
-    };
-  };
-}
-#+END_SRC
+#+BEGIN_SRC bash
+# Ejecutar crush
+crush
 
-***** Opciones de Configuración
+# Shortcuts
+Ctrl+O  # Seleccionar modelo
+Ctrl+K  # Comandos
+Ctrl+?  # Ayuda
 
-| Opción | Tipo | Descripción |
-|--------+------+-------------|
-| =programs.crush.enable= | bool | Habilitar crush |
-| =programs.crush.package= | package | Override del paquete |
-| =programs.crush.settings= | attrs | Configuración JSON (providers, lsp, mcp) |
-
-***** Ejemplo settings con LSP
-
-#+BEGIN_SRC nix
-programs.crush.settings = {
-  providers.ollama = { /* ... */ };
-  lsp = {
-    nix = { command = "nil"; };
-    go = { command = "gopls"; };
-    typescript = { command = "typescript-language-server"; args = ["--stdio"]; };
-  };
-};
+# Editar config
+vim ~/dotfiles/crush/.config/crush/crush.json
+# Cambios se aplican inmediatamente (symlink)
 #+END_SRC
 
 **** Ollama: Modelos Locales para Agentes
