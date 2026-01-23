@@ -15,6 +15,14 @@
 #   Ahora: home.file copia xmonad.hs desde dotfiles/xmonad/.config/xmonad/xmonad.hs
 #
 # FILOSOFIA: Simple copy (no templating) - xmonad.hs es portable tras Fase 1 cleanup
+#
+# TODO (Phase 3 - Portability refactor):
+#   - Cambiar xmonad.hs de .source a .text (templating)
+#   - Reemplazar /home/passh/ con ${config.home.homeDirectory}
+#   - Scripts afectados: trayer-toggle.sh, glmatrix-bg.sh
+#   - Ver xmobar.nix para mismo refactor (mismos paths hardcoded)
+#   - Consultar nixos-guru agent si dudas: ~/dotfiles/claude-code/.claude/agents/nixos-guru.md
+#   - Referencia: Commit ef0b151 (Phase 2.1) para contexto
 # =============================================================================
 
 {

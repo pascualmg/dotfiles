@@ -16,9 +16,21 @@
 #
 # NOTA: Usamos namespace "dotfiles.xmobar" para no colisionar con
 # programs.xmobar nativo de home-manager.
+#
+# TODO (Phase 3 - Portability refactor):
+#   - Reemplazar /home/passh/dotfiles/scripts/ con ${config.home.homeDirectory}/dotfiles/scripts/
+#   - Usar helper: let scriptsDir = "${config.home.homeDirectory}/dotfiles/scripts"; in
+#   - Afecta: todas las lineas Run Com "/home/passh/dotfiles/scripts/xmobar-*.sh"
+#   - Ver xmonad.nix para TODO similar (mismo problema)
+#   - Consultar nixos-guru: ~/dotfiles/claude-code/.claude/agents/nixos-guru.md
 # =============================================================================
 
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   cfg = config.dotfiles.xmobar;
@@ -36,8 +48,8 @@ let
 
   # Template GPU en la barra segun tipo
   gpuTemplate = {
-    nvidia = "%gpu%";  # Script ya incluye formato, color y click action
-    intel = "%gpu%";   # Script ya incluye formato y color
+    nvidia = "%gpu%"; # Script ya incluye formato, color y click action
+    intel = "%gpu%"; # Script ya incluye formato y color
     none = "";
   };
 
@@ -75,7 +87,9 @@ let
             ${lib.optionalString (cfg.gpuType != "none") (gpuCommand.${cfg.gpuType})}
 
             -- CPU frecuencia y governor (click abre cpupower-gui)
-            ${lib.optionalString (cfg.gpuType != "none") ","}Run Com "/home/passh/dotfiles/scripts/xmobar-cpu-freq.sh" [] "cpufreq" 20
+            ${
+              lib.optionalString (cfg.gpuType != "none") ","
+            }Run Com "/home/passh/dotfiles/scripts/xmobar-cpu-freq.sh" [] "cpufreq" 20
 
             -- CPU uso, temperatura y consumo (script externo)
             , Run Com "/home/passh/dotfiles/scripts/xmobar-cpu.sh" [] "cpu" 20
@@ -93,31 +107,31 @@ let
             , Run Date "<action=`gsimplecal`><fn=1>\xf017</fn> %a %d %b %H:%M</action>" "date" 10
 
             ${lib.optionalString (cfg.alsaMixer != null) ''
-            -- Volumen con color gradiente (script externo)
-            , Run Com "/home/passh/dotfiles/scripts/xmobar-volume.sh" [] "volume" 10
+              -- Volumen con color gradiente (script externo)
+              , Run Com "/home/passh/dotfiles/scripts/xmobar-volume.sh" [] "volume" 10
             ''}
 
             ${lib.optionalString cfg.showDiskMonitor ''
-            -- Monitor de discos genérico (NVMe + SATA + USB)
-            , Run Com "/home/passh/dotfiles/scripts/xmobar-disks.sh" [] "disks" 60
+              -- Monitor de discos genérico (NVMe + SATA + USB)
+              , Run Com "/home/passh/dotfiles/scripts/xmobar-disks.sh" [] "disks" 60
             ''}
 
             -- Bateria con color dinámico (script externo)
             ${lib.optionalString cfg.showBattery ''
-            , Run Com "/home/passh/dotfiles/scripts/xmobar-battery.sh" [] "battery" 50
+              , Run Com "/home/passh/dotfiles/scripts/xmobar-battery.sh" [] "battery" 50
             ''}
 
             -- Raton wireless (Logitech hidpp)
             ${lib.optionalString cfg.showWirelessMouse ''
-            , Run Com "/home/passh/dotfiles/scripts/wireless-mouse.sh" [] "mouse" 100
+              , Run Com "/home/passh/dotfiles/scripts/wireless-mouse.sh" [] "mouse" 100
             ''}
 
             -- XMonad Workspaces y Layout
             , Run StdinReader
 
             ${lib.optionalString cfg.showTrayer ''
-            -- Bandeja del sistema
-            , Run Com "/home/passh/dotfiles/scripts/trayer-padding-icon.sh" [] "trayerpad" 10
+              -- Bandeja del sistema
+              , Run Com "/home/passh/dotfiles/scripts/trayer-padding-icon.sh" [] "trayerpad" 10
             ''}
         ]
 
@@ -125,12 +139,17 @@ let
         -- LAYOUT: Izda (workspaces + fecha) | Dcha (menos importante → más importante)
         , sepChar = "%"
         , alignSep = "}{"
-        , template = "%date% %StdinReader% }{${lib.optionalString cfg.showTrayer " %trayerpad% |"} ${nixSep} %docker% ${lib.optionalString (cfg.alsaMixer != null) "%volume% "}${lib.optionalString cfg.showWirelessMouse "%mouse% "}${lib.optionalString cfg.showBattery "%battery% "}%network% ${lib.optionalString cfg.showDiskMonitor "%disks% "}${nixSep} ${lib.optionalString (cfg.gpuType != "none") (gpuTemplate.${cfg.gpuType} + " " + nixSep + " ")}%memory% %cpufreq% %cpu% "
+        , template = "%date% %StdinReader% }{${lib.optionalString cfg.showTrayer " %trayerpad% |"} ${nixSep} %docker% ${
+          lib.optionalString (cfg.alsaMixer != null) "%volume% "
+        }${lib.optionalString cfg.showWirelessMouse "%mouse% "}${lib.optionalString cfg.showBattery "%battery% "}%network% ${lib.optionalString cfg.showDiskMonitor "%disks% "}${nixSep} ${
+          lib.optionalString (cfg.gpuType != "none") (gpuTemplate.${cfg.gpuType} + " " + nixSep + " ")
+        }%memory% %cpufreq% %cpu% "
 
     }
   '';
 
-in {
+in
+{
   options.dotfiles.xmobar = {
     enable = lib.mkEnableOption "XMobar status bar configuration (dotfiles module)";
 
@@ -142,7 +161,11 @@ in {
     };
 
     gpuType = lib.mkOption {
-      type = lib.types.enum [ "nvidia" "intel" "none" ];
+      type = lib.types.enum [
+        "nvidia"
+        "intel"
+        "none"
+      ];
       default = "none";
       description = "Type of GPU for monitoring";
       example = "nvidia";
@@ -182,7 +205,7 @@ in {
 
     showTrayer = lib.mkOption {
       type = lib.types.bool;
-      default = false;  # Trayer ahora es toggle con Mod+t, no necesita padding
+      default = false; # Trayer ahora es toggle con Mod+t, no necesita padding
       description = "Show trayer padding (deprecated, usar Mod+t para toggle)";
     };
 
