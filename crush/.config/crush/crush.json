@@ -1,0 +1,14 @@
+{
+  "providers": {
+    "ollama-aurin": {
+      "name": "Ollama (Aurin 16GB)",
+      "base_url": "http://campo.zapto.org:11434/v1/",
+      "type": "openai-compat",
+      "models": [
+        {"name": "Qwen3 14B (tools)", "id": "qwen3:14b", "context_window": 32768, "default_max_tokens": 4096},
+        {"name": "GPT-OSS 20B (tools)", "id": "gpt-oss:20b", "context_window": 32768, "default_max_tokens": 4096},
+        {"name": "Devstral Small 2 (tools)", "id": "devstral-small-2:latest", "context_window": 32768, "default_max_tokens": 4096}
+      ]
+    }
+  }
+}
