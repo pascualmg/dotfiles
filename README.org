@@ -5,30 +5,55 @@
 
 * La Filosofía HHKB Aplicada al Sistema Operativo
 
+** La Historia
+
+La primera vez que probé un HHKB (Happy Hacking Keyboard), algo hizo clic. No fue inmediato - los primeros días maldecía la distribución, buscaba teclas que no estaban donde esperaba. Pero después de una semana, algo cambió. Mis dedos sabían dónde ir sin pensar. El teclado dejó de ser un periférico y se convirtió en *una extensión de mis manos*.
+
+Ahora llevo el HHKB a todas partes: desktop, portátil, oficina. El hardware cambia (PC, Mac, Linux), pero la interfaz con la que pienso permanece. Mis manos no tienen que reaprender.
+
+Entonces pensé: *¿Y si pudiera hacer lo mismo con TODO mi entorno?*
+
+No solo el teclado - también mi shell, mis aliases de Git, mi configuración de Vim, mis keybindings de XMonad, mis herramientas de desarrollo. Todo.
+
+*El HHKB se convirtió en una extensión de mis manos.*
+*NixOS se convirtió en una extensión de mi cerebro.*
+
 #+BEGIN_QUOTE
-"No cambies de caballo - lleva tu montura"
-— Filosofía HHKB (Happy Hacking Keyboard)
+"When America's cowboys were in the middle of a trip and their horse died, they would leave the horse there. But even if they were in the middle of a desert, they would take their saddle with them. The horse was a consumable good, but the saddle was an interface that their bodies had gotten used to. In the same vein, PCs are consumable goods, while keyboards are important interfaces."
+
+— Eiiti Wada, creador del Happy Hacking Keyboard
 #+END_QUOTE
+
+*Y si pudieras llevarte no solo la montura (el teclado), sino también las riendas, el mapa del camino, y la forma en que piensas sobre el viaje?*
 
 ** El Problema que Todos Hemos Vivido
 
-Imagina este escenario (que has vivido 100 veces):
+Imagina estos escenarios (que has vivido 1000 veces):
 
-1. *Reinstalar Windows/Mac/Linux*
-   - "Joder, ¿dónde estaba esa config de VSCode?"
-   - "¿Cómo se llamaba ese plugin de Vim?"
-   - "Ah coño, ¿cómo configuré el Docker Compose?"
-   - *3 horas después:* "Creo que ya está... pero falta algo"
+1. *Formatear / Reinstalar el sistema*
+   - "Mierda, ¿cuál era el plugin de VSCode para formatear?"
+   - "¿Cómo coño se configuraba el Dockerfile para el proyecto?"
+   - "Tenía un alias de Git que era la hostia... ¿cuál era?"
+   - "Las extensiones de Chrome, los favoritos, las sesiones guardadas..."
+   - *4 horas después:* "Creo que ya está... pero me falta algo y no sé qué"
 
-2. *Nuevo portátil del trabajo*
-   - Teams, Slack, Docker, IntelliJ, Postman, DBeaver...
-   - "¿En serio tengo que configurar TODO otra vez?"
-   - *2 días perdidos* configurando herramientas
+2. *Nuevo portátil (del trabajo, personal, o porque el viejo murió)*
+   - Teams, Slack, Zoom, Discord
+   - Docker, Docker Compose, Kubernetes
+   - IntelliJ IDEA, VSCode, Postman, DBeaver, pgAdmin
+   - Node, Python, Go, Rust (con sus versiones específicas)
+   - Nginx, PostgreSQL, Redis, MongoDB
+   - Git config (nombre, email, aliases), SSH keys, GPG keys
+   - Fuentes (Nerd Fonts), temas, wallpapers, iconos
+   - *2-3 DÍAS perdidos* instalando y configurando
+   - *1 semana más* recordando "ah, me faltaba esto"
 
-3. *Tu máquina de casa + portátil + servidor*
-   - Cada una configurada diferente
-   - Cambias algo en una → tienes que recordar cambiarlo en las otras
-   - *Caos total* - nunca sabes qué funciona en cuál
+3. *Desktop potente en casa + Portátil + Servidor en la nube*
+   - Cada máquina configurada de forma diferente
+   - "En el desktop funcionaba, en el portátil no... ¿qué cambiará?"
+   - Instalas algo nuevo → tienes que acordarte de instalarlo en las otras 2
+   - Actualizas config → ¿en cuál de las 3 era la versión buena?
+   - *Caos absoluto* - nunca sabes qué funciona dónde
 
 ** La Solución: Sistema Operativo Declarativo (NixOS)
 
