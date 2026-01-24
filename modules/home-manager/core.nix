@@ -27,7 +27,8 @@ in
 
 {
   imports = [
-    ./programs/ai-agents # AI agents modular config (claude-code, crush, opencode)
+    ./programs/ai-agents         # AI agents modular config (claude-code, crush, opencode)
+    ./programs/console-theme.nix # Temas terminal en caliente (TTY + Termux)
   ];
 
   # Home Manager basico

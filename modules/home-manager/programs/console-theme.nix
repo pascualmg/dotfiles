@@ -1,8 +1,12 @@
 # =============================================================================
-# HOME-MANAGER: Console (TTY) Theme Switcher
+# HOME-MANAGER: Console/Terminal Theme Switcher
 # =============================================================================
-# Permite cambiar el tema de colores de la consola TTY en caliente.
-# Similar a alacritty-theme pero para el framebuffer.
+# Permite cambiar el tema de colores de la terminal en caliente.
+#
+# Soporta:
+#   - TTY Linux (Ctrl+Alt+F1-F6) - secuencias framebuffer
+#   - Termux/nix-on-droid - secuencias OSC xterm
+#   - Cualquier terminal xterm-compatible
 #
 # Uso:
 #   console-theme dark      # Spacemacs Dark
@@ -10,8 +14,6 @@
 #   console-theme commodore # CRT Phosphor Green
 #   console-theme mix       # Spacemacs + Neon accents
 #   console-theme list      # Listar temas
-#
-# NOTA: Solo funciona en TTY real (Ctrl+Alt+F1-F6), no en terminales gráficos.
 # =============================================================================
 
 { config, lib, pkgs, ... }:
@@ -189,16 +191,9 @@ let
   consoleThemeScript = pkgs.writeShellScriptBin "console-theme" ''
     set -euo pipefail
 
-    # Solo funciona en TTY real
-    if [[ "$TERM" != "linux" ]]; then
-      echo "Error: console-theme solo funciona en TTY (Ctrl+Alt+F1-F6)"
-      echo "Para terminales gráficos usa: alacritty-theme"
-      exit 1
-    fi
-
     usage() {
       cat <<EOF
-    Console Theme Switcher - Cambia colores de TTY en caliente
+    Console/Terminal Theme Switcher - Cambia colores en caliente
 
     Uso: console-theme <tema>
 
@@ -215,22 +210,45 @@ let
       list       Listar temas disponibles
       current    Mostrar tema actual
 
+    Soporta: TTY Linux, Termux, nix-on-droid, xterm-compatible
+
     Ejemplos:
       console-theme dark
       console-theme commodore
     EOF
     }
 
+    # Detectar tipo de terminal
+    is_linux_tty() {
+      [[ "$TERM" == "linux" ]]
+    }
+
     # Función para aplicar un tema (16 colores)
     apply_theme() {
       local -a colors=("$@")
       local i
-      for i in {0..15}; do
-        # Formato: \e]Pnrrggbb donde n es 0-F en hex
-        printf '\e]P%X%s' "$i" "''${colors[$i]}"
-      done
-      # Limpiar pantalla para aplicar fondo
-      clear
+
+      if is_linux_tty; then
+        # TTY Linux: secuencias framebuffer \e]Pnrrggbb
+        for i in {0..15}; do
+          printf '\e]P%X%s' "$i" "''${colors[$i]}"
+        done
+        clear
+      else
+        # xterm/Termux: secuencias OSC
+        local ESC=''$'\e'
+        local BEL=''$'\a'
+
+        # Background = color 0, Foreground = color 7
+        echo -ne "''${ESC}]11;#''${colors[0]}''${BEL}"
+        echo -ne "''${ESC}]10;#''${colors[7]}''${BEL}"
+        echo -ne "''${ESC}]12;#''${colors[7]}''${BEL}"
+
+        # Colores 0-15
+        for i in {0..15}; do
+          echo -ne "''${ESC}]4;$i;#''${colors[$i]}''${BEL}"
+        done
+      fi
     }
 
     # Temas embebidos
