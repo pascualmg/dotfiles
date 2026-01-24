@@ -411,7 +411,7 @@ nix flake check --show-trace
 | *Home-manager* | ✅ 200+ packages, declarative configs |
 | *Multi-machine support* | ✅ Easy to add new machines |
 | *Hardware support* | ✅ NVIDIA, Apple, pro audio modules |
-| *Wayland compositors* | ⚠️ Available (Hyprland/Niri) but LightDM issue |
+| *Wayland compositors* | ✅ Hyprland, niri, GNOME Wayland (greetd) |
 | *Plug-and-play* | ❌ WIP - requires manual adaptation |
 
 ** What's Personal (Must Customize)
@@ -480,7 +480,8 @@ dotfiles/
 |-- modules/
 |   |-- base/                    * BASE UNIFICADA (todas las maquinas)
 |   |   |-- default.nix          # Imports: boot, nix-settings, packages, desktop, etc.
-|   |   |-- desktop.nix          # LightDM + GNOME + XMonad
+|   |   |-- desktop.nix          # GNOME + XMonad (sesiones)
+|   |   |-- greetd.nix           # greetd + tuigreet (login TUI)
 |   |   |-- sunshine.nix         # Streaming server (opcional)
 |   |   `-- virtualization.nix   # Docker + libvirt
 |   |-- common/                  . Modulos legacy (usados por mkNixosConfig)
@@ -546,9 +547,9 @@ vespino = mkSystem {
 
 | Maquina | Hardware | Rol | Display Manager |
 |---------+----------+-----+-----------------|
-| aurin   | Dual Xeon E5-2699v3, RTX 5080, 128GB | Produccion, desarrollo | LightDM |
-| macbook | MacBook Pro 2016, Intel, HiDPI | Laptop, movilidad | LightDM |
-| vespino | AMD CPU, RTX 2060 | Testing, Minecraft, NFS | LightDM |
+| aurin   | Dual Xeon E5-2699v3, RTX 5080, 128GB | Produccion, desarrollo | greetd |
+| macbook | MacBook Pro 2016, Intel, HiDPI | Laptop, movilidad | greetd |
+| vespino | AMD CPU, RTX 2060 | Testing, Minecraft, NFS | greetd |
 
 ** VPN Vocento (Ivanti/Pulse Secure) - EXPERIMENTAL [2026-01-21]
 
@@ -2648,74 +2649,93 @@ console.font = lib.mkForce "ter-v32n";
 console.packages = lib.mkForce [ pkgs.terminus_font ];
 #+END_SRC
 
-** Display Managers: GDM vs LightDM - PARCIAL (2026-01-19)
+** Display Managers: La saga GDM -> LightDM -> greetd (RESUELTO 2026-01-24)
 
-*Estado:* PARCIAL - XMonad OK, Wayland ROTO
+*Estado:* COMPLETO - X11 (XMonad) Y Wayland (Hyprland, niri) funcionan
 
-*** El problema
+*** Historia del problema
 
-Intentamos usar GDM + GNOME + XMonad como stack unificado en la arquitectura clone-first.
+*Era 1: GDM (2026-01-19)*
+Intentamos usar GDM + GNOME + XMonad como stack unificado.
 *Ambas maquinas (aurin y macbook) dejaron de arrancar graficamente.*
-
-Sintoma: El sistema arranca, llega a "reached target graphical interface", pero nunca aparece el login.
-
-*** Causa raiz
 
 GDM 49+ tiene problemas con:
 1. *NVIDIA*: GDM en modo X11 busca =gnome-session-x11@gnome-login.target= que no existe
 2. *XMonad puro*: GDM espera una sesion GNOME completa, no solo un WM
 
-*** Intentos fallidos
+*Era 2: LightDM (2026-01-19)*
+Cambiamos a LightDM. XMonad funcionaba, PERO:
+- LightDM solo lee =xsessions/= (X11)
+- Ignora completamente =wayland-sessions/=
+- Hyprland, niri, GNOME Wayland NO aparecian
 
-1. =services.displayManager.gdm.wayland = false=
-   - ERROR: GDM en X11 tiene dependencias rotas con gnome-session
-   - Rompio AMBAS maquinas
+*Era 3: greetd + tuigreet (2026-01-24)*
+Solucion definitiva: greetd con tuigreet (TUI greeter).
 
-2. Mover =gdm.wayland = false= solo al modulo NVIDIA
-   - Seguia fallando porque el problema es GDM en si
+*** Solucion actual: greetd + tuigreet
 
-*** Solucion final
-
-Cambiar de GDM a LightDM en =modules/base/desktop.nix=:
+Configurado en =modules/base/greetd.nix=:
 
 #+BEGIN_SRC nix
-# ANTES (roto con NVIDIA y XMonad):
-services.displayManager.gdm.enable = true;
-
-# DESPUES (funciona perfectamente):
-services.xserver.displayManager.lightdm.enable = true;
-services.displayManager.defaultSession = "none+xmonad";
+services.greetd = {
+  enable = true;
+  settings.default_session = {
+    command = ''
+      ${pkgs.tuigreet}/bin/tuigreet \
+        --time \
+        --asterisks \
+        --remember \
+        --remember-user-session \
+        --user passh \
+        --sessions ${config.services.displayManager.sessionData.desktops}/share/xsessions:${config.services.displayManager.sessionData.desktops}/share/wayland-sessions \
+        --xsession-wrapper "${pkgs.xorg.xinit}/bin/startx /run/current-system/sw/bin/env -- -keeptty"
+    '';
+    user = "greeter";
+  };
+};
 #+END_SRC
 
-*** Por que LightDM funciona
+*** Por que greetd + tuigreet
 
-- Es simple: solo lanza sesiones, no tiene dependencias complejas
-- Funciona con NVIDIA sin configuracion extra
-- Puede lanzar cualquier sesion: GNOME, XMonad, Hyprland, etc.
-- =display-setup-script= se ejecuta ANTES de crear la sesion X
+| Caracteristica | GDM | LightDM | greetd |
+|----------------+-----+---------+--------|
+| X11 sessions | Si (roto NVIDIA) | Si | Si |
+| Wayland sessions | Si | NO | Si |
+| Dependencias | Pesadas (GNOME) | Medias | Minimas |
+| TUI login | No | No | Si (tuigreet) |
+| NVIDIA compatible | Problematico | Si | Si |
+
+*** Controles de tuigreet
+
+| Tecla | Accion |
+|-------+--------|
+| Tab | Siguiente campo |
+| F2 | Menu de sesiones |
+| F3 | Ciclar sesiones |
+| Enter | Login |
+| F1 | Mostrar/ocultar password |
 
 *** Estado actual de las maquinas
 
-| Maquina | DM | WM/DE | Picom | Estado |
-|---------+----+-------+-------+--------|
-| aurin | LightDM | XMonad (X11) | home-manager | OK |
-| vespino | LightDM | XMonad (X11) | home-manager | OK |
-| macbook | LightDM | XMonad (X11) | home-manager | OK |
+| Maquina | DM | Sesiones disponibles | Estado |
+|---------+----+----------------------+--------|
+| macbook | greetd | XMonad, GNOME, Hyprland, niri | OK (probado) |
+| aurin | greetd | XMonad, GNOME, Hyprland, niri | Pendiente test |
+| vespino | greetd | XMonad, GNOME, Hyprland, niri | Pendiente test |
 
-*** PENDIENTE: Wayland no funciona
+*** NVIDIA + Wayland (aurin, vespino)
 
-*Problema:* LightDM es un display manager X11. Las sesiones Wayland (GNOME, niri, Hyprland) no arrancan correctamente.
+Para Wayland en NVIDIA, las variables de entorno van en =hardware/nvidia/*.nix=:
 
-*Afectados:*
-- GNOME (Wayland) - No arranca
-- niri - No arranca
-- Hyprland - No arranca
+#+BEGIN_SRC nix
+environment.sessionVariables = {
+  GBM_BACKEND = "nvidia-drm";
+  __GLX_VENDOR_LIBRARY_NAME = "nvidia";
+  WLR_NO_HARDWARE_CURSORS = "1";  # Necesario para wlroots (Hyprland)
+};
+#+END_SRC
 
-*Posibles soluciones a investigar:*
-1. Volver a GDM solo para sesiones Wayland
-2. Usar greetd (display manager moderno que soporta Wayland)
-3. Usar SDDM con soporte Wayland
-4. Login directo desde TTY con =Hyprland= / =niri=
+Estas variables se aplican DESPUES del login (sesion), no en greetd (pre-login)
 
 *** Picom: por que no esta en desktop.nix
 
@@ -3549,8 +3569,9 @@ Lista de secretos que necesitan migrarse (VALORES SANITIZADOS - no reales):
   - Copiar disco QCOW2 a vespino
   - Configurar =services.vocento-vpn-bridge= con interface correcta
   - Validar que funciona igual que en macbook
-- [ ] *WAYLAND ROTO* - LightDM no soporta sesiones Wayland (GNOME, niri, Hyprland)
-  - Investigar: greetd, SDDM, o login directo desde TTY
+- [X] *WAYLAND RESUELTO* - greetd + tuigreet soporta X11 y Wayland (2026-01-24)
+  - Probado en macbook con Hyprland
+  - Pendiente: probar en aurin y vespino (NVIDIA)
 - [ ] *rEFInd* - Bootloader para fix geometria TTY en MacBook
   - =boot.loader.refind.enable = true=
   - Configurar =resolution 2560 1600= en refind.conf
@@ -3625,7 +3646,7 @@ Lista de secretos que necesitan migrarse (VALORES SANITIZADOS - no reales):
 
 *Ultima actualizacion:* 2026-01-19
 *Arquitectura:* Clone-First (mkSystem)
-*Display Manager:* LightDM (todas las maquinas)
+*Display Manager:* greetd + tuigreet (todas las maquinas)
 *Sistemas:* Aurin, MacBook, Vespino (NixOS 25.05)
 *Shell principal:* Fish
 *Window Manager:* XMonad

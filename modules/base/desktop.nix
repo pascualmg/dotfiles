@@ -1,18 +1,23 @@
 # =============================================================================
 # MODULES/BASE/DESKTOP.NIX - Escritorio unificado para TODAS las maquinas
 # =============================================================================
-# LightDM + GNOME + XMonad - TODO disponible en TODAS las maquinas
+# SDDM + GNOME + XMonad - TODO disponible en TODAS las maquinas
 #
 # IMPORTANTE:
-#   - LightDM en vez de GDM (GDM tiene problemas con NVIDIA)
+#   - SDDM como display manager (soporta X11 Y Wayland sin dramas)
 #   - NO habilita picom aqui (va en home-manager, se lanza desde xmonad.hs)
 #   - displaySetupCommand va en los modulos hardware/ de cada maquina
 #
-# Sesiones disponibles en LightDM:
-#   - GNOME
-#   - XMonad
-#   - Hyprland (via hyprland.nix)
-#   - Niri (via niri.nix)
+# Sesiones disponibles (detectadas automaticamente por SDDM):
+#   - XMonad (X11)
+#   - GNOME (X11 y Wayland)
+#   - Hyprland (Wayland)
+#   - niri (Wayland)
+#
+# HISTORIAL:
+#   - 2026-01-19: LightDM (GDM roto con NVIDIA)
+#   - 2026-01-24: greetd (X11 roto, Xorg sin suid + logind = pesadilla)
+#   - 2026-01-24: SDDM (funciona todo)
 # =============================================================================
 
 { config, pkgs, lib, ... }:
@@ -21,11 +26,10 @@
   # ===== X.ORG SERVER =====
   services.xserver.enable = true;
 
-  # ===== DISPLAY MANAGER: LIGHTDM =====
-  # LightDM en vez de GDM (GDM tiene problemas con NVIDIA)
-  # LightDM es simple y funciona con cualquier sesion
-  services.xserver.displayManager.lightdm.enable = true;
-  services.displayManager.defaultSession = "none+xmonad";  # XMonad por defecto en todas
+  # ===== DISPLAY MANAGER =====
+  # SDDM (configurado en ./sddm.nix)
+  # - Soporta X11 (XMonad) y Wayland (Hyprland, niri)
+  # - Login grafico, simple, funciona
 
   # ===== DESKTOP ENVIRONMENT: GNOME =====
   services.desktopManager.gnome.enable = true;

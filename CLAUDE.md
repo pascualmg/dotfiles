@@ -26,7 +26,8 @@ dotfiles/
 |-- modules/
 |   |-- base/                    # BASE UNIFICADA (todas las maquinas)
 |   |   |-- default.nix          # Imports: core/* + desktop + virtualization
-|   |   |-- desktop.nix          # LightDM + GNOME + XMonad
+|   |   |-- desktop.nix          # GNOME + XMonad (sesiones)
+|   |   |-- sddm.nix             # SDDM (login grafico, X11 + Wayland)
 |   |   |-- sunshine.nix         # Streaming server (opcional)
 |   |   `-- virtualization.nix   # Docker + libvirt
 |   |-- core/                    # Modulos core del sistema (boot, locale, packages, etc.)
@@ -83,55 +84,35 @@ vespino = mkSystem {
 };
 ```
 
-## El problema GDM vs LightDM (RESUELTO 2026-01-19)
+## Display Managers: GDM -> LightDM -> greetd -> SDDM (RESUELTO 2026-01-24)
 
-### El problema
+### Historia
 
-Intentamos usar GDM + GNOME + XMonad como stack unificado. **Ambas maquinas (aurin y macbook) dejaron de arrancar graficamente.**
+1. **GDM (2026-01-19)**: Roto con NVIDIA y XMonad puro
+2. **LightDM (2026-01-19)**: Funcionaba X11, pero NO soporta Wayland
+3. **greetd + tuigreet (2026-01-24)**: X11 roto - Xorg sin suid necesita logind, pesadilla de permisos
+4. **SDDM (2026-01-24)**: Funciona con X11 Y Wayland sin problemas
 
-Sintoma: El sistema arranca, llega a "reached target graphical interface", pero nunca aparece el login.
+### Solucion actual: SDDM
 
-### Causa raiz
-
-GDM 49+ tiene problemas con:
-1. **NVIDIA**: GDM en modo X11 busca `gnome-session-x11@gnome-login.target` que no existe
-2. **XMonad puro**: GDM espera una sesion GNOME completa, no solo un WM
-
-### Intentos fallidos
-
-1. `services.displayManager.gdm.wayland = false`
-   - ERROR: GDM en X11 tiene dependencias rotas con gnome-session
-   - Rompio AMBAS maquinas
-
-2. Mover `gdm.wayland = false` solo al modulo NVIDIA
-   - Seguia fallando porque el problema es GDM en si
-
-### Solucion final
-
-Cambiar de GDM a LightDM en `modules/base/desktop.nix`:
+Configurado en `modules/base/sddm.nix`:
 
 ```nix
-# ANTES (roto con NVIDIA y XMonad):
-services.displayManager.gdm.enable = true;
-
-# DESPUES (funciona perfectamente):
-services.xserver.displayManager.lightdm.enable = true;
-services.displayManager.defaultSession = "none+xmonad";
+services.displayManager.sddm = {
+  enable = true;
+  wayland.enable = true;  # Permite sesiones Wayland
+};
 ```
 
-**Por que LightDM funciona:**
-- Es simple: solo lanza sesiones, no tiene dependencias complejas
-- Funciona con NVIDIA sin configuracion extra
-- Puede lanzar cualquier sesion: GNOME, XMonad, Hyprland, etc.
-- `display-setup-script` se ejecuta ANTES de crear la sesion
+**Simple. Funciona. Sin dramas.**
 
 ### Estado actual
 
-| Maquina | Display Manager | Stack | Estado |
-|---------|-----------------|-------|--------|
-| aurin   | LightDM         | XMonad + GNOME disponible | OK |
-| macbook | LightDM         | XMonad + GNOME disponible | OK |
-| vespino | LightDM         | XMonad + GNOME disponible | OK |
+| Maquina | Display Manager | Sesiones | Estado |
+|---------|-----------------|----------|--------|
+| macbook | SDDM | XMonad, GNOME, Hyprland, niri | OK (probado) |
+| aurin   | SDDM | XMonad, GNOME, Hyprland, niri | Pendiente test |
+| vespino | SDDM | XMonad, GNOME, Hyprland, niri | Pendiente test |
 
 ## Aplicar configuraciones
 
@@ -249,7 +230,7 @@ numa-info           # Info NUMA dual socket
 
 ---
 
-**Ultima actualizacion**: 2026-01-19
+**Ultima actualizacion**: 2026-01-24
 **Arquitectura**: Clone-First (mkSystem)
-**Display Manager**: LightDM (todas las maquinas)
+**Display Manager**: SDDM (todas las maquinas)
 **Sistemas**: Aurin, MacBook, Vespino (NixOS 25.05)
