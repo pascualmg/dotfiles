@@ -411,7 +411,7 @@ nix flake check --show-trace
 | *Home-manager* | ✅ 200+ packages, declarative configs |
 | *Multi-machine support* | ✅ Easy to add new machines |
 | *Hardware support* | ✅ NVIDIA, Apple, pro audio modules |
-| *Wayland compositors* | ✅ Hyprland, niri, GNOME Wayland (greetd) |
+| *Wayland compositors* | ✅ Hyprland, niri, GNOME Wayland (SDDM) |
 | *Plug-and-play* | ❌ WIP - requires manual adaptation |
 
 ** What's Personal (Must Customize)
@@ -481,7 +481,7 @@ dotfiles/
 |   |-- base/                    * BASE UNIFICADA (todas las maquinas)
 |   |   |-- default.nix          # Imports: boot, nix-settings, packages, desktop, etc.
 |   |   |-- desktop.nix          # GNOME + XMonad (sesiones)
-|   |   |-- greetd.nix           # greetd + tuigreet (login TUI)
+|   |   |-- sddm.nix             # SDDM display manager (X11 + Wayland)
 |   |   |-- sunshine.nix         # Streaming server (opcional)
 |   |   `-- virtualization.nix   # Docker + libvirt
 |   |-- common/                  . Modulos legacy (usados por mkNixosConfig)
@@ -547,9 +547,9 @@ vespino = mkSystem {
 
 | Maquina | Hardware | Rol | Display Manager |
 |---------+----------+-----+-----------------|
-| aurin   | Dual Xeon E5-2699v3, RTX 5080, 128GB | Produccion, desarrollo | greetd |
-| macbook | MacBook Pro 2016, Intel, HiDPI | Laptop, movilidad | greetd |
-| vespino | AMD CPU, RTX 2060 | Testing, Minecraft, NFS | greetd |
+| aurin   | Dual Xeon E5-2699v3, RTX 5080, 128GB | Produccion, desarrollo | SDDM |
+| macbook | MacBook Pro 2016, Intel, HiDPI | Laptop, movilidad | SDDM |
+| vespino | AMD CPU, RTX 2060 | Testing, Minecraft, NFS | SDDM |
 
 ** VPN Vocento (Ivanti/Pulse Secure) - EXPERIMENTAL [2026-01-21]
 
@@ -2649,7 +2649,7 @@ console.font = lib.mkForce "ter-v32n";
 console.packages = lib.mkForce [ pkgs.terminus_font ];
 #+END_SRC
 
-** Display Managers: La saga GDM -> LightDM -> greetd (RESUELTO 2026-01-24)
+** Display Managers: La saga GDM -> LightDM -> greetd -> SDDM (RESUELTO 2026-01-24)
 
 *Estado:* COMPLETO - X11 (XMonad) Y Wayland (Hyprland, niri) funcionan
 
@@ -2669,59 +2669,47 @@ Cambiamos a LightDM. XMonad funcionaba, PERO:
 - Ignora completamente =wayland-sessions/=
 - Hyprland, niri, GNOME Wayland NO aparecian
 
-*Era 3: greetd + tuigreet (2026-01-24)*
-Solucion definitiva: greetd con tuigreet (TUI greeter).
+*Era 3: greetd + tuigreet (2026-01-24) - FALLIDO*
+Intentamos greetd con tuigreet (TUI greeter), pero:
+- X11 roto: Xorg sin suid necesita logind para permisos de input
+- Sesiones Wayland funcionaban pero X11 (XMonad) no arrancaba
+- Demasiado complejo configurar correctamente
 
-*** Solucion actual: greetd + tuigreet
+*Era 4: SDDM (2026-01-24)*
+Solucion definitiva: SDDM con tema astronaut.
 
-Configurado en =modules/base/greetd.nix=:
+*** Solucion actual: SDDM
+
+Configurado en =modules/base/sddm.nix=:
 
 #+BEGIN_SRC nix
-services.greetd = {
+services.displayManager.sddm = {
   enable = true;
-  settings.default_session = {
-    command = ''
-      ${pkgs.tuigreet}/bin/tuigreet \
-        --time \
-        --asterisks \
-        --remember \
-        --remember-user-session \
-        --user passh \
-        --sessions ${config.services.displayManager.sessionData.desktops}/share/xsessions:${config.services.displayManager.sessionData.desktops}/share/wayland-sessions \
-        --xsession-wrapper "${pkgs.xorg.xinit}/bin/startx /run/current-system/sw/bin/env -- -keeptty"
-    '';
-    user = "greeter";
-  };
+  wayland.enable = true;  # Permite sesiones Wayland
+  theme = "sddm-astronaut-theme";
+  extraPackages = [ pkgs.sddm-astronaut ];
 };
 #+END_SRC
 
-*** Por que greetd + tuigreet
+*Simple. Funciona. Sin dramas.*
 
-| Caracteristica | GDM | LightDM | greetd |
-|----------------+-----+---------+--------|
-| X11 sessions | Si (roto NVIDIA) | Si | Si |
-| Wayland sessions | Si | NO | Si |
-| Dependencias | Pesadas (GNOME) | Medias | Minimas |
-| TUI login | No | No | Si (tuigreet) |
-| NVIDIA compatible | Problematico | Si | Si |
+*** Por que SDDM
 
-*** Controles de tuigreet
-
-| Tecla | Accion |
-|-------+--------|
-| Tab | Siguiente campo |
-| F2 | Menu de sesiones |
-| F3 | Ciclar sesiones |
-| Enter | Login |
-| F1 | Mostrar/ocultar password |
+| Caracteristica | GDM | LightDM | greetd | SDDM |
+|----------------+-----+---------+--------+------|
+| X11 sessions | Si (roto NVIDIA) | Si | Roto (suid) | Si |
+| Wayland sessions | Si | NO | Si | Si |
+| Dependencias | Pesadas (GNOME) | Medias | Minimas | Medias (Qt) |
+| NVIDIA compatible | Problematico | Si | Parcial | Si |
+| Configuracion | Compleja | Media | Compleja | Simple |
 
 *** Estado actual de las maquinas
 
 | Maquina | DM | Sesiones disponibles | Estado |
 |---------+----+----------------------+--------|
-| macbook | greetd | XMonad, GNOME, Hyprland, niri | OK (probado) |
-| aurin | greetd | XMonad, GNOME, Hyprland, niri | Pendiente test |
-| vespino | greetd | XMonad, GNOME, Hyprland, niri | Pendiente test |
+| macbook | SDDM | XMonad, GNOME, KDE, Hyprland, niri | OK (probado) |
+| aurin   | SDDM | XMonad, GNOME, KDE, Hyprland, niri | OK (probado) |
+| vespino | SDDM | XMonad, GNOME, KDE, Hyprland, niri | Pendiente test |
 
 *** NVIDIA + Wayland (aurin, vespino)
 
@@ -2735,7 +2723,7 @@ environment.sessionVariables = {
 };
 #+END_SRC
 
-Estas variables se aplican DESPUES del login (sesion), no en greetd (pre-login)
+Estas variables se aplican DESPUES del login (sesion), no en SDDM (pre-login)
 
 *** Picom: por que no esta en desktop.nix
 
@@ -3569,7 +3557,7 @@ Lista de secretos que necesitan migrarse (VALORES SANITIZADOS - no reales):
   - Copiar disco QCOW2 a vespino
   - Configurar =services.vocento-vpn-bridge= con interface correcta
   - Validar que funciona igual que en macbook
-- [X] *WAYLAND RESUELTO* - greetd + tuigreet soporta X11 y Wayland (2026-01-24)
+- [X] *WAYLAND RESUELTO* - SDDM soporta X11 y Wayland (2026-01-24)
   - Probado en macbook con Hyprland
   - Pendiente: probar en aurin y vespino (NVIDIA)
 - [ ] *rEFInd* - Bootloader para fix geometria TTY en MacBook
@@ -3632,6 +3620,123 @@ Lista de secretos que necesitan migrarse (VALORES SANITIZADOS - no reales):
 - [X] Migrar xmonad a home-manager - DONE (Phase 2)
 - [ ] Eliminar stow cuando composer migre (CRÍTICO: composer en PROD Vocento)
 
+* Apps Utiles de GNOME y KDE (para usar en XMonad)
+
+Al tener GNOME y KDE Plasma instalados, tenemos acceso a todas sus aplicaciones
+que funcionan perfectamente en XMonad u otros WMs minimalistas.
+
+** Configuracion del Sistema
+
+| App                        | DE    | Comando                    | Para que                              |
+|----------------------------+-------+----------------------------+---------------------------------------|
+| GNOME Settings             | GNOME | =gnome-control-center=     | Config general del sistema            |
+| KDE System Settings        | KDE   | =systemsettings=           | Config general del sistema            |
+| Display/Monitors           | -     | =arandr=                   | Configurar monitores (xrandr GUI)     |
+| Network Connections        | GNOME | =nm-connection-editor=     | WiFi, VPN, proxies                    |
+| Bluetooth                  | -     | =blueman-manager=          | Dispositivos Bluetooth                |
+| Audio/Volume               | -     | =pavucontrol=              | Mezclador de audio detallado          |
+| Printers                   | GNOME | =system-config-printer=    | Configurar impresoras                 |
+| Users                      | GNOME | =gnome-control-center user-accounts= | Gestion de usuarios        |
+| Date & Time                | GNOME | =gnome-control-center datetime= | Zona horaria, NTP               |
+| Power                      | GNOME | =gnome-control-center power= | Energia, suspension                 |
+| KDE Connect                | KDE   | =kdeconnect-app=           | Conectar movil al PC                  |
+
+** Gestion de Archivos
+
+| App                        | DE    | Comando                    | Para que                              |
+|----------------------------+-------+----------------------------+---------------------------------------|
+| Dolphin                    | KDE   | =dolphin=                  | File manager muy potente              |
+| Nautilus                   | GNOME | =nautilus=                 | File manager GNOME                    |
+| Thunar                     | XFCE  | =thunar=                   | File manager ligero                   |
+| Disks                      | GNOME | =gnome-disks=              | Particiones, montar discos, SMART     |
+| KDE Partition Manager      | KDE   | =partitionmanager=         | Particiones avanzado                  |
+| Filelight                  | KDE   | =filelight=                | Uso de disco visual (sunburst)        |
+| Baobab                     | GNOME | =baobab=                   | Uso de disco visual                   |
+
+** Multimedia
+
+| App                        | DE    | Comando                    | Para que                              |
+|----------------------------+-------+----------------------------+---------------------------------------|
+| Gwenview                   | KDE   | =gwenview=                 | Visor imagenes con edicion basica     |
+| Eye of GNOME               | GNOME | =eog=                      | Visor imagenes simple                 |
+| Okular                     | KDE   | =okular=                   | PDFs, ePub, comics, anotaciones       |
+| Evince                     | GNOME | =evince=                   | PDFs simple                           |
+| Totem                      | GNOME | =totem=                    | Reproductor video                     |
+| Elisa                      | KDE   | =elisa=                    | Reproductor musica                    |
+| Rhythmbox                  | GNOME | =rhythmbox=                | Reproductor musica + podcasts         |
+
+** Screenshots y Grabacion
+
+| App                        | DE    | Comando                    | Para que                              |
+|----------------------------+-------+----------------------------+---------------------------------------|
+| Spectacle                  | KDE   | =spectacle=                | Screenshots con anotaciones           |
+| GNOME Screenshot           | GNOME | =gnome-screenshot=         | Screenshots basico                    |
+| Flameshot                  | -     | =flameshot gui=            | Screenshots con edicion               |
+| OBS Studio                 | -     | =obs=                      | Grabacion/streaming profesional       |
+| Peek                       | -     | =peek=                     | GIFs animados                         |
+
+** Editores y Documentos
+
+| App                        | DE    | Comando                    | Para que                              |
+|----------------------------+-------+----------------------------+---------------------------------------|
+| Kate                       | KDE   | =kate=                     | Editor texto avanzado                 |
+| GNOME Text Editor          | GNOME | =gnome-text-editor=        | Editor texto simple                   |
+| Gedit                      | GNOME | =gedit=                    | Editor texto clasico                  |
+| LibreOffice                | -     | =libreoffice=              | Suite offimatica completa             |
+| Apostrophe                 | GNOME | =apostrophe=               | Editor Markdown                       |
+
+** Utilidades
+
+| App                        | DE    | Comando                    | Para que                              |
+|----------------------------+-------+----------------------------+---------------------------------------|
+| Calculator                 | GNOME | =gnome-calculator=         | Calculadora cientifica                |
+| KCalc                      | KDE   | =kcalc=                    | Calculadora                           |
+| System Monitor             | GNOME | =gnome-system-monitor=     | Procesos, CPU, memoria                |
+| KSysGuard                  | KDE   | =ksysguard=                | Monitor sistema clasico               |
+| Plasma System Monitor      | KDE   | =plasma-systemmonitor=     | Monitor sistema moderno               |
+| Characters                 | GNOME | =gnome-characters=         | Mapa de caracteres, emojis            |
+| KCharSelect                | KDE   | =kcharselect=              | Mapa de caracteres                    |
+| Fonts                      | GNOME | =gnome-font-viewer=        | Visor de fuentes                      |
+| Archive Manager            | GNOME | =file-roller=              | Comprimir/descomprimir                |
+| Ark                        | KDE   | =ark=                      | Comprimir/descomprimir                |
+| Secrets (Keyring)          | GNOME | =gnome-keyring=            | Gestor de passwords del sistema       |
+| KWallet                    | KDE   | =kwalletmanager5=          | Gestor de passwords del sistema       |
+
+** Desarrollo
+
+| App                        | DE    | Comando                    | Para que                              |
+|----------------------------+-------+----------------------------+---------------------------------------|
+| D-Spy                      | GNOME | =d-spy=                    | Explorador D-Bus                      |
+| Qt Designer                | KDE   | =designer=                 | Disenar interfaces Qt                 |
+| Glade                      | GNOME | =glade=                    | Disenar interfaces GTK                |
+
+** Herramientas CLI utiles (bonus)
+
+| Comando                    | Para que                                          |
+|----------------------------+---------------------------------------------------|
+| =xrandr=                   | Configurar monitores desde terminal               |
+| =autorandr=                | Perfiles de monitor automaticos                   |
+| =xdotool=                  | Automatizar clicks y teclas                       |
+| =xclip= / =xsel=           | Clipboard desde terminal                          |
+| =wl-copy= / =wl-paste=     | Clipboard Wayland                                 |
+| =notify-send=              | Enviar notificaciones                             |
+| =pactl=                    | Control PulseAudio/PipeWire                       |
+| =playerctl=                | Controlar reproductores multimedia                |
+| =brightnessctl=            | Controlar brillo de pantalla                      |
+| =nmcli=                    | NetworkManager desde terminal                     |
+| =bluetoothctl=             | Bluetooth desde terminal                          |
+
+** Nota sobre instalacion
+
+La mayoria de estas apps ya estan instaladas al tener GNOME y KDE Plasma habilitados.
+Si alguna falta, se puede instalar temporalmente con:
+
+#+begin_src bash
+nix-shell -p gnome.gnome-disk-utility  # Ejemplo
+#+end_src
+
+O anadirla permanentemente en =modules/core/packages.nix=.
+
 * Referencias
 
 - [[https://nixos.org/manual/nixos/stable/][NixOS Manual]]
@@ -3644,12 +3749,12 @@ Lista de secretos que necesitan migrarse (VALORES SANITIZADOS - no reales):
 
 ---
 
-*Ultima actualizacion:* 2026-01-19
+*Ultima actualizacion:* 2026-01-24
 *Arquitectura:* Clone-First (mkSystem)
-*Display Manager:* greetd + tuigreet (todas las maquinas)
+*Display Manager:* SDDM (todas las maquinas)
 *Sistemas:* Aurin, MacBook, Vespino (NixOS 25.05)
 *Shell principal:* Fish
-*Window Manager:* XMonad
+*Window Manager:* XMonad (X11), Hyprland/niri (Wayland)
 *Terminal:* Alacritty
 
 *Documentacion adicional:*
