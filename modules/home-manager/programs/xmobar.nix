@@ -218,8 +218,12 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    # Generar el archivo xmobarrc
+    # Generar el archivo xmobarrc (full - todo junto)
     xdg.configFile."xmobar/xmobarrc".text = xmobarConfig;
+
+    # Configs para modo split (workspaces arriba, monitors abajo)
+    xdg.configFile."xmobar/xmobar-workspaces.hs".source = ../../../xmobar/.config/xmobar/xmobar-workspaces.hs;
+    xdg.configFile."xmobar/xmobar-monitors.hs".source = ../../../xmobar/.config/xmobar/xmobar-monitors.hs;
 
     # Asegurar que xmobar esta instalado
     home.packages = [ pkgs.xmobar ];

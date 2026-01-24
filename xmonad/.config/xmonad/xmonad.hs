@@ -255,11 +255,13 @@ toggleSticky = do
 
 main :: IO ()
 main = do
-    -- Xmobar en cada monitor (detecta automáticamente cuántos hay)
-    -- -x 0 = monitor principal, -x 1 = secundario, etc.
-    xmproc0 <- spawnPipe "xmobar -x 0"
+    -- MODO SPLIT: Dos barras
+    -- Workspaces+Layout+Titulo (arriba) - recibe info de XMonad
+    xmproc0 <- spawnPipe "xmobar ~/.config/xmobar/xmobar-workspaces.hs"
+    -- Monitors (abajo) - no necesita pipe
+    spawn "xmobar ~/.config/xmobar/xmobar-monitors.hs"
+    -- Para el segundo monitor (full)
     xmproc1 <- spawnPipe "xmobar -x 1"
-    -- Si solo hay un monitor, el segundo simplemente no aparece (no peta)
 
     -- Configuración de XMonad
     -- ewmh exporta info de workspaces que taffybar lee automáticamente
