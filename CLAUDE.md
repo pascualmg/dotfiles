@@ -27,7 +27,7 @@ dotfiles/
 |   |-- base/                    # BASE UNIFICADA (todas las maquinas)
 |   |   |-- default.nix          # Imports: core/* + desktop + virtualization
 |   |   |-- desktop.nix          # GNOME + XMonad (sesiones)
-|   |   |-- greetd.nix           # greetd + tuigreet (login TUI)
+|   |   |-- sddm.nix             # SDDM (login grafico, X11 + Wayland)
 |   |   |-- sunshine.nix         # Streaming server (opcional)
 |   |   `-- virtualization.nix   # Docker + libvirt
 |   |-- core/                    # Modulos core del sistema (boot, locale, packages, etc.)
@@ -84,49 +84,35 @@ vespino = mkSystem {
 };
 ```
 
-## Display Managers: GDM -> LightDM -> greetd (RESUELTO 2026-01-24)
+## Display Managers: GDM -> LightDM -> greetd -> SDDM (RESUELTO 2026-01-24)
 
 ### Historia
 
 1. **GDM (2026-01-19)**: Roto con NVIDIA y XMonad puro
 2. **LightDM (2026-01-19)**: Funcionaba X11, pero NO soporta Wayland
-3. **greetd + tuigreet (2026-01-24)**: Soporta X11 Y Wayland
+3. **greetd + tuigreet (2026-01-24)**: X11 roto - Xorg sin suid necesita logind, pesadilla de permisos
+4. **SDDM (2026-01-24)**: Funciona con X11 Y Wayland sin problemas
 
-### Solucion actual: greetd + tuigreet
+### Solucion actual: SDDM
 
-Configurado en `modules/base/greetd.nix`:
+Configurado en `modules/base/sddm.nix`:
 
 ```nix
-services.greetd = {
+services.displayManager.sddm = {
   enable = true;
-  settings.default_session = {
-    command = ''
-      ${pkgs.tuigreet}/bin/tuigreet \
-        --time --asterisks --remember --remember-user-session \
-        --sessions .../xsessions:.../wayland-sessions \
-        --xsession-wrapper "startx ... -- -keeptty"
-    '';
-    user = "greeter";
-  };
+  wayland.enable = true;  # Permite sesiones Wayland
 };
 ```
 
-**Nota:** `--remember` guarda el último usuario en `/var/cache/tuigreet`. Primera vez vacío, después recuerda.
-
-### Controles tuigreet
-
-- **Tab**: Siguiente campo
-- **F2**: Menu de sesiones
-- **F3**: Ciclar sesiones
-- **Enter**: Login
+**Simple. Funciona. Sin dramas.**
 
 ### Estado actual
 
 | Maquina | Display Manager | Sesiones | Estado |
 |---------|-----------------|----------|--------|
-| macbook | greetd | XMonad, GNOME, Hyprland, niri | OK (probado) |
-| aurin   | greetd | XMonad, GNOME, Hyprland, niri | Pendiente test |
-| vespino | greetd | XMonad, GNOME, Hyprland, niri | Pendiente test |
+| macbook | SDDM | XMonad, GNOME, Hyprland, niri | OK (probado) |
+| aurin   | SDDM | XMonad, GNOME, Hyprland, niri | Pendiente test |
+| vespino | SDDM | XMonad, GNOME, Hyprland, niri | Pendiente test |
 
 ## Aplicar configuraciones
 
@@ -246,5 +232,5 @@ numa-info           # Info NUMA dual socket
 
 **Ultima actualizacion**: 2026-01-24
 **Arquitectura**: Clone-First (mkSystem)
-**Display Manager**: greetd + tuigreet (todas las maquinas)
+**Display Manager**: SDDM (todas las maquinas)
 **Sistemas**: Aurin, MacBook, Vespino (NixOS 25.05)

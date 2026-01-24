@@ -1,22 +1,23 @@
 # =============================================================================
 # MODULES/BASE/DESKTOP.NIX - Escritorio unificado para TODAS las maquinas
 # =============================================================================
-# greetd + tuigreet + GNOME + XMonad - TODO disponible en TODAS las maquinas
+# SDDM + GNOME + XMonad - TODO disponible en TODAS las maquinas
 #
 # IMPORTANTE:
-#   - greetd + tuigreet en vez de LightDM (soporta X11 Y Wayland)
+#   - SDDM como display manager (soporta X11 Y Wayland sin dramas)
 #   - NO habilita picom aqui (va en home-manager, se lanza desde xmonad.hs)
 #   - displaySetupCommand va en los modulos hardware/ de cada maquina
 #
-# Sesiones disponibles (detectadas automaticamente por tuigreet):
-#   - XMonad (X11) - via xsessions/
-#   - GNOME (X11 y Wayland) - via ambos
-#   - Hyprland (Wayland) - via wayland-sessions/
-#   - niri (Wayland) - via wayland-sessions/
+# Sesiones disponibles (detectadas automaticamente por SDDM):
+#   - XMonad (X11)
+#   - GNOME (X11 y Wayland)
+#   - Hyprland (Wayland)
+#   - niri (Wayland)
 #
 # HISTORIAL:
 #   - 2026-01-19: LightDM (GDM roto con NVIDIA)
-#   - 2026-01-24: greetd + tuigreet (LightDM no soporta Wayland)
+#   - 2026-01-24: greetd (X11 roto, Xorg sin suid + logind = pesadilla)
+#   - 2026-01-24: SDDM (funciona todo)
 # =============================================================================
 
 { config, pkgs, lib, ... }:
@@ -26,14 +27,9 @@
   services.xserver.enable = true;
 
   # ===== DISPLAY MANAGER =====
-  # ANTES: LightDM (comentado - no soporta Wayland)
-  # services.xserver.displayManager.lightdm.enable = true;
-  # services.displayManager.defaultSession = "none+xmonad";
-  #
-  # AHORA: greetd + tuigreet (configurado en ./greetd.nix)
+  # SDDM (configurado en ./sddm.nix)
   # - Soporta X11 (XMonad) y Wayland (Hyprland, niri)
-  # - Login en TUI (terminal)
-  # - Detecta sesiones automaticamente
+  # - Login grafico, simple, funciona
 
   # ===== DESKTOP ENVIRONMENT: GNOME =====
   services.desktopManager.gnome.enable = true;

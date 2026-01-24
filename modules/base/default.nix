@@ -28,9 +28,9 @@
     ../core/cpupower-gui.nix
 
     # ===== DESKTOP UNIFICADO =====
-    # greetd + GNOME + XMonad + Hyprland + Niri - TODO disponible en TODAS
+    # SDDM + GNOME + XMonad + Hyprland + Niri - TODO disponible en TODAS
     ./desktop.nix
-    ./greetd.nix  # Login manager (tuigreet TUI)
+    ./sddm.nix  # Login manager (soporta X11 y Wayland)
 
     # ===== WAYLAND COMPOSITORS =====
     ../desktop/hyprland.nix
