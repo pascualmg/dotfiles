@@ -1,6 +1,9 @@
 {
-  "alwaysThinkingEnabled": true,
   "permissions": {
     "defaultMode": "bypassPermissions"
+  },
+  "alwaysThinkingEnabled": true,
+  "enabledPlugins": {
+    "php-lsp@claude-plugins-official": true
   }
 }

@@ -60,8 +60,8 @@
   # Estos modulos definen opciones (services.ivanti-vpn-vm, etc.)
   # que luego configuramos abajo.
   imports = [
-    ../../modules/services/ivanti-vpn-vm.nix       # VM Ubuntu para VPN Ivanti
-    ../../modules/services/vocento-vpn-bridge.nix  # Bridge networking para VPN
+    ../../modules/services/ivanti-vpn-vm.nix # VM Ubuntu para VPN Ivanti
+    ../../modules/services/vocento-vpn-bridge.nix # Bridge networking para VPN
   ];
 
   # ===========================================================================
@@ -81,15 +81,15 @@
 
   # Configuracion de la VM
   services.ivanti-vpn-vm = {
-    enable = true;              # Activa el modulo
-    networkMode = "bridge";     # Usa bridge br0 (no NAT de libvirt)
+    enable = true; # Activa el modulo
+    networkMode = "bridge"; # Usa bridge br0 (no NAT de libvirt)
     vmAddress = "192.168.53.12"; # IP fija de la VM en el bridge
   };
 
   # Configuracion del bridge y rutas
   services.vocento-vpn-bridge = {
     enable = true;
-    externalInterface = "wlp0s20f0u7u4";  # WiFi USB dongle (el wifi interno no funciona)
+    externalInterface = "wlp0s20f0u7u4"; # WiFi USB dongle (el wifi interno no funciona)
     # Valores por defecto (se pueden cambiar si es necesario):
     # hostAddress = "192.168.53.10";       # IP del host en br0
     # vmAddress = "192.168.53.12";         # IP de la VM
@@ -105,9 +105,9 @@
 
   # Configuracion de logind (lo que pasa al cerrar tapa, etc.)
   services.logind.settings.Login = {
-    HandleLidSwitch = "ignore";                # Cerrar tapa -> no hacer nada
-    HandleLidSwitchExternalPower = "ignore";   # Cerrar tapa con cargador -> nada
-    HandleLidSwitchDocked = "ignore";          # Cerrar tapa con dock -> nada
+    HandleLidSwitch = "ignore"; # Cerrar tapa -> no hacer nada
+    HandleLidSwitchExternalPower = "ignore"; # Cerrar tapa con cargador -> nada
+    HandleLidSwitchDocked = "ignore"; # Cerrar tapa con dock -> nada
   };
 
   # Deshabilitar los targets de systemd relacionados con suspension
@@ -126,6 +126,14 @@
   # Esto es comodo pero MENOS SEGURO. En entornos corporativos o
   # multi-usuario se deberia cambiar a true.
   security.sudo.wheelNeedsPassword = false;
+
+  # ===========================================================================
+  # SSH
+  # ===========================================================================
+  # En macbook habilitamos password porque a veces nos conectamos desde
+  # el movil u otros dispositivos donde no tenemos claves SSH configuradas.
+  # El default en modules/core/services.nix es false (solo claves).
+  services.openssh.settings.PasswordAuthentication = true;
 
   # ===========================================================================
   # STATE VERSION
