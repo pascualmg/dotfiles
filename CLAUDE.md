@@ -199,7 +199,12 @@ services.xserver.xkb = {
 ```
 
 ### Raton
-- **Logitech G Pro X Superlight 2** - DPI en onboard memory
+- **Logitech G Pro X Superlight 2**
+  - Conexión: Lightspeed (receptor USB) o cable USB
+  - IDs: `046d:c54d` (Lightspeed), `046d:c09b` (cable, "PRO X 2")
+  - **DPI**: Solo configurable via G Hub (Windows) → onboard memory
+  - **Estado Linux** (2026-01): libratbag/solaar NO lo soportan todavía
+  - **Workaround**: Configurar DPI en Windows, queda guardado en el ratón
 - **libinput flat** (raw input) en todas las maquinas
 
 ## Notas para Claude

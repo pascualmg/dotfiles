@@ -2751,6 +2751,40 @@ El teclado Apple SPI tiene las teclas = a= y =< >= intercambiadas respecto al la
 
 Esto funciona tanto en X11 (XMonad) como en Wayland (GNOME) porque keyd opera a nivel evdev.
 
+** Perifericos de Input
+
+*** Teclados HHKB
+
+- *HHKB original*: Hasu controller (QMK) - layout programado en hardware
+- *HHKB Hybrid*: BT + USB-C, Topre switches
+
+Filosofía: *el hardware manda, no el software*. Config en memoria del teclado.
+
+*** Ratón: Logitech G Pro X Superlight 2
+
+| Conexión | Device ID | Nombre |
+|----------+-----------+--------|
+| Lightspeed (receptor USB) | =046d:c54d= | Logitech USB Receiver |
+| Cable USB | =046d:c09b= | Logitech PRO X 2 |
+| Bluetooth | - | No probado |
+
+*Estado soporte Linux (2026-01):*
+- =libratbag= / =piper=: NO soportado
+- =solaar=: NO soportado
+- El ratón es muy nuevo para las herramientas open source
+
+*Configurar DPI:*
+1. Conectar a Windows (VM o dual boot)
+2. Instalar Logitech G Hub
+3. Configurar DPI y guardar en *onboard memory*
+4. El DPI persiste en Linux (guardado en el ratón)
+
+*Config libinput* (ya aplicada):
+#+BEGIN_SRC nix
+# Aceleración plana (raw input) - ideal para gaming
+services.libinput.mouse.accelProfile = "flat";
+#+END_SRC
+
 ** Solucion: xmobar y fuentes HiDPI
 
 *Estado:* RESUELTO
