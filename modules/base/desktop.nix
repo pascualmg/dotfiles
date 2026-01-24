@@ -1,18 +1,22 @@
 # =============================================================================
 # MODULES/BASE/DESKTOP.NIX - Escritorio unificado para TODAS las maquinas
 # =============================================================================
-# LightDM + GNOME + XMonad - TODO disponible en TODAS las maquinas
+# greetd + tuigreet + GNOME + XMonad - TODO disponible en TODAS las maquinas
 #
 # IMPORTANTE:
-#   - LightDM en vez de GDM (GDM tiene problemas con NVIDIA)
+#   - greetd + tuigreet en vez de LightDM (soporta X11 Y Wayland)
 #   - NO habilita picom aqui (va en home-manager, se lanza desde xmonad.hs)
 #   - displaySetupCommand va en los modulos hardware/ de cada maquina
 #
-# Sesiones disponibles en LightDM:
-#   - GNOME
-#   - XMonad
-#   - Hyprland (via hyprland.nix)
-#   - Niri (via niri.nix)
+# Sesiones disponibles (detectadas automaticamente por tuigreet):
+#   - XMonad (X11) - via xsessions/
+#   - GNOME (X11 y Wayland) - via ambos
+#   - Hyprland (Wayland) - via wayland-sessions/
+#   - niri (Wayland) - via wayland-sessions/
+#
+# HISTORIAL:
+#   - 2026-01-19: LightDM (GDM roto con NVIDIA)
+#   - 2026-01-24: greetd + tuigreet (LightDM no soporta Wayland)
 # =============================================================================
 
 { config, pkgs, lib, ... }:
@@ -21,11 +25,15 @@
   # ===== X.ORG SERVER =====
   services.xserver.enable = true;
 
-  # ===== DISPLAY MANAGER: LIGHTDM =====
-  # LightDM en vez de GDM (GDM tiene problemas con NVIDIA)
-  # LightDM es simple y funciona con cualquier sesion
-  services.xserver.displayManager.lightdm.enable = true;
-  services.displayManager.defaultSession = "none+xmonad";  # XMonad por defecto en todas
+  # ===== DISPLAY MANAGER =====
+  # ANTES: LightDM (comentado - no soporta Wayland)
+  # services.xserver.displayManager.lightdm.enable = true;
+  # services.displayManager.defaultSession = "none+xmonad";
+  #
+  # AHORA: greetd + tuigreet (configurado en ./greetd.nix)
+  # - Soporta X11 (XMonad) y Wayland (Hyprland, niri)
+  # - Login en TUI (terminal)
+  # - Detecta sesiones automaticamente
 
   # ===== DESKTOP ENVIRONMENT: GNOME =====
   services.desktopManager.gnome.enable = true;
