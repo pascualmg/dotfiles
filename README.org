@@ -1841,7 +1841,7 @@ En XMonad (por defecto):
 
 **** greedyView vs view (comportamiento al cambiar workspace)
 
-**greedyView (config actual):** Los workspaces se INTERCAMBIAN
+**greedyView:** Los workspaces se INTERCAMBIAN
 
 #+BEGIN_SRC text
 Estado inicial:
@@ -1853,7 +1853,7 @@ Estás en Monitor 1, pulsas M-3:
 El WS3 viene a tu monitor, el WS1 va al otro.
 #+END_SRC
 
-**view:** Solo mueve el FOCO
+**view (config actual):** Solo mueve el FOCO
 
 #+BEGIN_SRC text
 Estado inicial:
@@ -1865,18 +1865,19 @@ Estás en Monitor 1, pulsas M-3:
                        Foco aquí ahora
 
 Tu cursor/foco salta al Monitor 2 donde ya está WS3.
+Ideal para: "reunión en monitor 2, trabajo en monitor 1"
 #+END_SRC
 
-**** Cambiar entre greedyView y view
+**** Cambiar entre view y greedyView
 
-Para probar =view= en lugar de =greedyView=, edita =xmonad.hs=:
+*Config actual usa =view=.* Para volver a =greedyView= (swap), edita =xmonad.hs=:
 
 #+BEGIN_SRC haskell
--- Cambiar esto (en prevWS' y nextWS'):
-windows $ W.greedyView (sorted !! (i - 1))
+-- Cambiar esto (en keybindings M-[1-9]):
+, ("M-1", windows $ W.view "1")
 
 -- Por esto:
-windows $ W.view (sorted !! (i - 1))
+, ("M-1", windows $ W.greedyView "1")
 #+END_SRC
 
 Luego =M-q= para hot-reload y probar.
@@ -1996,11 +1997,11 @@ arandr
 
 | Escenario | Recomendación |
 |-----------+---------------|
-| Monitor único (macbook) | Config actual (greedyView) |
+| Monitor único | Config actual (view) funciona igual |
 | Ultrawide (aurin) | Config actual + ThreeColMid |
-| Dual monitor trabajo | PhysicalScreens (M-w/M-e) |
+| Dual monitor + reunión fija | Config actual (view) ✓ |
+| Quieres swap de workspaces | Cambiar a =greedyView= |
 | Quieres workspaces fijos por monitor | IndependentScreens |
-| Te confunde el swap de workspaces | Cambiar a =view= |
 
 ** Picom (~/.config/picom/picom.conf) *
 
