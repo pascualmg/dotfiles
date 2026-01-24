@@ -250,9 +250,11 @@ toggleSticky = do
 
 main :: IO ()
 main = do
-    -- Xmobar arriba (tu katana de siempre)
-    xmproc <- spawnPipe "xmobar"
-    -- Taffybar abajo usa EWMH/DBus (no necesita pipe)
+    -- Xmobar en cada monitor (detecta automáticamente cuántos hay)
+    -- -x 0 = monitor principal, -x 1 = secundario, etc.
+    xmproc0 <- spawnPipe "xmobar -x 0"
+    xmproc1 <- spawnPipe "xmobar -x 1"
+    -- Si solo hay un monitor, el segundo simplemente no aparece (no peta)
 
     -- Configuración de XMonad
     -- ewmh exporta info de workspaces que taffybar lee automáticamente
@@ -280,8 +282,9 @@ main = do
         -- LOG HOOK
         -- =========================================
         -- Xmobar recibe info via pipe, taffybar lee de EWMH automáticamente
+        -- Enviamos la misma info a ambos monitores
         , logHook = dynamicLogWithPP xmobarPP
-            { ppOutput          = hPutStrLn xmproc
+            { ppOutput          = \s -> hPutStrLn xmproc0 s >> hPutStrLn xmproc1 s
             , ppCurrent         = xmobarColor "#98c379" "" . wrap "[" "]"
             , ppVisible         = xmobarColor "#61afef" ""
             , ppHidden          = xmobarColor "#c678dd" "" . wrap "*" ""
