@@ -15,15 +15,11 @@
 { config, lib, pkgs, ... }:
 
 {
-  # HiDPI variables para sesion X (GDM no lee /etc/set-environment)
-  home.sessionVariables = {
-    GDK_SCALE = "2";
-    GDK_DPI_SCALE = "0.5";
-    QT_SCALE_FACTOR = "2";
-    QT_AUTO_SCREEN_SCALE_FACTOR = "1";
-    QT_ENABLE_HIGHDPI_SCALING = "1";
-    XCURSOR_SIZE = "48";
-  };
+  # ===== SCALING =====
+  # NO forzamos escala - los escritorios modernos (GNOME, KDE, Hyprland)
+  # autodetectan el DPI del monitor (168 DPI Retina).
+  # Antes teníamos GDK_SCALE=2, QT_SCALE_FACTOR=2, etc. pero causaba
+  # problemas al mezclar X11/Wayland y diferentes DEs.
 
   # XMobar configurado para macbook HiDPI (arriba)
   # NOTA: Usa sintaxis Pango que escala correctamente con DPI
@@ -65,8 +61,7 @@
 
   # ===== WAYLAND COMPOSITORS =====
   # Hyprland y niri habilitados por defecto
-  # Solo configuramos opciones especificas de macbook
-  dotfiles.hyprland.monitorScale = "2";  # HiDPI Retina
+  # Escala autodetectada - no forzamos monitorScale
 
   # ===========================================================================
   # WORKAROUND: Geometría TTY incorrecta por EFI Apple
