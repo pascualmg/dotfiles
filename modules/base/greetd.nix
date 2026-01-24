@@ -28,9 +28,8 @@
       # tuigreet flags:
       #   --time: muestra la hora
       #   --asterisks: asteriscos en password
-      #   --remember: recuerda usuario
-      #   --remember-user-session: recuerda sesion
-      #   --user: usuario por defecto (hardcoded - solo tenemos uno)
+      #   --remember: recuerda ultimo usuario (guardado en /var/cache/tuigreet)
+      #   --remember-user-session: recuerda ultima sesion del usuario
       #   --sessions: rutas a xsessions y wayland-sessions
       #   --xsession-wrapper: wrapper para sesiones X11 (startx con keeptty)
       command = ''
@@ -39,7 +38,6 @@
           --asterisks \
           --remember \
           --remember-user-session \
-          --user passh \
           --sessions ${config.services.displayManager.sessionData.desktops}/share/xsessions:${config.services.displayManager.sessionData.desktops}/share/wayland-sessions \
           --xsession-wrapper "${pkgs.xorg.xinit}/bin/startx /run/current-system/sw/bin/env -- -keeptty"
       '';

@@ -103,14 +103,15 @@ services.greetd = {
     command = ''
       ${pkgs.tuigreet}/bin/tuigreet \
         --time --asterisks --remember --remember-user-session \
-        --user passh \
         --sessions .../xsessions:.../wayland-sessions \
-        --xsession-wrapper "startx /run/current-system/sw/bin/env -- -keeptty"
+        --xsession-wrapper "startx ... -- -keeptty"
     '';
     user = "greeter";
   };
 };
 ```
+
+**Nota:** `--remember` guarda el último usuario en `/var/cache/tuigreet`. Primera vez vacío, después recuerda.
 
 ### Controles tuigreet
 
