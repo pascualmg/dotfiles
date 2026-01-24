@@ -1,7 +1,7 @@
 # =============================================================================
 # MODULES/BASE/DESKTOP.NIX - Escritorio unificado para TODAS las maquinas
 # =============================================================================
-# SDDM + GNOME + XMonad - TODO disponible en TODAS las maquinas
+# SDDM + GNOME + KDE Plasma + XMonad - TODO disponible en TODAS las maquinas
 #
 # IMPORTANTE:
 #   - SDDM como display manager (soporta X11 Y Wayland sin dramas)
@@ -11,6 +11,7 @@
 # Sesiones disponibles (detectadas automaticamente por SDDM):
 #   - XMonad (X11)
 #   - GNOME (X11 y Wayland)
+#   - KDE Plasma (X11 y Wayland)
 #   - Hyprland (Wayland)
 #   - niri (Wayland)
 #
@@ -31,8 +32,13 @@
   # - Soporta X11 (XMonad) y Wayland (Hyprland, niri)
   # - Login grafico, simple, funciona
 
-  # ===== DESKTOP ENVIRONMENT: GNOME =====
+  # ===== DESKTOP ENVIRONMENTS =====
   services.desktopManager.gnome.enable = true;
+  services.desktopManager.plasma6.enable = true;  # KDE Plasma 6
+
+  # Resolver conflicto GNOME vs KDE por ssh-askpass
+  # Usamos el de KDE (ksshaskpass) que es mas moderno
+  programs.ssh.askPassword = lib.mkForce "${pkgs.kdePackages.ksshaskpass}/bin/ksshaskpass";
 
   # ===== WINDOW MANAGER: XMONAD =====
   services.xserver.windowManager.xmonad = {
