@@ -200,12 +200,17 @@ myStartupHook = do
     spawnOnce "notify-send 'XMonad configuración recargada 8==D~mente'"
 
 -- -----------------------------------------------------------------------------
--- NAVEGACIÓN DE WORKSPACES (sin wrap)
+-- NAVEGACIÓN DE WORKSPACES (sin wrap, con view)
 -- -----------------------------------------------------------------------------
 -- Funciones personalizadas para Mod+Left / Mod+Right
 -- A diferencia de nextWS/prevWS estándar, estas NO hacen wrap:
 --   - En workspace 1, Mod+Left no hace nada (no salta al 9)
 --   - En workspace 9, Mod+Right no hace nada (no salta al 1)
+--
+-- NOTA: Usamos W.view en lugar de W.greedyView para que:
+--   - Si el workspace destino ya está visible en otro monitor, solo mueve el FOCO
+--   - NO intercambia workspaces entre monitores
+--   - Ideal para: "reunión en monitor 2, trabajo en monitor 1"
 
 -- Ir al workspace anterior (sin wrap)
 prevWS' :: X ()
@@ -215,7 +220,7 @@ prevWS' = do
     let cur = W.currentTag ws                     -- Workspace actual
     let sorted = sort wss                         -- Ordenar workspaces
     case elemIndex cur sorted of                  -- Buscar índice actual
-        Just i | i > 0 -> windows $ W.greedyView (sorted !! (i - 1))  -- Si no es el primero, ir al anterior
+        Just i | i > 0 -> windows $ W.view (sorted !! (i - 1))  -- Si no es el primero, ir al anterior
         _ -> return ()                            -- Si es el primero, no hacer nada
 
 -- Ir al workspace siguiente (sin wrap)
@@ -226,7 +231,7 @@ nextWS' = do
     let cur = W.currentTag ws
     let sorted = sort wss
     case elemIndex cur sorted of
-        Just i | i < length sorted - 1 -> windows $ W.greedyView (sorted !! (i + 1))  -- Si no es el último, ir al siguiente
+        Just i | i < length sorted - 1 -> windows $ W.view (sorted !! (i + 1))  -- Si no es el último, ir al siguiente
         _ -> return ()                            -- Si es el último, no hacer nada
 
 -- Toggle sticky: si la ventana tiene copias, las quita; si no, la copia a todos
@@ -359,6 +364,21 @@ main = do
         -- -----------------------------------------
         , ("M-<Left>", prevWS')                  -- Workspace anterior (sin wrap)
         , ("M-<Right>", nextWS')                 -- Workspace siguiente (sin wrap)
+
+        -- -----------------------------------------
+        -- Workspaces M-[1-9] con view (NO greedyView)
+        -- -----------------------------------------
+        -- Si el WS ya está visible en otro monitor, solo mueve el foco
+        -- NO intercambia workspaces entre monitores
+        , ("M-1", windows $ W.view "1")
+        , ("M-2", windows $ W.view "2")
+        , ("M-3", windows $ W.view "3")
+        , ("M-4", windows $ W.view "4")
+        , ("M-5", windows $ W.view "5")
+        , ("M-6", windows $ W.view "6")
+        , ("M-7", windows $ W.view "7")
+        , ("M-8", windows $ W.view "8")
+        , ("M-9", windows $ W.view "9")
 
         -- -----------------------------------------
         -- Fullscreen
