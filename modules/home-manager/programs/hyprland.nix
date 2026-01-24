@@ -48,8 +48,8 @@
 
     monitorScale = lib.mkOption {
       type = lib.types.str;
-      default = "2";
-      description = "HiDPI scale factor";
+      default = "1";  # Default para monitores normales, MacBook override a "2"
+      description = "HiDPI scale factor (1=normal, 2=HiDPI)";
     };
   };
 
