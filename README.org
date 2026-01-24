@@ -1812,12 +1812,195 @@ sudo nixos-rebuild switch --flake ~/dotfiles#aurin --impure
 
 *Recargar config:*
 #+BEGIN_SRC bash
-# Recompilar y recargar
+# Recompilar y recargar (HOT RELOAD - no pierde ventanas!)
 M-q
 
 # O manualmente
 xmonad --recompile && xmonad --restart
 #+END_SRC
+
+*** Multi-Monitor y Workspaces
+
+XMonad tiene un modelo de workspaces MUY diferente a otros WMs (GNOME, KDE, i3).
+Entender esto es clave para no volverse loco con múltiples monitores.
+
+**** El modelo "peculiar" de XMonad
+
+#+BEGIN_SRC text
+En GNOME/KDE:
+  Monitor 1: WS1, WS2, WS3 (fijos a este monitor)
+  Monitor 2: WS4, WS5, WS6 (fijos a este monitor)
+  → Cada monitor tiene SUS workspaces
+
+En XMonad (por defecto):
+  Pool compartido: WS1, WS2, WS3, WS4, WS5, WS6, WS7, WS8, WS9
+  Monitor 1: muestra WS1 (puede mostrar cualquiera)
+  Monitor 2: muestra WS3 (puede mostrar cualquiera)
+  → Los workspaces FLOTAN entre monitores
+#+END_SRC
+
+**** greedyView vs view (comportamiento al cambiar workspace)
+
+**greedyView (config actual):** Los workspaces se INTERCAMBIAN
+
+#+BEGIN_SRC text
+Estado inicial:
+  Monitor 1: [WS1]     Monitor 2: [WS3]
+
+Estás en Monitor 1, pulsas M-3:
+  Monitor 1: [WS3]     Monitor 2: [WS1]  ← ¡SWAP!
+
+El WS3 viene a tu monitor, el WS1 va al otro.
+#+END_SRC
+
+**view:** Solo mueve el FOCO
+
+#+BEGIN_SRC text
+Estado inicial:
+  Monitor 1: [WS1]     Monitor 2: [WS3]
+
+Estás en Monitor 1, pulsas M-3:
+  Monitor 1: [WS1]     Monitor 2: [WS3]  ← Sin cambios
+                            ^
+                       Foco aquí ahora
+
+Tu cursor/foco salta al Monitor 2 donde ya está WS3.
+#+END_SRC
+
+**** Cambiar entre greedyView y view
+
+Para probar =view= en lugar de =greedyView=, edita =xmonad.hs=:
+
+#+BEGIN_SRC haskell
+-- Cambiar esto (en prevWS' y nextWS'):
+windows $ W.greedyView (sorted !! (i - 1))
+
+-- Por esto:
+windows $ W.view (sorted !! (i - 1))
+#+END_SRC
+
+Luego =M-q= para hot-reload y probar.
+
+**** IndependentScreens (workspaces por monitor)
+
+Para tener workspaces INDEPENDIENTES por monitor (como GNOME/KDE):
+
+#+BEGIN_SRC haskell
+import XMonad.Layout.IndependentScreens
+
+-- En main:
+xmonad $ def
+    { workspaces = withScreens 2 ["1","2","3","4","5","6","7","8","9"]
+    -- ...
+    }
+
+-- Keybindings cambian:
+-- M-1 en monitor 0 → workspace "0_1"
+-- M-1 en monitor 1 → workspace "1_1"
+#+END_SRC
+
+Con 2 monitores tendrías 18 workspaces: =0_1= a =0_9= y =1_1= a =1_9=.
+
+**** PhysicalScreens (navegar entre monitores)
+
+Para teclas dedicadas a saltar entre monitores físicos:
+
+#+BEGIN_SRC haskell
+import XMonad.Actions.PhysicalScreens
+
+-- Keybindings:
+, ("M-w", viewScreen def 0)      -- Ir a monitor 0 (izquierda/principal)
+, ("M-e", viewScreen def 1)      -- Ir a monitor 1 (derecha/secundario)
+, ("M-r", viewScreen def 2)      -- Ir a monitor 2 (si existe)
+
+-- Mover ventana a otro monitor:
+, ("M-S-w", sendToScreen def 0)
+, ("M-S-e", sendToScreen def 1)
+#+END_SRC
+
+**** CycleWS (navegación avanzada)
+
+Para navegar solo por workspaces no vacíos o del monitor actual:
+
+#+BEGIN_SRC haskell
+import XMonad.Actions.CycleWS
+
+-- Solo workspaces con ventanas:
+, ("M-<Right>", moveTo Next NonEmptyWS)
+, ("M-<Left>", moveTo Prev NonEmptyWS)
+
+-- Mover ventana al siguiente workspace no vacío:
+, ("M-S-<Right>", shiftTo Next NonEmptyWS)
+
+-- Alternar entre los 2 últimos workspaces usados:
+, ("M-<Tab>", toggleWS)
+#+END_SRC
+
+**** Configuración recomendada para ultrawide (aurin)
+
+Para el monitor ultrawide 5120x1440 de aurin, el layout =ThreeColMid=
+funciona muy bien (master en el centro, slaves a los lados):
+
+#+BEGIN_SRC haskell
+-- Ya configurado en myLayoutHook:
+ThreeColMid 1 (3/100) (2/3)  -- 1 master, incremento 3%, ratio 2/3
+#+END_SRC
+
+**** xrandr: detectar y configurar monitores
+
+#+BEGIN_SRC bash
+# Ver monitores conectados
+xrandr
+
+# Configurar monitor ultrawide como primario
+xrandr --output DP-4 --mode 5120x1440 --rate 120 --primary
+
+# Añadir segundo monitor a la derecha
+xrandr --output HDMI-0 --mode 1920x1080 --right-of DP-4
+
+# Apagar monitor
+xrandr --output HDMI-0 --off
+#+END_SRC
+
+**** autorandr: perfiles automáticos
+
+Para cambiar automáticamente entre configs de monitores:
+
+#+BEGIN_SRC bash
+# Guardar configuración actual como perfil
+autorandr --save trabajo
+
+# Listar perfiles
+autorandr --list
+
+# Aplicar perfil
+autorandr --load trabajo
+
+# Detectar y aplicar automáticamente
+autorandr --change
+#+END_SRC
+
+**** arandr: configuración gráfica
+
+=arandr= es la GUI para xrandr. Permite arrastrar monitores visualmente
+y genera scripts de configuración.
+
+#+BEGIN_SRC bash
+# Lanzar
+arandr
+
+# Guardar layout → genera script en ~/.screenlayout/
+#+END_SRC
+
+**** Resumen: qué elegir
+
+| Escenario | Recomendación |
+|-----------+---------------|
+| Monitor único (macbook) | Config actual (greedyView) |
+| Ultrawide (aurin) | Config actual + ThreeColMid |
+| Dual monitor trabajo | PhysicalScreens (M-w/M-e) |
+| Quieres workspaces fijos por monitor | IndependentScreens |
+| Te confunde el swap de workspaces | Cambiar a =view= |
 
 ** Picom (~/.config/picom/picom.conf) *
 
