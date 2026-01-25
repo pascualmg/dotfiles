@@ -63,9 +63,8 @@
         dysk
 
         # Terminal fun (fish greeting)
-        fortune
-        cowsay
-        pokemon-colorscripts
+        fortune                   # Para fortunes-es custom
+        pokemon-colorscripts      # Pokemon ASCII aleatorio
 
         # Shells adicionales
         zsh

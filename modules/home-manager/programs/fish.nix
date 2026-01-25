@@ -95,9 +95,9 @@
             --color_blocks off
         end
 
-        # Fortune + cowsay (frase random con vaca)
-        if type -q fortune; and type -q cowsay
-          fortune -s | cowsay -f small
+        # Fortune español (frases random)
+        if test -f ~/dotfiles/scripts/fortunes-es
+          fortune ~/dotfiles/scripts/fortunes-es
         end
 
         # Monitores xmobar con colores
