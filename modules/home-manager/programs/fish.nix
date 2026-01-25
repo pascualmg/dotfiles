@@ -82,28 +82,28 @@
         set --global fish_pager_color_selected_prefix
 
         # =======================================================================
-        # FISH GREETING: Pokemon + Neofetch + Fortune + Monitores
+        # FISH GREETING: Monitores + Neofetch + Pokemon + Fortune
         # =======================================================================
-        # Pokemon aleatorio (si esta instalado)
-        if type -q pokemon-colorscripts
-          pokemon-colorscripts -r --no-title
+        # 1. Monitores xmobar (estado del sistema)
+        if test -x ~/dotfiles/scripts/xmobar-test-all.sh
+          ~/dotfiles/scripts/xmobar-test-all.sh
         end
 
-        # Neofetch compacto con logo NixOS
+        # 2. Neofetch compacto con logo NixOS
         if type -q neofetch
           neofetch --config none --ascii_distro NixOS_small \
             --disable title underline model resolution theme icons cursor \
             --color_blocks off
         end
 
-        # Fortune español (frases random)
-        if test -f ~/dotfiles/scripts/fortunes-es
-          fortune ~/dotfiles/scripts/fortunes-es
+        # 3. Pokemon aleatorio
+        if type -q pokemon-colorscripts
+          pokemon-colorscripts -r --no-title
         end
 
-        # Monitores xmobar con colores
-        if test -x ~/dotfiles/scripts/xmobar-test-all.sh
-          ~/dotfiles/scripts/xmobar-test-all.sh
+        # 4. Fortune español (frase random)
+        if test -f ~/dotfiles/scripts/fortunes-es
+          fortune ~/dotfiles/scripts/fortunes-es
         end
       '';
 
