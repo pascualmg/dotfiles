@@ -84,35 +84,49 @@ vespino = mkSystem {
 };
 ```
 
-## Display Managers: GDM -> LightDM -> greetd -> SDDM (RESUELTO 2026-01-24)
+## Display Managers: GDM -> LightDM -> greetd -> SDDM (RESUELTO 2026-01-25)
 
 ### Historia
 
 1. **GDM (2026-01-19)**: Roto con NVIDIA y XMonad puro
 2. **LightDM (2026-01-19)**: Funcionaba X11, pero NO soporta Wayland
 3. **greetd + tuigreet (2026-01-24)**: X11 roto - Xorg sin suid necesita logind, pesadilla de permisos
-4. **SDDM (2026-01-24)**: Funciona con X11 Y Wayland sin problemas
+4. **SDDM Wayland (2026-01-24)**: Greeter crasheaba con NVIDIA (kwin_wayland)
+5. **SDDM X11 (2026-01-25)**: Funciona con todo
 
-### Solucion actual: SDDM
+### Solucion actual: SDDM con greeter X11
 
 Configurado en `modules/base/sddm.nix`:
 
 ```nix
 services.displayManager.sddm = {
   enable = true;
-  wayland.enable = true;  # Permite sesiones Wayland
+  wayland.enable = false;  # GREETER en X11 (kwin_wayland crashea con NVIDIA)
 };
 ```
 
-**Simple. Funciona. Sin dramas.**
+**IMPORTANTE**: `wayland.enable` controla el GREETER, NO las sesiones.
+Puedes elegir sesiones Wayland (Hyprland, niri) desde el greeter X11.
+
+### NVIDIA + Wayland: Que funciona (2026-01-25)
+
+| Compositor   | X11 | Wayland | Notas                              |
+|--------------|-----|---------|-----------------------------------|
+| XMonad       | OK  | N/A     | Solo X11                          |
+| Plasma (KDE) | OK  | NO      | kwin crashea con NVIDIA           |
+| GNOME        | OK  | NO      | Mutter problemas con drivers open |
+| Hyprland     | N/A | OK      | Buen soporte NVIDIA               |
+| niri         | N/A | OK      | Buen soporte NVIDIA               |
+
+**SOLUCION**: Plasma/GNOME en X11, Wayland solo con Hyprland/niri.
 
 ### Estado actual
 
-| Maquina | Display Manager | Sesiones | Estado |
-|---------|-----------------|----------|--------|
-| macbook | SDDM | XMonad, GNOME, Hyprland, niri | OK (probado) |
-| aurin   | SDDM | XMonad, GNOME, Hyprland, niri | Pendiente test |
-| vespino | SDDM | XMonad, GNOME, Hyprland, niri | Pendiente test |
+| Maquina | Display Manager | Sesiones probadas | Estado |
+|---------|-----------------|-------------------|--------|
+| aurin   | SDDM | XMonad OK, Plasma X11 OK, Hyprland OK | Probado 2026-01-25 |
+| macbook | SDDM | XMonad, GNOME, Hyprland, niri | OK (Intel, sin NVIDIA) |
+| vespino | SDDM | XMonad, Hyprland | Pendiente test |
 
 ## Aplicar configuraciones
 
@@ -235,7 +249,7 @@ numa-info           # Info NUMA dual socket
 
 ---
 
-**Ultima actualizacion**: 2026-01-24
+**Ultima actualizacion**: 2026-01-25
 **Arquitectura**: Clone-First (mkSystem)
 **Display Manager**: SDDM (todas las maquinas)
 **Sistemas**: Aurin, MacBook, Vespino (NixOS 25.05)

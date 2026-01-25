@@ -15,6 +15,24 @@
 #   - open = true (obligatorio para RTX 50xx)
 #   - package = beta (no stable)
 #   - NVreg_OpenRmEnableUnsupportedGpus=1
+#
+# =============================================================================
+# WAYLAND + NVIDIA: QUE FUNCIONA Y QUE NO (2026-01-25)
+# =============================================================================
+#
+# | Compositor      | Funciona | Notas                                    |
+# |-----------------|----------|------------------------------------------|
+# | Hyprland        | SI       | Diseñado con soporte NVIDIA              |
+# | niri            | SI       | Diseñado con soporte NVIDIA              |
+# | kwin (Plasma)   | NO       | Crashea - bugs historicos con NVIDIA     |
+# | Mutter (GNOME)  | NO       | Problemas con drivers open               |
+#
+# SOLUCION PRACTICA:
+#   - Plasma/GNOME → usar sesiones X11 (funcionan perfecto)
+#   - Wayland → usar Hyprland o niri (funcionan perfecto)
+#
+# El greeter de SDDM tampoco puede usar Wayland (usa kwin_wayland),
+# por eso en sddm.nix tenemos wayland.enable = false.
 # =============================================================================
 
 { config, pkgs, ... }:

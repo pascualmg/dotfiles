@@ -2986,13 +2986,15 @@ Configurado en =modules/base/sddm.nix=:
 #+BEGIN_SRC nix
 services.displayManager.sddm = {
   enable = true;
-  wayland.enable = true;  # Permite sesiones Wayland
+  wayland.enable = false;  # GREETER en X11 (kwin_wayland crashea con NVIDIA)
   theme = "sddm-astronaut-theme";
   extraPackages = [ pkgs.sddm-astronaut ];
 };
 #+END_SRC
 
-*Simple. Funciona. Sin dramas.*
+*IMPORTANTE*: =wayland.enable= controla el GREETER (pantalla de login), NO las sesiones.
+El greeter usa kwin_wayland que crashea con NVIDIA. Con =false= usa X11 para el greeter
+pero puedes seguir eligiendo sesiones Wayland (Hyprland, niri) sin problema.
 
 *** Por que SDDM
 
@@ -3004,23 +3006,41 @@ services.displayManager.sddm = {
 | NVIDIA compatible | Problematico | Si | Parcial | Si |
 | Configuracion | Compleja | Media | Compleja | Simple |
 
+*** NVIDIA + Wayland: Que funciona y que NO (2026-01-25)
+
+| Compositor/DE   | X11 | Wayland | Notas                                    |
+|-----------------+-----+---------+------------------------------------------|
+| XMonad          | OK  | N/A     | Solo X11                                 |
+| Plasma (KDE)    | OK  | NO      | kwin_wayland crashea con NVIDIA          |
+| GNOME           | OK  | NO      | Mutter tiene problemas con drivers open  |
+| Hyprland        | N/A | OK      | Diseñado con soporte NVIDIA desde inicio |
+| niri            | N/A | OK      | Diseñado con soporte NVIDIA desde inicio |
+
+*SOLUCION PRACTICA*:
+- Plasma/GNOME → usar sesiones X11 (funcionan perfecto)
+- Wayland → usar Hyprland o niri (funcionan perfecto)
+
+Los problemas de kwin y Mutter con NVIDIA son bugs upstream, no de NixOS.
+El soporte NVIDIA en Wayland sigue mejorando - esto puede cambiar en el futuro.
+
 *** Estado actual de las maquinas
 
-| Maquina | DM | Sesiones disponibles | Estado |
-|---------+----+----------------------+--------|
-| macbook | SDDM | XMonad, GNOME, KDE, Hyprland, niri | OK (probado) |
-| aurin   | SDDM | XMonad, GNOME, KDE, Hyprland, niri | OK (probado) |
-| vespino | SDDM | XMonad, GNOME, KDE, Hyprland, niri | Pendiente test |
+| Maquina | DM | Sesiones probadas | Estado |
+|---------+----+-------------------+--------|
+| aurin   | SDDM | XMonad OK, Plasma X11 OK, Hyprland OK | Probado 2026-01-25 |
+| macbook | SDDM | XMonad, GNOME, KDE, Hyprland, niri | OK (Intel, sin NVIDIA) |
+| vespino | SDDM | XMonad, Hyprland | Pendiente test |
 
-*** NVIDIA + Wayland (aurin, vespino)
+*** Variables de entorno NVIDIA
 
-Para Wayland en NVIDIA, las variables de entorno van en =hardware/nvidia/*.nix=:
+Las variables para Wayland van en =hardware/nvidia/*.nix=:
 
 #+BEGIN_SRC nix
 environment.sessionVariables = {
-  GBM_BACKEND = "nvidia-drm";
+  LIBVA_DRIVER_NAME = "nvidia";
   __GLX_VENDOR_LIBRARY_NAME = "nvidia";
-  WLR_NO_HARDWARE_CURSORS = "1";  # Necesario para wlroots (Hyprland)
+  # Para wlroots (Hyprland, etc):
+  WLR_NO_HARDWARE_CURSORS = "1";  # Si hay problemas con el cursor
 };
 #+END_SRC
 
