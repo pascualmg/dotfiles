@@ -2127,20 +2127,47 @@ En laptops también aparecen: 󱊣 Batería, ⌨ HHKB BT, 󰤨 WiFi
 
 *** Monitores disponibles (scripts/xmobar-*.sh)
 
+**** Hardware (siempre visibles)
+
+| Monitor | Script | Icono | Descripción |
+|---------+--------+-------+-------------|
+| CPU | =xmobar-cpu.sh= | 󰻠 | Uso % + temperatura |
+| CPU Freq | =xmobar-cpu-freq.sh= | 󰾅 | Frecuencia + governor |
+| RAM | =xmobar-memory.sh= | 󰍛 | Uso con gradiente |
+| GPU | =xmobar-gpu.sh= | 󰢮 | Uso, temp, VRAM, watts (NVIDIA/Intel/AMD) |
+| Discos | =xmobar-disks.sh= | 󰋊 | Uso % + temperatura NVMe |
+| Volumen | =xmobar-volume.sh= | 󰕾 | Nivel PipeWire con gradiente |
+| Red | =xmobar-network.sh= | 󰈀 | IP principal (eth/wifi) |
+
+**** Sistema (nuevos 2026-01)
+
+| Monitor | Script | Icono | Descripción | Smart |
+|---------+--------+-------+-------------+-------|
+| Load | =xmobar-load.sh= | 󰊚 | Load average (1min) | Verde < 70%, amarillo < 100%, rojo >= cores |
+| Swap | =xmobar-swap.sh= | 󰾴 | Uso swap en MB | Solo si se está usando swap |
+| Uptime | =xmobar-uptime.sh= | 󰅐 | Tiempo activo (1h52m) | Siempre visible |
+| Brightness | =xmobar-brightness.sh= | 󰃠󰃟󰃞 | Brillo pantalla % | Solo en laptops con brightnessctl |
+| Updates | =xmobar-updates.sh= | 󰚰 | Días desde flake.lock update | Solo si > 7 días (warning) |
+
+**** Conectividad (nuevos 2026-01)
+
+| Monitor | Script | Icono | Descripción | Smart |
+|---------+--------+-------+-------------+-------|
+| VPN | =xmobar-vpn.sh= | 󰖂 | Pulse Secure activo | Solo si conectado |
+| Bluetooth | =xmobar-bluetooth.sh= | 󰂯 | Dispositivos BT conectados | Solo si hay dispositivos |
+| SSH | =xmobar-ssh.sh= | 󰣀 | Sesiones SSH (↓entrantes ↑salientes) | Solo si hay sesiones |
+| Machines | =xmobar-machines.sh= | ●/○ | Estado máquinas remotas | ●=online ○=offline |
+| Keyboard | =xmobar-keyboard-layout.sh= | US/ES | Layout teclado actual | Siempre visible |
+
+**** Dispositivos (smart - se ocultan si no hay hardware)
+
 | Monitor | Script | Icono | Descripción | Smart |
 |---------+--------+-------+-------------+-------|
 | Docker | =xmobar-docker.sh= | 󰡨 | Containers activos | Si no hay Docker/containers: oculto |
-| Volumen | =xmobar-volume.sh= | 󰕾 | Nivel PipeWire con gradiente | Siempre visible |
 | Batería | =xmobar-battery.sh= | 󱊣 | Carga + estado (charging/discharging) | Si no hay batería: oculto |
 | HHKB | =xmobar-hhkb-battery.sh= | ⌨ | Batería teclado HHKB Hybrid BT | Si no hay HHKB BT: oculto |
 | Ratón | =xmobar-mouse-battery.sh= | 󰍽 | Batería ratón Logitech (HID++) | Si no hay ratón Logitech: oculto |
 | WiFi | =xmobar-wifi.sh= | 󰤨 | SSID red WiFi | Si no hay WiFi/conectado: oculto |
-| Red | =xmobar-network.sh= | 󰈀 | IP principal (eth/wifi) | Siempre visible |
-| Discos | =xmobar-disks.sh= | 󰋊 | Uso % + temperatura NVMe | Siempre visible |
-| GPU | =xmobar-gpu.sh= | 󰢮 | Uso, temp, VRAM, watts | Auto-detecta NVIDIA/Intel/AMD |
-| RAM | =xmobar-memory.sh= | 󰍛 | Uso con gradiente | Siempre visible |
-| CPU Freq | =xmobar-cpu-freq.sh= | 󰾅 | Frecuencia + governor | Siempre visible |
-| CPU | =xmobar-cpu.sh= | 󰻠 | Uso % + temperatura | Siempre visible |
 
 *** GPU: Auto-detección (xmobar-gpu.sh)
 
