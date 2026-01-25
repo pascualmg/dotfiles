@@ -74,6 +74,11 @@
         set --global fish_pager_color_selected_completion
         set --global fish_pager_color_selected_description
         set --global fish_pager_color_selected_prefix
+
+        # Mostrar estado de monitores xmobar al iniciar (solo login shell)
+        if status --is-login; and test -x ~/dotfiles/scripts/xmobar-test-all.sh
+          ~/dotfiles/scripts/xmobar-test-all.sh
+        end
       '';
 
       # Aliases comunes
