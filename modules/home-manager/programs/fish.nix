@@ -25,8 +25,9 @@
     programs.fish = {
       enable = true;
 
-      # Configuración interactiva
+      # Desactivar greeting por defecto (usamos el nuestro)
       interactiveShellInit = ''
+        set -g fish_greeting ""
         # Terminal type for byobu/tmux compatibility
         if not set -q TERM; or test "$TERM" = "dumb"
           set -x TERM xterm-256color
