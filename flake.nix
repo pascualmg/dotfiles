@@ -307,7 +307,43 @@
 
       nixosConfigurations = {
         # ---------------------------------------------------------------------
-        # LIVE ISO - Entorno completo booteable desde USB
+        # AURIN - Workstation de produccion (CRITICO)
+        # ---------------------------------------------------------------------
+        aurin = mkSystem {
+          hostname = "aurin";
+          hardware = [
+            ./hardware/nvidia/rtx5080.nix
+            ./hardware/audio/fiio-k7.nix
+          ];
+        };
+
+        # ---------------------------------------------------------------------
+        # VESPINO - Servidor secundario / Testing
+        # ---------------------------------------------------------------------
+        vespino = mkSystem {
+          hostname = "vespino";
+          hardware = [
+            ./hardware/nvidia/rtx2060.nix
+          ];
+        };
+
+        # ---------------------------------------------------------------------
+        # MACBOOK - Laptop Apple MacBook Pro 13,2 (2016)
+        # ---------------------------------------------------------------------
+        macbook = mkSystem {
+          hostname = "macbook";
+          hardware = [
+            # Modulos de nixos-hardware para hardware Apple
+            nixos-hardware.nixosModules.apple-macbook-pro
+            nixos-hardware.nixosModules.common-pc-ssd
+            # Modulos locales para configuracion especifica
+            ./hardware/apple/macbook-pro-13-2.nix
+            ./hardware/apple/snd-hda-macbookpro.nix
+          ];
+        };
+
+        # ---------------------------------------------------------------------
+        # LIVE ISO - Entorno completo booteable desde USB (EXTRA)
         # ---------------------------------------------------------------------
         # Genera ISO: nix build .#nixosConfigurations.live.config.system.build.isoImage
         # Resultado:  result/iso/nixos-passh-live-*.iso
@@ -351,42 +387,6 @@
                 backupFileExtension = "backup";
               };
             }
-          ];
-        };
-
-        # ---------------------------------------------------------------------
-        # AURIN - Workstation de produccion (CRITICO)
-        # ---------------------------------------------------------------------
-        aurin = mkSystem {
-          hostname = "aurin";
-          hardware = [
-            ./hardware/nvidia/rtx5080.nix
-            ./hardware/audio/fiio-k7.nix
-          ];
-        };
-
-        # ---------------------------------------------------------------------
-        # VESPINO - Servidor secundario / Testing
-        # ---------------------------------------------------------------------
-        vespino = mkSystem {
-          hostname = "vespino";
-          hardware = [
-            ./hardware/nvidia/rtx2060.nix
-          ];
-        };
-
-        # ---------------------------------------------------------------------
-        # MACBOOK - Laptop Apple MacBook Pro 13,2 (2016)
-        # ---------------------------------------------------------------------
-        macbook = mkSystem {
-          hostname = "macbook";
-          hardware = [
-            # Modulos de nixos-hardware para hardware Apple
-            nixos-hardware.nixosModules.apple-macbook-pro
-            nixos-hardware.nixosModules.common-pc-ssd
-            # Modulos locales para configuracion especifica
-            ./hardware/apple/macbook-pro-13-2.nix
-            ./hardware/apple/snd-hda-macbookpro.nix
           ];
         };
       };
