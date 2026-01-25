@@ -7,9 +7,13 @@
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 source "${SCRIPT_DIR}/xmobar-colors.sh"
 
-# Máquinas: nombre:host:puerto_ssh
+# Máquinas: nombre=host:puerto_ssh
+# Red local (piso): 192.168.18.x
+# Red local (campo): 192.168.2.x
 declare -A MACHINES=(
-    ["aurin"]="campo.zapto.org:2222"
+    ["aurin"]="192.168.2.147:22"
+    ["macbook"]="192.168.2.148:22"
+    ["vespino"]="192.168.2.149:22"
 )
 
 CACHE_FILE="/tmp/xmobar-machines-cache"
