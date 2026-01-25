@@ -29,7 +29,7 @@
   # ---------------------------------------------------------------------------
   # ISO METADATA
   # ---------------------------------------------------------------------------
-  image.baseName = "nixos-passh-live";
+  image.baseName = lib.mkForce "nixos-passh-live";
   isoImage = {
     # Comprimir con zstd (rapido y buena compresion)
     squashfsCompression = "zstd -Xcompression-level 6";

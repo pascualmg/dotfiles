@@ -1718,66 +1718,181 @@ ollama pull mistral-small3.2   # Buen tool calling
 - *Ollama Tools Models*: https://ollama.com/search?c=tools
 - *Agent Skills*: https://agentskills.io
 
-* Live ISO - Tu Entorno Booteable
+* Live ISO - Tu Entorno Portable
 
-** Que es
+#+BEGIN_QUOTE
+*Tu entorno completo, booteable en cualquier PC.*
+Trabaja donde quieras. Prueba hardware nuevo. Comparte tu setup.
+#+END_QUOTE
 
-Una ISO de NixOS con TODO tu entorno pre-instalado:
-- XMonad + xmobar configurados
-- Fish shell con tus aliases
-- Todos tus paquetes (200+)
-- Alacritty, doom-emacs, neovim...
-- Git + flake listo para instalar en cualquier maquina
+** Por que esto es revolucionario
+
+Tradicionalmente, compartir tu entorno requeria:
+1. Instalar el OS
+2. Copiar dotfiles
+3. Instalar paquetes manualmente
+4. Rezar para que funcione igual
+
+*Con NixOS + Flakes + Live ISO:*
+1. Descargar ISO
+2. Bootear
+3. Ya tienes TODO funcionando identico
+
+| Antes (dotfiles tradicionales) | Ahora (NixOS Live ISO) |
+|--------------------------------+------------------------|
+| "Funciona en mi maquina" | Funciona EN CUALQUIER maquina |
+| Horas configurando | Bootea y listo |
+| Dependencias rotas | Todo declarativo |
+| Instalacion manual | Un comando |
+
+** Casos de uso
+
+*** Trabajo portatil
+Llevas un USB con tu Live. Llegas a cualquier PC, booteas, y tienes
+tu XMonad + fish + emacs + todo exactamente como en casa.
+
+*** Probar hardware nuevo
+Antes de comprar/instalar, booteas el Live y compruebas que todo funciona:
+WiFi, GPU, audio, etc.
+
+*** Rescate de sistemas
+Tu NixOS no arranca? Booteas el Live, montas el disco, arreglas y listo.
+Tienes todas tus herramientas disponibles.
+
+*** Demo para otros
+Alguien quiere ver tu setup? Le pasas la ISO. La prueba en VM o USB
+sin tocar su sistema.
+
+*** Clonar maquinas rapido
+Nueva maquina? Booteas Live, particionas, y:
+=nixos-install --flake github:pascualmg/dotfiles#aurin=
+
+*** Compartir el repo
+Cualquiera puede descargar tu ISO y probar tu entorno completo.
+No necesitan saber Nix, solo bootear.
+
+** Que incluye la ISO
+
+*** Sistema base
+| Componente | Version/Config |
+|------------+----------------|
+| Kernel | Linux 6.12 (estable) |
+| Boot | BIOS + UEFI |
+| Drivers | Intel, AMD, NVIDIA (nouveau) |
+| Firmware | WiFi, Bluetooth, todo incluido |
+| Red | NetworkManager |
+| SSH | Habilitado (para instalar remoto) |
+
+*** Tu entorno completo
+| Categoria | Incluido |
+|-----------+----------|
+| WM | XMonad + xmobar (tu config exacta) |
+| Shell | Fish con tus aliases y funciones |
+| Terminal | Alacritty (tu tema) |
+| Editores | Doom Emacs, Neovim |
+| Dev | Git, gh, nodejs, php, python... |
+| Tools | 200+ paquetes que usas |
+
+*** Herramientas extra para Live
+| Tool | Uso |
+|------+-----|
+| GParted | Particionar discos (GUI) |
+| GNOME Disks | Gestionar discos |
+| Calamares | Instalador grafico |
+| Firefox | Navegador |
+| htop/btop | Monitorizar sistema |
+| p7zip/unrar | Descomprimir |
 
 ** Generar la ISO
 
 #+BEGIN_SRC bash
 cd ~/dotfiles
 
-# Generar ISO (tarda unos minutos la primera vez)
-nix build .#nixosConfigurations.live.config.system.build.isoImage
+# Generar ISO (primera vez tarda, luego usa cache)
+nix build .#nixosConfigurations.live.config.system.build.isoImage --impure
 
-# Resultado
+# Ver resultado
 ls -lh result/iso/
-# nixos-passh-live-25.05.*-x86_64-linux.iso
+# nixos-passh-live-26.05.*-x86_64-linux.iso (~3-4 GB)
 #+END_SRC
 
 ** Grabar en USB
 
 *** Opcion 1: Ventoy (Recomendado)
 
+[[https://www.ventoy.net/][Ventoy]] permite tener MULTIPLES ISOs en un solo USB.
+
 #+BEGIN_SRC bash
-# Si tienes Ventoy en el USB, solo copia la ISO
-cp result/iso/nixos-*.iso /run/media/passh/Ventoy/
+# Solo copiar la ISO
+cp result/iso/nixos-passh-live-*.iso /run/media/passh/Ventoy/
 #+END_SRC
 
-Ventoy permite tener MULTIPLES ISOs en un solo USB.
+Ventajas:
+- Multiples ISOs en un USB
+- No hay que "quemar" nada
+- Añadir/quitar ISOs es copiar/borrar archivos
 
 *** Opcion 2: dd (USB dedicado)
 
 #+BEGIN_SRC bash
-# CUIDADO: Esto borra todo el USB
-# Verificar dispositivo con lsblk primero!
-sudo dd if=result/iso/nixos-*.iso of=/dev/sdX bs=4M status=progress
+# 1. Identificar USB (CUIDADO: no borrar disco equivocado!)
+lsblk
+
+# 2. Grabar (reemplaza sdX por tu USB)
+sudo dd if=result/iso/nixos-passh-live-*.iso of=/dev/sdX bs=4M status=progress
 sync
 #+END_SRC
 
-** Uso del Live
+** Usar como Live
 
-*** Bootear y usar
+*** Bootear
 
-1. Arrancar desde USB
-2. Seleccionar "NixOS Live"
-3. Tu entorno XMonad arranca automaticamente
-4. Usuario: =passh= (sin password)
+1. Conectar USB
+2. Reiniciar PC
+3. Entrar en BIOS/UEFI (F2, F12, DEL, ESC segun fabricante)
+4. Seleccionar boot desde USB
+5. Elegir "NixOS Live"
 
-*** Instalar en disco
+*** Tu entorno arranca automaticamente
+
+#+BEGIN_SRC
+┌────────────────────────────────────────────────────────────┐
+│                                                            │
+│   XMonad arranca directamente                              │
+│   Usuario: passh (sin password)                            │
+│                                                            │
+│   Keybindings:                                             │
+│   ─────────────                                            │
+│   Mod+Shift+Enter  → Terminal (Alacritty)                  │
+│   Mod+p            → Launcher (dmenu)                      │
+│   Mod+Shift+q      → Cerrar ventana                        │
+│   Mod+1-9          → Cambiar workspace                     │
+│                                                            │
+│   WiFi:                                                    │
+│   ─────                                                    │
+│   nmtui            → TUI para conectar                     │
+│   nm-applet        → Icono en xmobar                       │
+│                                                            │
+└────────────────────────────────────────────────────────────┘
+#+END_SRC
+
+** Instalar en disco
+
+*** Opcion 1: Calamares (GUI, facil)
+
+#+BEGIN_SRC bash
+calamares
+#+END_SRC
+
+Sigue el wizard grafico: idioma → teclado → disco → usuario → instalar.
+
+*** Opcion 2: Manual con tu Flake (recomendado)
 
 #+BEGIN_SRC bash
 # 1. Entrar como root
 sudo -i
 
-# 2. Particionar disco (ejemplo: GPT + EFI)
+# 2. Particionar disco (ejemplo: NVMe con GPT + EFI)
 parted /dev/nvme0n1 -- mklabel gpt
 parted /dev/nvme0n1 -- mkpart ESP fat32 1MB 512MB
 parted /dev/nvme0n1 -- set 1 esp on
@@ -1792,45 +1907,120 @@ mount /dev/disk/by-label/nixos /mnt
 mkdir -p /mnt/boot
 mount /dev/disk/by-label/BOOT /mnt/boot
 
-# 5. Generar hardware-configuration.nix
+# 5. Generar hardware-configuration.nix para esta maquina
 nixos-generate-config --root /mnt
 
-# 6. Instalar desde flake (elige tu hostname)
+# 6. Instalar desde el flake (elige segun la maquina)
 nixos-install --flake github:pascualmg/dotfiles#aurin
-# o
-nixos-install --flake github:pascualmg/dotfiles#macbook
-# o
-nixos-install --flake github:pascualmg/dotfiles#vespino
+# o: nixos-install --flake github:pascualmg/dotfiles#macbook
+# o: nixos-install --flake github:pascualmg/dotfiles#vespino
 
-# 7. Reboot
+# 7. Poner password a tu usuario
+nixos-enter --root /mnt -c 'passwd passh'
+
+# 8. Reboot
 reboot
 #+END_SRC
 
-** Estructura
+*** Crear config para maquina nueva
+
+Si es una maquina nueva que no es aurin/macbook/vespino:
+
+#+BEGIN_SRC bash
+# 1. Copiar hardware-configuration.nix generado
+cp /mnt/etc/nixos/hardware-configuration.nix ~/dotfiles/hosts/nuevamaquina/
+
+# 2. Crear hosts/nuevamaquina/default.nix (puede estar vacio)
+mkdir -p ~/dotfiles/hosts/nuevamaquina
+echo '{ }' > ~/dotfiles/hosts/nuevamaquina/default.nix
+
+# 3. Añadir a flake.nix
+# nuevamaquina = mkSystem { hostname = "nuevamaquina"; };
+
+# 4. Commit y push
+cd ~/dotfiles
+git add -A && git commit -m "feat: add nuevamaquina"
+git push
+
+# 5. Instalar
+nixos-install --flake github:pascualmg/dotfiles#nuevamaquina
+#+END_SRC
+
+** Compatibilidad de hardware
+
+| Hardware | Soporte | Notas |
+|----------+---------+-------|
+| CPU Intel | Excelente | Cualquier generacion |
+| CPU AMD | Excelente | Ryzen, EPYC, etc |
+| GPU Intel | Excelente | Aceleracion completa |
+| GPU AMD | Excelente | Drivers open |
+| GPU NVIDIA | Basico | nouveau (sin CUDA/gaming) |
+| WiFi Intel | Excelente | iwlwifi incluido |
+| WiFi Atheros | Excelente | ath9k/ath10k incluido |
+| WiFi Broadcom | Bueno | Firmware incluido |
+| WiFi Realtek | Variable | Mayoria funciona |
+| Bluetooth | Bueno | BlueZ incluido |
+| NVMe/SSD/HDD | Excelente | Todos soportados |
+| USB 3.x | Excelente | xHCI incluido |
+
+*** Limitaciones
+
+- *NVIDIA propietario*: El Live usa nouveau. Para gaming/CUDA, instala con tu config (=rtx5080.nix=, etc.)
+- *Secure Boot*: Puede necesitar desactivarse en BIOS
+- *Hardware muy nuevo*: Si kernel 6.12 no lo soporta, no funcionara
+
+** Estructura de archivos
 
 #+BEGIN_SRC
 modules/iso/
-└── default.nix     # Configuracion del Live ISO
+└── default.nix          # Configuracion del Live ISO
 
 flake.nix
-└── nixosConfigurations.live   # Entry point
+└── nixosConfigurations
+    ├── aurin            # Workstation
+    ├── vespino          # Servidor
+    ├── macbook          # Laptop
+    └── live             # ISO booteable  ← ESTE
 #+END_SRC
 
-** Ventajas
+** Especificaciones tecnicas
 
-| Caracteristica | Descripcion |
-|----------------+-------------|
-| Portable | Tu entorno en cualquier PC |
-| Rescue | Recuperar sistemas rotos |
-| Demo | Mostrar tu setup a otros |
-| Install | Instalador personalizado |
-| Ventoy | Compatible con multi-boot |
-| Offline | Todo pre-descargado |
+| Propiedad | Valor |
+|-----------+-------|
+| Tipo ISO | Hibrida (BIOS + UEFI) |
+| Compresion | SquashFS + zstd |
+| Tamano | ~3-4 GB |
+| USB minimo | 8 GB (16 GB con Ventoy) |
+| RAM minima | 4 GB (8 GB recomendado) |
+| Instalador | Calamares (grafico) |
 
-** Tamano aproximado
+** Crear tu propia Live ISO (para otros usuarios)
 
-- ISO comprimida: ~3-4 GB
-- USB minimo: 8 GB (16 GB recomendado con Ventoy)
+Si tienes tu propio flake y quieres generar tu Live ISO:
+
+#+BEGIN_SRC nix
+# En tu flake.nix, añade:
+nixosConfigurations.live = nixpkgs.lib.nixosSystem {
+  system = "x86_64-linux";
+  modules = [
+    # Base del instalador
+    "${nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-graphical-calamares.nix"
+
+    # Tu config
+    ./modules/iso        # Config especifica ISO
+    ./modules/base       # Tu base
+
+    # Home manager con tu config
+    home-manager.nixosModules.home-manager
+    { home-manager.users.tuusuario = import ./modules/home-manager; }
+  ];
+};
+#+END_SRC
+
+Genera con:
+#+BEGIN_SRC bash
+nix build .#nixosConfigurations.live.config.system.build.isoImage --impure
+#+END_SRC
 
 * Configuraciones Principales
 
