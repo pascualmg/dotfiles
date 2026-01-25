@@ -1,5 +1,30 @@
 # Dotfiles - Instrucciones para Claude
 
+## REGLA DE ORO: NO ROMPER AURIN
+
+**AURIN ES LA MAQUINA DE PRODUCCION. NO SE PUEDE ROMPER.**
+
+Antes de modificar `modules/base/*` o cualquier config compartida:
+
+1. **Verificar en qué máquina estás**: `hostname`
+2. **Si estás en macbook/vespino modificando algo que afecta a aurin**:
+   - Conectar por SSH a aurin: `ssh passh@192.168.2.147`
+   - O usar Sunshine para escritorio remoto
+   - Probar el cambio EN AURIN antes de push
+3. **Diferencias de hardware críticas**:
+   - aurin: NVIDIA RTX 5080 (drivers open, Wayland limitado)
+   - macbook: Intel (sin NVIDIA, Wayland funciona todo)
+   - vespino: NVIDIA RTX 2060 (drivers propietarios)
+
+**Lo que funciona en macbook (Intel) puede ROMPER aurin (NVIDIA).**
+
+Si necesitas comportamiento diferente por máquina:
+- Usar overrides en `hosts/<maquina>/default.nix`
+- Usar `lib.mkIf` para detectar hardware
+- NUNCA asumir que algo funciona en todas las máquinas
+
+---
+
 ## Contexto del proyecto
 
 Este es el repositorio de dotfiles de passh usando NixOS Flakes con arquitectura **clone-first**.
