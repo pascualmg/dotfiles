@@ -17,5 +17,5 @@ Config {
 
     , sepChar = "%"
     , alignSep = "}{"
-    , template = " %date% | %StdinReader% }{ "
+    , template = " %StdinReader% }{ %date% "
 }
