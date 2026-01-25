@@ -22,7 +22,7 @@ Config {
 
     -- Comandos y monitores
     , commands = [
-        Run Com "/home/passh/dotfiles/scripts/xmobar-gpu-intel.sh" [] "gpu" 20
+        Run Com "/home/passh/dotfiles/scripts/xmobar-gpu.sh" [] "gpu" 20
 
 
         -- CPU frecuencia y governor (click abre cpupower-gui)

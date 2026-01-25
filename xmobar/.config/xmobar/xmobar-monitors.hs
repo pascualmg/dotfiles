@@ -11,7 +11,7 @@ Config {
     , persistent = True
 
     , commands = [
-        Run Com "/home/passh/dotfiles/scripts/xmobar-gpu-intel.sh" [] "gpu" 20
+        Run Com "/home/passh/dotfiles/scripts/xmobar-gpu.sh" [] "gpu" 20
         , Run Com "/home/passh/dotfiles/scripts/xmobar-cpu-freq.sh" [] "cpufreq" 20
         , Run Com "/home/passh/dotfiles/scripts/xmobar-cpu.sh" [] "cpu" 20
         , Run Com "/home/passh/dotfiles/scripts/xmobar-memory.sh" [] "memory" 20
