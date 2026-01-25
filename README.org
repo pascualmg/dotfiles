@@ -2069,32 +2069,115 @@ fish
 
 ** XMobar (~/.config/xmobar/) *
 
-*Status bar* para XMonad
+*Status bar* para XMonad con soporte para modo split (dos barras).
 
-*Muestra:*
-- Workspaces activos
-- Layout actual
-- Window title
-- Posiblemente: CPU, RAM, fecha/hora (ver config)
+*** Modos disponibles
 
-*Recargar:*
+| Modo | Descripción | Uso |
+|------+-------------+-----|
+| Full | Todo en una barra | Monitor único, aurin ultrawide |
+| Split | Dos barras separadas | Multi-monitor, MacBook + externo |
+
+*** Modo Split (actual en MacBook)
+
+#+BEGIN_SRC text
+┌─────────────────────────────────────────────────────────────┐
+│ 🕐 Hora │ [1] 2 3 4 │ Layout │ Título ventana              │  ← Arriba (workspaces)
+└─────────────────────────────────────────────────────────────┘
+                    ... contenido ...
+┌─────────────────────────────────────────────────────────────┐
+│                    Docker Vol Bat ⌨HHKB Red Disk GPU RAM CPU│  ← Abajo (monitores)
+└─────────────────────────────────────────────────────────────┘
+#+END_SRC
+
+*Archivos:*
+| Archivo | Posición | Contenido |
+|---------+----------+-----------|
+| =xmobar-workspaces.hs= | Top | Hora + Workspaces + Layout + Título |
+| =xmobar-monitors.hs= | Bottom | CPU, RAM, GPU, Red, Batería, HHKB, etc. |
+| =xmobarrc= | (Full) | Todo junto (generado por home-manager) |
+
+*** Configuración en xmonad.hs
+
+#+BEGIN_SRC haskell
+main = do
+    -- MODO SPLIT: Dos barras
+    -- Workspaces (arriba) - recibe info de XMonad via pipe
+    xmproc0 <- spawnPipe "xmobar ~/.config/xmobar/xmobar-workspaces.hs"
+    -- Monitors (abajo) - no necesita pipe
+    spawn "xmobar ~/.config/xmobar/xmobar-monitors.hs"
+    -- Monitor secundario (full)
+    xmproc1 <- spawnPipe "xmobar -x 1"
+#+END_SRC
+
+*** Monitores disponibles
+
+| Monitor | Script | Descripción |
+|---------+--------+-------------|
+| CPU | =xmobar-cpu.sh= | Uso %, temperatura, consumo W |
+| CPU Freq | =xmobar-cpu-freq.sh= | Frecuencia y governor |
+| RAM | =xmobar-memory.sh= | Uso con gradiente de color |
+| GPU | =xmobar-gpu-nvidia.sh= / =intel.sh= | Temp, uso, VRAM |
+| Red | =xmobar-network.sh= | IP, velocidad (auto-detecta eth/wifi) |
+| Discos | =xmobar-disks.sh= | Uso NVMe/SATA/USB |
+| Batería | =xmobar-battery.sh= | Carga con icono y color |
+| HHKB | =xmobar-hhkb-battery.sh= | Batería teclado Bluetooth |
+| Docker | =xmobar-docker.sh= | Containers activos |
+| Volumen | =xmobar-volume.sh= | Nivel con gradiente |
+
+*** Sistema de colores (xmobar-colors.sh)
+
+Todos los scripts usan =xmobar-colors.sh= para gradientes consistentes:
+
 #+BEGIN_SRC bash
-killall xmobar
-xmobar &
+# Colores One Dark
+COLOR_GREEN="#98c379"   # Bueno (>70%)
+COLOR_YELLOW="#e5c07b"  # Warning (30-70%)
+COLOR_ORANGE="#d19a66"  # Alto
+COLOR_RED="#e06c75"     # Crítico (<30%)
+
+# Funciones
+pct_to_color 75          # Devuelve color según % (0=verde, 100=rojo)
+pct_to_color_inverse 75  # Inverso (0=rojo, 100=verde) - para batería
+#+END_SRC
+
+*** Recargar
+
+#+BEGIN_SRC bash
+# Recargar solo xmobar (sin reiniciar xmonad)
+killall xmobar && xmonad --restart
+
+# O simplemente
+M-q  # Recompila y reinicia xmonad (relanza xmobars)
+#+END_SRC
+
+*** Personalización por máquina
+
+En =modules/home-manager/machines/<maquina>.nix=:
+
+#+BEGIN_SRC nix
+dotfiles.xmobar = {
+  enable = true;
+  fontSize = 22;           # MacBook HiDPI
+  gpuType = "intel";       # intel | nvidia | none
+  showBattery = true;      # Laptops
+  showWirelessMouse = false;
+};
 #+END_SRC
 
 ** Scripts (~/scripts/) .
 
 *Scripts utiles del sistema*
 
-| Script                 | Descripcion                               |
-|------------------------+-------------------------------------------|
-| =vm-backupeitor.sh=    | Backup/restore VMs libvirt (XML + QCOW2) |
-| =bootstrap-doom.sh=    | Setup inicial Doom Emacs en máquinas nuevas |
-| =sync-wallpapers.sh=   | Sincronizar wallpapers                    |
-| =xmobar-*.sh=          | Scripts de monitorización para xmobar     |
-| =trayer-*.sh=          | Gestión de trayer (system tray)           |
-| =wireless-mouse.sh=    | Monitor batería ratón wireless            |
+| Script                   | Descripcion                               |
+|--------------------------+-------------------------------------------|
+| =vm-backupeitor.sh=      | Backup/restore VMs libvirt (XML + QCOW2)  |
+| =bootstrap-doom.sh=      | Setup inicial Doom Emacs en máquinas nuevas |
+| =sync-wallpapers.sh=     | Sincronizar wallpapers                    |
+| =xmobar-*.sh=            | Scripts de monitorización para xmobar     |
+| =xmobar-hhkb-battery.sh= | Batería HHKB Hybrid (BT) con colores      |
+| =trayer-*.sh=            | Gestión de trayer (system tray)           |
+| =wireless-mouse.sh=      | Monitor batería ratón wireless            |
 
 ** Wallpapers (~/wallpapers/) .
 
