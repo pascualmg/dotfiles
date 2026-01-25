@@ -36,10 +36,9 @@ Config {
         , Run Com "/home/passh/dotfiles/scripts/xmobar-cpu-freq.sh" [] "cpufreq" 20
         , Run Com "/home/passh/dotfiles/scripts/xmobar-cpu.sh" [] "cpu" 20
         , Run Com "/home/passh/dotfiles/scripts/xmobar-uptime.sh" [] "uptime" 60
-        , Run Com "/home/passh/dotfiles/scripts/xmobar-keyboard-layout.sh" [] "kb" 10
     ]
 
     , sepChar = "%"
     , alignSep = "}{"
-    , template = "}{ %vpn%%docker%%updates%%machines%%ssh%%bt%%volume%%bright%%battery%%hhkb%%mouse%%wifi%%network%%disks%%gpu%%swap%%memory%%load%%cpufreq%%cpu%%uptime%%kb%"
+    , template = "}{ %vpn%%docker%%updates%%machines%%ssh%%bt%%volume%%bright%%battery%%hhkb%%mouse%%wifi%%network%%disks%%gpu%%swap%%memory%%load%%cpufreq%%cpu%%uptime%"
 }

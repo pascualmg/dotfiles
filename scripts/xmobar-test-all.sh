@@ -40,7 +40,6 @@ load=$(timeout 1s "$SCRIPT_DIR/xmobar-load.sh" 2>/dev/null | hex_to_ansi)
 freq=$(timeout 1s "$SCRIPT_DIR/xmobar-cpu-freq.sh" 2>/dev/null | hex_to_ansi)
 cpu=$(timeout 1s "$SCRIPT_DIR/xmobar-cpu.sh" 2>/dev/null | hex_to_ansi)
 uptime=$(timeout 1s "$SCRIPT_DIR/xmobar-uptime.sh" 2>/dev/null | hex_to_ansi)
-kb=$(timeout 1s "$SCRIPT_DIR/xmobar-keyboard-layout.sh" 2>/dev/null | hex_to_ansi)
 
 # Output (orden: estado > red > dispositivos > hardware)
 out=""
@@ -64,7 +63,6 @@ out=""
 [ -n "$load" ] && out+="$load  "
 [ -n "$freq" ] && out+="$freq  "
 [ -n "$cpu" ] && out+="$cpu  "
-[ -n "$uptime" ] && out+="$uptime  "
-[ -n "$kb" ] && out+="$kb"
+[ -n "$uptime" ] && out+="$uptime"
 
 echo -e "$out"
