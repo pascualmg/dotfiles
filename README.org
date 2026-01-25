@@ -2067,9 +2067,37 @@ fish
 - True color support
 - Integracion con tmux/byobu
 
-** XMobar (~/.config/xmobar/) *
+** La Increíble XMobar (~/.config/xmobar/) *
 
-*Status bar* para XMonad con soporte para modo split (dos barras).
+*Status bar minimalista y elegante* para XMonad. Filosofía: solo iconos Nerd Font
+y valores, sin texto redundante. Si un monitor no aplica a la máquina, simplemente
+no aparece.
+
+*** Filosofía de diseño
+
+- *Solo iconos*: Nerd Fonts para máxima densidad de información
+- *Smart monitors*: Si no aplica (ej: batería en desktop), no muestra nada (exit 0)
+- *Auto-detección*: GPU detecta NVIDIA/Intel/AMD automáticamente
+- *Colores con significado*: Gradiente verde→amarillo→rojo según estado
+- *Mismo código, todas las máquinas*: Clone-first, sin configs por máquina
+
+*** Vista previa
+
+#+BEGIN_SRC text
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ 󰡨02  󰕾124%  󰈀(192.168.2.147)  󰋊21% 48°  󰢮04% 󰔐50° 󰍛1.3G 󰚥33W  󰍛08%  󰾅1.8GHz  󰻠04% 󰔐46° │
+└──────────────────────────────────────────────────────────────────────────────┘
+  │      │           │              │            │                   │         │
+  │      │           │              │            │                   │         └─ CPU (uso% + temp)
+  │      │           │              │            │                   └─ CPU Freq (GHz + governor)
+  │      │           │              │            └─ GPU (uso% temp VRAM watts)
+  │      │           │              └─ Discos (uso% + temp)
+  │      │           └─ Red (IP)
+  │      └─ Volumen (%)
+  └─ Docker (containers)
+#+END_SRC
+
+En laptops también aparecen: 󱊣 Batería, ⌨ HHKB BT, 󰤨 WiFi
 
 *** Modos disponibles
 
@@ -2078,15 +2106,15 @@ fish
 | Full | Todo en una barra | Monitor único, aurin ultrawide |
 | Split | Dos barras separadas | Multi-monitor, MacBook + externo |
 
-*** Modo Split (actual en MacBook)
+*** Modo Split (MacBook)
 
 #+BEGIN_SRC text
 ┌─────────────────────────────────────────────────────────────┐
-│ 🕐 Hora │ [1] 2 3 4 │ Layout │ Título ventana              │  ← Arriba (workspaces)
+│ 󰥔 Hora │ [1] 2 3 4 │ Layout │ Título ventana               │  ← Arriba (workspaces)
 └─────────────────────────────────────────────────────────────┘
                     ... contenido ...
 ┌─────────────────────────────────────────────────────────────┐
-│                    Docker Vol Bat ⌨HHKB Red Disk GPU RAM CPU│  ← Abajo (monitores)
+│             󰡨 󰕾 󱊣 ⌨ 󰤨 󰈀 󰋊 󰢮 󰍛 󰾅 󰻠                        │  ← Abajo (monitores)
 └─────────────────────────────────────────────────────────────┘
 #+END_SRC
 
@@ -2094,36 +2122,60 @@ fish
 | Archivo | Posición | Contenido |
 |---------+----------+-----------|
 | =xmobar-workspaces.hs= | Top | Hora + Workspaces + Layout + Título |
-| =xmobar-monitors.hs= | Bottom | CPU, RAM, GPU, Red, Batería, HHKB, etc. |
-| =xmobarrc= | (Full) | Todo junto (generado por home-manager) |
+| =xmobar-monitors.hs= | Bottom | Todos los monitores del sistema |
+| =xmobar-full.hs= | (Full) | Todo junto para monitor único |
 
-*** Configuración en xmonad.hs
+*** Monitores disponibles (scripts/xmobar-*.sh)
 
-#+BEGIN_SRC haskell
-main = do
-    -- MODO SPLIT: Dos barras
-    -- Workspaces (arriba) - recibe info de XMonad via pipe
-    xmproc0 <- spawnPipe "xmobar ~/.config/xmobar/xmobar-workspaces.hs"
-    -- Monitors (abajo) - no necesita pipe
-    spawn "xmobar ~/.config/xmobar/xmobar-monitors.hs"
-    -- Monitor secundario (full)
-    xmproc1 <- spawnPipe "xmobar -x 1"
+| Monitor | Script | Icono | Descripción | Smart |
+|---------+--------+-------+-------------+-------|
+| Docker | =xmobar-docker.sh= | 󰡨 | Containers activos | Si no hay Docker/containers: oculto |
+| Volumen | =xmobar-volume.sh= | 󰕾 | Nivel PipeWire con gradiente | Siempre visible |
+| Batería | =xmobar-battery.sh= | 󱊣 | Carga + estado (charging/discharging) | Si no hay batería: oculto |
+| HHKB | =xmobar-hhkb-battery.sh= | ⌨ | Batería teclado HHKB Hybrid BT | Si no hay HHKB BT: oculto |
+| WiFi | =xmobar-wifi.sh= | 󰤨 | SSID red WiFi | Si no hay WiFi/conectado: oculto |
+| Red | =xmobar-network.sh= | 󰈀 | IP principal (eth/wifi) | Siempre visible |
+| Discos | =xmobar-disks.sh= | 󰋊 | Uso % + temperatura NVMe | Siempre visible |
+| GPU | =xmobar-gpu.sh= | 󰢮 | Uso, temp, VRAM, watts | Auto-detecta NVIDIA/Intel/AMD |
+| RAM | =xmobar-memory.sh= | 󰍛 | Uso con gradiente | Siempre visible |
+| CPU Freq | =xmobar-cpu-freq.sh= | 󰾅 | Frecuencia + governor | Siempre visible |
+| CPU | =xmobar-cpu.sh= | 󰻠 | Uso % + temperatura | Siempre visible |
+
+*** GPU: Auto-detección (xmobar-gpu.sh)
+
+El script unificado detecta automáticamente el tipo de GPU:
+
+#+BEGIN_SRC bash
+# Prioridad: NVIDIA > AMD > Intel
+# En aurin (RTX 5080): usa nvidia-smi
+# En macbook (Intel): usa /sys/class/drm/card*/gt_cur_freq_mhz
+# Si no hay GPU dedicada: no muestra nada
 #+END_SRC
 
-*** Monitores disponibles
+Output ejemplo NVIDIA:
+#+BEGIN_SRC text
+󰢮04% 󰔐50° 󰍛1.3G 󰚥33W   (uso% temp VRAM watts)
+#+END_SRC
 
-| Monitor | Script | Descripción |
-|---------+--------+-------------|
-| CPU | =xmobar-cpu.sh= | Uso %, temperatura, consumo W |
-| CPU Freq | =xmobar-cpu-freq.sh= | Frecuencia y governor |
-| RAM | =xmobar-memory.sh= | Uso con gradiente de color |
-| GPU | =xmobar-gpu-nvidia.sh= / =intel.sh= | Temp, uso, VRAM |
-| Red | =xmobar-network.sh= | IP, velocidad (auto-detecta eth/wifi) |
-| Discos | =xmobar-disks.sh= | Uso NVMe/SATA/USB |
-| Batería | =xmobar-battery.sh= | Carga con icono y color |
-| HHKB | =xmobar-hhkb-battery.sh= | Batería teclado Bluetooth |
-| Docker | =xmobar-docker.sh= | Containers activos |
-| Volumen | =xmobar-volume.sh= | Nivel con gradiente |
+*** Test en terminal: xmobar-test-all.sh
+
+Script para ver todos los monitores en la terminal con los mismos colores que xmobar.
+Se ejecuta automáticamente al abrir cada terminal (fish greeting).
+
+#+BEGIN_SRC bash
+# Ejecutar manualmente
+~/dotfiles/scripts/xmobar-test-all.sh
+
+# Output (con colores ANSI truecolor):
+󰡨02  󰕾124%  󰈀(192.168.2.147)  󰋊21% 48°  󰢮04% 󰔐50° 󰍛1.3G 󰚥33W  󰍛08%  󰾅1.8GHz  󰻠04% 󰔐46°
+#+END_SRC
+
+*Magia del color*: Convierte tags xmobar =<fc=#RRGGBB>= a ANSI truecolor usando Perl:
+
+#+BEGIN_SRC perl
+# <fc=#56b6c2>text</fc> → \e[38;2;86;182;194mtext\e[0m
+s/<fc=#(..)(..)(..)>([^<]*)<\/fc>/chr(27)."[38;2;".hex($1).";".hex($2).";".hex($3)."m".$4.chr(27)."[0m"/ge
+#+END_SRC
 
 *** Sistema de colores (xmobar-colors.sh)
 
