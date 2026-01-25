@@ -14,7 +14,8 @@ source "${SCRIPT_DIR}/xmobar-colors.sh"
 
 # Buscar dispositivos HHKB conectados por Bluetooth
 # Formato bluetoothctl devices: "Device XX:XX:XX:XX:XX:XX HHKB-Hybrid_1"
-HHKB_MACS=$(bluetoothctl devices 2>/dev/null | grep -i "HHKB" | awk '{print $2}')
+# Timeout para evitar que se quede colgado si no hay BT
+HHKB_MACS=$(timeout 0.5s bluetoothctl devices 2>/dev/null | grep -i "HHKB" | awk '{print $2}')
 
 # Si no hay HHKB por Bluetooth, no mostrar nada
 [ -z "$HHKB_MACS" ] && exit 0
