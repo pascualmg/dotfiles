@@ -2133,6 +2133,7 @@ En laptops también aparecen: 󱊣 Batería, ⌨ HHKB BT, 󰤨 WiFi
 | Volumen | =xmobar-volume.sh= | 󰕾 | Nivel PipeWire con gradiente | Siempre visible |
 | Batería | =xmobar-battery.sh= | 󱊣 | Carga + estado (charging/discharging) | Si no hay batería: oculto |
 | HHKB | =xmobar-hhkb-battery.sh= | ⌨ | Batería teclado HHKB Hybrid BT | Si no hay HHKB BT: oculto |
+| Ratón | =xmobar-mouse-battery.sh= | 󰍽 | Batería ratón Logitech (HID++) | Si no hay ratón Logitech: oculto |
 | WiFi | =xmobar-wifi.sh= | 󰤨 | SSID red WiFi | Si no hay WiFi/conectado: oculto |
 | Red | =xmobar-network.sh= | 󰈀 | IP principal (eth/wifi) | Siempre visible |
 | Discos | =xmobar-disks.sh= | 󰋊 | Uso % + temperatura NVMe | Siempre visible |
