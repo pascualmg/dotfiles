@@ -62,6 +62,11 @@
         filezilla
         dysk
 
+        # Terminal fun (fish greeting)
+        fortune
+        cowsay
+        pokemon-colorscripts
+
         # Shells adicionales
         zsh
         bash

@@ -12,7 +12,12 @@
 # No requiere parametrización por máquina (mismo config en todas)
 # =============================================================================
 
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 {
   config = {
@@ -75,7 +80,27 @@
         set --global fish_pager_color_selected_description
         set --global fish_pager_color_selected_prefix
 
-        # Mostrar estado de monitores xmobar al iniciar terminal
+        # =======================================================================
+        # FISH GREETING: Pokemon + Neofetch + Fortune + Monitores
+        # =======================================================================
+        # Pokemon aleatorio (si esta instalado)
+        if type -q pokemon-colorscripts
+          pokemon-colorscripts -r --no-title
+        end
+
+        # Neofetch compacto con logo NixOS
+        if type -q neofetch
+          neofetch --config none --ascii_distro NixOS_small \
+            --disable title underline model resolution theme icons cursor \
+            --color_blocks off
+        end
+
+        # Fortune + cowsay (frase random con vaca)
+        if type -q fortune; and type -q cowsay
+          fortune -s | cowsay -f small
+        end
+
+        # Monitores xmobar con colores
         if test -x ~/dotfiles/scripts/xmobar-test-all.sh
           ~/dotfiles/scripts/xmobar-test-all.sh
         end
@@ -96,9 +121,6 @@
         ll = "eza -la --icons";
         tree = "eza --tree --icons";
 
-        # NixOS helpers (--impure needed for Vocento hosts file)
-        nrs = "sudo nixos-rebuild switch --flake ~/dotfiles#aurin --impure";
-        nrt = "sudo nixos-rebuild test --flake ~/dotfiles#aurin --impure";
       };
 
       # Abbreviations (expanden al escribir)
