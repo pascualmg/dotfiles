@@ -7,14 +7,18 @@
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 source "${SCRIPT_DIR}/xmobar-colors.sh"
 
-# Máquinas: nombre=host:puerto_ssh
-# TODO: Configurar IPs reales o usar mDNS (.local)
-# Red local (piso): 192.168.18.x
-# Red local (campo): 192.168.2.x
+# =============================================================================
+# MÁQUINAS A MONITOREAR
+# =============================================================================
+# Formato: ["nombre"]="host:puerto"
+# - Usa DDNS/hostname para acceso remoto (campo.zapto.org)
+# - Usa IP local si solo acceso LAN (192.168.x.x)
+# - Puerto SSH (22 por defecto, o el que tengas en port forwarding)
+# =============================================================================
 declare -A MACHINES=(
-    ["aurin"]="aurin.local:22"
-    ["macbook"]="macbook.local:22"
-    ["vespino"]="vespino.local:22"
+    ["aurin"]="campo.zapto.org:2222"    # DDNS + puerto SSH externo
+    # ["vespino"]="192.168.2.149:22"    # Solo LAN campo
+    # ["vps"]="mi-vps.com:22"           # Ejemplo VPS
 )
 
 CACHE_FILE="/tmp/xmobar-machines-cache"
