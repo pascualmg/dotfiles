@@ -2,31 +2,40 @@
 # =============================================================================
 # XMOBAR: HHKB Hybrid Battery Monitor
 # =============================================================================
-# Muestra batería del teclado HHKB Hybrid conectado por Bluetooth
-# Usa sistema de colores compartido (xmobar-colors.sh)
+# Muestra bateria de teclados HHKB Hybrid conectados por Bluetooth.
+# Auto-detecta cualquier HHKB conectado (no usa MAC hardcodeada).
+#
+# HHKB con Hasu controller (USB) no tiene bateria, no mostrara nada.
+# Solo el HHKB Hybrid (Bluetooth) tiene bateria.
 # =============================================================================
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 source "${SCRIPT_DIR}/xmobar-colors.sh"
 
-HHKB_MAC="E0:09:E7:07:B1:DD"
+# Buscar dispositivos HHKB conectados por Bluetooth
+# Formato bluetoothctl devices: "Device XX:XX:XX:XX:XX:XX HHKB-Hybrid_1"
+HHKB_MACS=$(bluetoothctl devices 2>/dev/null | grep -i "HHKB" | awk '{print $2}')
 
-# Obtener porcentaje
-BATTERY=$(bluetoothctl info "$HHKB_MAC" 2>/dev/null | grep "Battery Percentage" | sed 's/.*0x.. (\(.*\))/\1/')
+# Si no hay HHKB por Bluetooth, no mostrar nada
+[ -z "$HHKB_MACS" ] && exit 0
 
-# Si no hay batería o no está conectado
-if [ -z "$BATTERY" ]; then
-    echo ""
-    exit 0
-fi
+output=""
+for MAC in $HHKB_MACS; do
+    # Verificar que esta conectado y obtener bateria
+    BATTERY=$(bluetoothctl info "$MAC" 2>/dev/null | grep "Battery Percentage" | sed 's/.*0x.. (\(.*\))/\1/')
 
-# Icono teclado (Nerd Font)
-ICON="⌨"
+    # Si no tiene bateria o no esta conectado, skip
+    [ -z "$BATTERY" ] && continue
 
-# Color según nivel (inverso: 100% = verde)
-COLOR=$(pct_to_color_inverse "$BATTERY")
+    # Color segun nivel (inverso: 100% = verde)
+    COLOR=$(pct_to_color_inverse "$BATTERY")
 
-# Padding a 3 caracteres para alinear
-BAT_PAD=$(printf "%3d" "$BATTERY")
+    # Padding a 3 caracteres
+    BAT_PAD=$(printf "%3d" "$BATTERY")
 
-echo "<fc=${COLOR}><fn=1>${ICON}</fn>${BAT_PAD}%</fc>"
+    # Icono teclado (Nerd Font)
+    output+="<fc=${COLOR}><fn=1>⌨</fn>${BAT_PAD}%</fc> "
+done
+
+# Quitar espacio final, si no hay nada no muestra nada
+echo "${output% }"

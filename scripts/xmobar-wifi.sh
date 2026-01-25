@@ -1,16 +1,18 @@
 #!/usr/bin/env bash
-# WiFi monitor for xmobar - icono y señal con color dinámico
+# =============================================================================
+# XMOBAR: WiFi Monitor (laptops/wifi only)
+# =============================================================================
+# Muestra senal WiFi solo si hay conexion. En desktops sin wifi no muestra nada.
+# =============================================================================
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 source "${SCRIPT_DIR}/xmobar-colors.sh"
 
-# Leer señal WiFi desde /proc/net/wireless
+# Leer senal WiFi desde /proc/net/wireless
 SIGNAL=$(awk 'NR==3 {printf "%.0f", $3}' /proc/net/wireless 2>/dev/null)
 
-if [ -z "$SIGNAL" ] || [ "$SIGNAL" = "0" ]; then
-    echo "<fc=$COLOR_GRAY><fn=1>󰖪</fn></fc>N/A"
-    exit 0
-fi
+# Si no hay wifi o no hay senal, no mostrar nada
+[ -z "$SIGNAL" ] || [ "$SIGNAL" = "0" ] && exit 0
 
 # Color inverso (100% señal = bueno = verde)
 COLOR=$(pct_to_color_inverse "$SIGNAL")

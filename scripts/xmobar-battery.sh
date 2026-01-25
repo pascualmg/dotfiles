@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
-# Battery monitor for xmobar - icono y carga con color dinámico
+# =============================================================================
+# XMOBAR: Battery Monitor (laptops only)
+# =============================================================================
+# Muestra bateria solo si existe. En desktops no muestra nada.
+# =============================================================================
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 source "${SCRIPT_DIR}/xmobar-colors.sh"
 
-# Leer batería
+# Buscar bateria - si no hay, no mostrar nada (desktop)
 BAT_PATH="/sys/class/power_supply/BAT0"
 [ ! -d "$BAT_PATH" ] && BAT_PATH="/sys/class/power_supply/BAT1"
-[ ! -d "$BAT_PATH" ] && { echo "<fc=$COLOR_GRAY><fn=1>󰂃</fn></fc>N/A"; exit 0; }
+[ ! -d "$BAT_PATH" ] && exit 0
 
 # Calcular carga REAL (no battery health)
 # charge_now/charge_full = carga actual real
