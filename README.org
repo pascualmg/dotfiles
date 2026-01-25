@@ -411,7 +411,7 @@ nix flake check --show-trace
 | *Home-manager* | ✅ 200+ packages, declarative configs |
 | *Multi-machine support* | ✅ Easy to add new machines |
 | *Hardware support* | ✅ NVIDIA, Apple, pro audio modules |
-| *Wayland compositors* | ✅ Hyprland, niri, GNOME Wayland (greetd) |
+| *Wayland compositors* | ✅ Hyprland, niri, GNOME Wayland (SDDM) |
 | *Plug-and-play* | ❌ WIP - requires manual adaptation |
 
 ** What's Personal (Must Customize)
@@ -481,7 +481,7 @@ dotfiles/
 |   |-- base/                    * BASE UNIFICADA (todas las maquinas)
 |   |   |-- default.nix          # Imports: boot, nix-settings, packages, desktop, etc.
 |   |   |-- desktop.nix          # GNOME + XMonad (sesiones)
-|   |   |-- greetd.nix           # greetd + tuigreet (login TUI)
+|   |   |-- sddm.nix             # SDDM display manager (X11 + Wayland)
 |   |   |-- sunshine.nix         # Streaming server (opcional)
 |   |   `-- virtualization.nix   # Docker + libvirt
 |   |-- common/                  . Modulos legacy (usados por mkNixosConfig)
@@ -547,9 +547,9 @@ vespino = mkSystem {
 
 | Maquina | Hardware | Rol | Display Manager |
 |---------+----------+-----+-----------------|
-| aurin   | Dual Xeon E5-2699v3, RTX 5080, 128GB | Produccion, desarrollo | greetd |
-| macbook | MacBook Pro 2016, Intel, HiDPI | Laptop, movilidad | greetd |
-| vespino | AMD CPU, RTX 2060 | Testing, Minecraft, NFS | greetd |
+| aurin   | Dual Xeon E5-2699v3, RTX 5080, 128GB | Produccion, desarrollo | SDDM |
+| macbook | MacBook Pro 2016, Intel, HiDPI | Laptop, movilidad | SDDM |
+| vespino | AMD CPU, RTX 2060 | Testing, Minecraft, NFS | SDDM |
 
 ** VPN Vocento (Ivanti/Pulse Secure) - EXPERIMENTAL [2026-01-21]
 
@@ -1812,12 +1812,196 @@ sudo nixos-rebuild switch --flake ~/dotfiles#aurin --impure
 
 *Recargar config:*
 #+BEGIN_SRC bash
-# Recompilar y recargar
+# Recompilar y recargar (HOT RELOAD - no pierde ventanas!)
 M-q
 
 # O manualmente
 xmonad --recompile && xmonad --restart
 #+END_SRC
+
+*** Multi-Monitor y Workspaces
+
+XMonad tiene un modelo de workspaces MUY diferente a otros WMs (GNOME, KDE, i3).
+Entender esto es clave para no volverse loco con múltiples monitores.
+
+**** El modelo "peculiar" de XMonad
+
+#+BEGIN_SRC text
+En GNOME/KDE:
+  Monitor 1: WS1, WS2, WS3 (fijos a este monitor)
+  Monitor 2: WS4, WS5, WS6 (fijos a este monitor)
+  → Cada monitor tiene SUS workspaces
+
+En XMonad (por defecto):
+  Pool compartido: WS1, WS2, WS3, WS4, WS5, WS6, WS7, WS8, WS9
+  Monitor 1: muestra WS1 (puede mostrar cualquiera)
+  Monitor 2: muestra WS3 (puede mostrar cualquiera)
+  → Los workspaces FLOTAN entre monitores
+#+END_SRC
+
+**** greedyView vs view (comportamiento al cambiar workspace)
+
+**greedyView:** Los workspaces se INTERCAMBIAN
+
+#+BEGIN_SRC text
+Estado inicial:
+  Monitor 1: [WS1]     Monitor 2: [WS3]
+
+Estás en Monitor 1, pulsas M-3:
+  Monitor 1: [WS3]     Monitor 2: [WS1]  ← ¡SWAP!
+
+El WS3 viene a tu monitor, el WS1 va al otro.
+#+END_SRC
+
+**view (config actual):** Solo mueve el FOCO
+
+#+BEGIN_SRC text
+Estado inicial:
+  Monitor 1: [WS1]     Monitor 2: [WS3]
+
+Estás en Monitor 1, pulsas M-3:
+  Monitor 1: [WS1]     Monitor 2: [WS3]  ← Sin cambios
+                            ^
+                       Foco aquí ahora
+
+Tu cursor/foco salta al Monitor 2 donde ya está WS3.
+Ideal para: "reunión en monitor 2, trabajo en monitor 1"
+#+END_SRC
+
+**** Cambiar entre view y greedyView
+
+*Config actual usa =view=.* Para volver a =greedyView= (swap), edita =xmonad.hs=:
+
+#+BEGIN_SRC haskell
+-- Cambiar esto (en keybindings M-[1-9]):
+, ("M-1", windows $ W.view "1")
+
+-- Por esto:
+, ("M-1", windows $ W.greedyView "1")
+#+END_SRC
+
+Luego =M-q= para hot-reload y probar.
+
+**** IndependentScreens (workspaces por monitor)
+
+Para tener workspaces INDEPENDIENTES por monitor (como GNOME/KDE):
+
+#+BEGIN_SRC haskell
+import XMonad.Layout.IndependentScreens
+
+-- En main:
+xmonad $ def
+    { workspaces = withScreens 2 ["1","2","3","4","5","6","7","8","9"]
+    -- ...
+    }
+
+-- Keybindings cambian:
+-- M-1 en monitor 0 → workspace "0_1"
+-- M-1 en monitor 1 → workspace "1_1"
+#+END_SRC
+
+Con 2 monitores tendrías 18 workspaces: =0_1= a =0_9= y =1_1= a =1_9=.
+
+**** PhysicalScreens (navegar entre monitores)
+
+Para teclas dedicadas a saltar entre monitores físicos:
+
+#+BEGIN_SRC haskell
+import XMonad.Actions.PhysicalScreens
+
+-- Keybindings:
+, ("M-w", viewScreen def 0)      -- Ir a monitor 0 (izquierda/principal)
+, ("M-e", viewScreen def 1)      -- Ir a monitor 1 (derecha/secundario)
+, ("M-r", viewScreen def 2)      -- Ir a monitor 2 (si existe)
+
+-- Mover ventana a otro monitor:
+, ("M-S-w", sendToScreen def 0)
+, ("M-S-e", sendToScreen def 1)
+#+END_SRC
+
+**** CycleWS (navegación avanzada)
+
+Para navegar solo por workspaces no vacíos o del monitor actual:
+
+#+BEGIN_SRC haskell
+import XMonad.Actions.CycleWS
+
+-- Solo workspaces con ventanas:
+, ("M-<Right>", moveTo Next NonEmptyWS)
+, ("M-<Left>", moveTo Prev NonEmptyWS)
+
+-- Mover ventana al siguiente workspace no vacío:
+, ("M-S-<Right>", shiftTo Next NonEmptyWS)
+
+-- Alternar entre los 2 últimos workspaces usados:
+, ("M-<Tab>", toggleWS)
+#+END_SRC
+
+**** Configuración recomendada para ultrawide (aurin)
+
+Para el monitor ultrawide 5120x1440 de aurin, el layout =ThreeColMid=
+funciona muy bien (master en el centro, slaves a los lados):
+
+#+BEGIN_SRC haskell
+-- Ya configurado en myLayoutHook:
+ThreeColMid 1 (3/100) (2/3)  -- 1 master, incremento 3%, ratio 2/3
+#+END_SRC
+
+**** xrandr: detectar y configurar monitores
+
+#+BEGIN_SRC bash
+# Ver monitores conectados
+xrandr
+
+# Configurar monitor ultrawide como primario
+xrandr --output DP-4 --mode 5120x1440 --rate 120 --primary
+
+# Añadir segundo monitor a la derecha
+xrandr --output HDMI-0 --mode 1920x1080 --right-of DP-4
+
+# Apagar monitor
+xrandr --output HDMI-0 --off
+#+END_SRC
+
+**** autorandr: perfiles automáticos
+
+Para cambiar automáticamente entre configs de monitores:
+
+#+BEGIN_SRC bash
+# Guardar configuración actual como perfil
+autorandr --save trabajo
+
+# Listar perfiles
+autorandr --list
+
+# Aplicar perfil
+autorandr --load trabajo
+
+# Detectar y aplicar automáticamente
+autorandr --change
+#+END_SRC
+
+**** arandr: configuración gráfica
+
+=arandr= es la GUI para xrandr. Permite arrastrar monitores visualmente
+y genera scripts de configuración.
+
+#+BEGIN_SRC bash
+# Lanzar
+arandr
+
+# Guardar layout → genera script en ~/.screenlayout/
+#+END_SRC
+
+**** Resumen: qué elegir
+
+| Escenario | Recomendación |
+|-----------+---------------|
+| Monitor único | Config actual (view) funciona igual |
+| Ultrawide (aurin) | Config actual + ThreeColMid |
+| Dual monitor + reunión fija | Config actual (view) ✓ |
+| Quieres swap de workspaces | Cambiar a =greedyView= |
+| Quieres workspaces fijos por monitor | IndependentScreens |
 
 ** Picom (~/.config/picom/picom.conf) *
 
@@ -1885,32 +2069,115 @@ fish
 
 ** XMobar (~/.config/xmobar/) *
 
-*Status bar* para XMonad
+*Status bar* para XMonad con soporte para modo split (dos barras).
 
-*Muestra:*
-- Workspaces activos
-- Layout actual
-- Window title
-- Posiblemente: CPU, RAM, fecha/hora (ver config)
+*** Modos disponibles
 
-*Recargar:*
+| Modo | Descripción | Uso |
+|------+-------------+-----|
+| Full | Todo en una barra | Monitor único, aurin ultrawide |
+| Split | Dos barras separadas | Multi-monitor, MacBook + externo |
+
+*** Modo Split (actual en MacBook)
+
+#+BEGIN_SRC text
+┌─────────────────────────────────────────────────────────────┐
+│ 🕐 Hora │ [1] 2 3 4 │ Layout │ Título ventana              │  ← Arriba (workspaces)
+└─────────────────────────────────────────────────────────────┘
+                    ... contenido ...
+┌─────────────────────────────────────────────────────────────┐
+│                    Docker Vol Bat ⌨HHKB Red Disk GPU RAM CPU│  ← Abajo (monitores)
+└─────────────────────────────────────────────────────────────┘
+#+END_SRC
+
+*Archivos:*
+| Archivo | Posición | Contenido |
+|---------+----------+-----------|
+| =xmobar-workspaces.hs= | Top | Hora + Workspaces + Layout + Título |
+| =xmobar-monitors.hs= | Bottom | CPU, RAM, GPU, Red, Batería, HHKB, etc. |
+| =xmobarrc= | (Full) | Todo junto (generado por home-manager) |
+
+*** Configuración en xmonad.hs
+
+#+BEGIN_SRC haskell
+main = do
+    -- MODO SPLIT: Dos barras
+    -- Workspaces (arriba) - recibe info de XMonad via pipe
+    xmproc0 <- spawnPipe "xmobar ~/.config/xmobar/xmobar-workspaces.hs"
+    -- Monitors (abajo) - no necesita pipe
+    spawn "xmobar ~/.config/xmobar/xmobar-monitors.hs"
+    -- Monitor secundario (full)
+    xmproc1 <- spawnPipe "xmobar -x 1"
+#+END_SRC
+
+*** Monitores disponibles
+
+| Monitor | Script | Descripción |
+|---------+--------+-------------|
+| CPU | =xmobar-cpu.sh= | Uso %, temperatura, consumo W |
+| CPU Freq | =xmobar-cpu-freq.sh= | Frecuencia y governor |
+| RAM | =xmobar-memory.sh= | Uso con gradiente de color |
+| GPU | =xmobar-gpu-nvidia.sh= / =intel.sh= | Temp, uso, VRAM |
+| Red | =xmobar-network.sh= | IP, velocidad (auto-detecta eth/wifi) |
+| Discos | =xmobar-disks.sh= | Uso NVMe/SATA/USB |
+| Batería | =xmobar-battery.sh= | Carga con icono y color |
+| HHKB | =xmobar-hhkb-battery.sh= | Batería teclado Bluetooth |
+| Docker | =xmobar-docker.sh= | Containers activos |
+| Volumen | =xmobar-volume.sh= | Nivel con gradiente |
+
+*** Sistema de colores (xmobar-colors.sh)
+
+Todos los scripts usan =xmobar-colors.sh= para gradientes consistentes:
+
 #+BEGIN_SRC bash
-killall xmobar
-xmobar &
+# Colores One Dark
+COLOR_GREEN="#98c379"   # Bueno (>70%)
+COLOR_YELLOW="#e5c07b"  # Warning (30-70%)
+COLOR_ORANGE="#d19a66"  # Alto
+COLOR_RED="#e06c75"     # Crítico (<30%)
+
+# Funciones
+pct_to_color 75          # Devuelve color según % (0=verde, 100=rojo)
+pct_to_color_inverse 75  # Inverso (0=rojo, 100=verde) - para batería
+#+END_SRC
+
+*** Recargar
+
+#+BEGIN_SRC bash
+# Recargar solo xmobar (sin reiniciar xmonad)
+killall xmobar && xmonad --restart
+
+# O simplemente
+M-q  # Recompila y reinicia xmonad (relanza xmobars)
+#+END_SRC
+
+*** Personalización por máquina
+
+En =modules/home-manager/machines/<maquina>.nix=:
+
+#+BEGIN_SRC nix
+dotfiles.xmobar = {
+  enable = true;
+  fontSize = 22;           # MacBook HiDPI
+  gpuType = "intel";       # intel | nvidia | none
+  showBattery = true;      # Laptops
+  showWirelessMouse = false;
+};
 #+END_SRC
 
 ** Scripts (~/scripts/) .
 
 *Scripts utiles del sistema*
 
-| Script                 | Descripcion                               |
-|------------------------+-------------------------------------------|
-| =vm-backupeitor.sh=    | Backup/restore VMs libvirt (XML + QCOW2) |
-| =bootstrap-doom.sh=    | Setup inicial Doom Emacs en máquinas nuevas |
-| =sync-wallpapers.sh=   | Sincronizar wallpapers                    |
-| =xmobar-*.sh=          | Scripts de monitorización para xmobar     |
-| =trayer-*.sh=          | Gestión de trayer (system tray)           |
-| =wireless-mouse.sh=    | Monitor batería ratón wireless            |
+| Script                   | Descripcion                               |
+|--------------------------+-------------------------------------------|
+| =vm-backupeitor.sh=      | Backup/restore VMs libvirt (XML + QCOW2)  |
+| =bootstrap-doom.sh=      | Setup inicial Doom Emacs en máquinas nuevas |
+| =sync-wallpapers.sh=     | Sincronizar wallpapers                    |
+| =xmobar-*.sh=            | Scripts de monitorización para xmobar     |
+| =xmobar-hhkb-battery.sh= | Batería HHKB Hybrid (BT) con colores      |
+| =trayer-*.sh=            | Gestión de trayer (system tray)           |
+| =wireless-mouse.sh=      | Monitor batería ratón wireless            |
 
 ** Wallpapers (~/wallpapers/) .
 
@@ -2567,6 +2834,40 @@ El teclado Apple SPI tiene las teclas = a= y =< >= intercambiadas respecto al la
 
 Esto funciona tanto en X11 (XMonad) como en Wayland (GNOME) porque keyd opera a nivel evdev.
 
+** Perifericos de Input
+
+*** Teclados HHKB
+
+- *HHKB original*: Hasu controller (QMK) - layout programado en hardware
+- *HHKB Hybrid*: BT + USB-C, Topre switches
+
+Filosofía: *el hardware manda, no el software*. Config en memoria del teclado.
+
+*** Ratón: Logitech G Pro X Superlight 2
+
+| Conexión | Device ID | Nombre |
+|----------+-----------+--------|
+| Lightspeed (receptor USB) | =046d:c54d= | Logitech USB Receiver |
+| Cable USB | =046d:c09b= | Logitech PRO X 2 |
+| Bluetooth | - | No probado |
+
+*Estado soporte Linux (2026-01):*
+- =libratbag= / =piper=: NO soportado
+- =solaar=: NO soportado
+- El ratón es muy nuevo para las herramientas open source
+
+*Configurar DPI:*
+1. Conectar a Windows (VM o dual boot)
+2. Instalar Logitech G Hub
+3. Configurar DPI y guardar en *onboard memory*
+4. El DPI persiste en Linux (guardado en el ratón)
+
+*Config libinput* (ya aplicada):
+#+BEGIN_SRC nix
+# Aceleración plana (raw input) - ideal para gaming
+services.libinput.mouse.accelProfile = "flat";
+#+END_SRC
+
 ** Solucion: xmobar y fuentes HiDPI
 
 *Estado:* RESUELTO
@@ -2649,7 +2950,7 @@ console.font = lib.mkForce "ter-v32n";
 console.packages = lib.mkForce [ pkgs.terminus_font ];
 #+END_SRC
 
-** Display Managers: La saga GDM -> LightDM -> greetd (RESUELTO 2026-01-24)
+** Display Managers: La saga GDM -> LightDM -> greetd -> SDDM (RESUELTO 2026-01-24)
 
 *Estado:* COMPLETO - X11 (XMonad) Y Wayland (Hyprland, niri) funcionan
 
@@ -2669,59 +2970,47 @@ Cambiamos a LightDM. XMonad funcionaba, PERO:
 - Ignora completamente =wayland-sessions/=
 - Hyprland, niri, GNOME Wayland NO aparecian
 
-*Era 3: greetd + tuigreet (2026-01-24)*
-Solucion definitiva: greetd con tuigreet (TUI greeter).
+*Era 3: greetd + tuigreet (2026-01-24) - FALLIDO*
+Intentamos greetd con tuigreet (TUI greeter), pero:
+- X11 roto: Xorg sin suid necesita logind para permisos de input
+- Sesiones Wayland funcionaban pero X11 (XMonad) no arrancaba
+- Demasiado complejo configurar correctamente
 
-*** Solucion actual: greetd + tuigreet
+*Era 4: SDDM (2026-01-24)*
+Solucion definitiva: SDDM con tema astronaut.
 
-Configurado en =modules/base/greetd.nix=:
+*** Solucion actual: SDDM
+
+Configurado en =modules/base/sddm.nix=:
 
 #+BEGIN_SRC nix
-services.greetd = {
+services.displayManager.sddm = {
   enable = true;
-  settings.default_session = {
-    command = ''
-      ${pkgs.tuigreet}/bin/tuigreet \
-        --time \
-        --asterisks \
-        --remember \
-        --remember-user-session \
-        --user passh \
-        --sessions ${config.services.displayManager.sessionData.desktops}/share/xsessions:${config.services.displayManager.sessionData.desktops}/share/wayland-sessions \
-        --xsession-wrapper "${pkgs.xorg.xinit}/bin/startx /run/current-system/sw/bin/env -- -keeptty"
-    '';
-    user = "greeter";
-  };
+  wayland.enable = true;  # Permite sesiones Wayland
+  theme = "sddm-astronaut-theme";
+  extraPackages = [ pkgs.sddm-astronaut ];
 };
 #+END_SRC
 
-*** Por que greetd + tuigreet
+*Simple. Funciona. Sin dramas.*
 
-| Caracteristica | GDM | LightDM | greetd |
-|----------------+-----+---------+--------|
-| X11 sessions | Si (roto NVIDIA) | Si | Si |
-| Wayland sessions | Si | NO | Si |
-| Dependencias | Pesadas (GNOME) | Medias | Minimas |
-| TUI login | No | No | Si (tuigreet) |
-| NVIDIA compatible | Problematico | Si | Si |
+*** Por que SDDM
 
-*** Controles de tuigreet
-
-| Tecla | Accion |
-|-------+--------|
-| Tab | Siguiente campo |
-| F2 | Menu de sesiones |
-| F3 | Ciclar sesiones |
-| Enter | Login |
-| F1 | Mostrar/ocultar password |
+| Caracteristica | GDM | LightDM | greetd | SDDM |
+|----------------+-----+---------+--------+------|
+| X11 sessions | Si (roto NVIDIA) | Si | Roto (suid) | Si |
+| Wayland sessions | Si | NO | Si | Si |
+| Dependencias | Pesadas (GNOME) | Medias | Minimas | Medias (Qt) |
+| NVIDIA compatible | Problematico | Si | Parcial | Si |
+| Configuracion | Compleja | Media | Compleja | Simple |
 
 *** Estado actual de las maquinas
 
 | Maquina | DM | Sesiones disponibles | Estado |
 |---------+----+----------------------+--------|
-| macbook | greetd | XMonad, GNOME, Hyprland, niri | OK (probado) |
-| aurin | greetd | XMonad, GNOME, Hyprland, niri | Pendiente test |
-| vespino | greetd | XMonad, GNOME, Hyprland, niri | Pendiente test |
+| macbook | SDDM | XMonad, GNOME, KDE, Hyprland, niri | OK (probado) |
+| aurin   | SDDM | XMonad, GNOME, KDE, Hyprland, niri | OK (probado) |
+| vespino | SDDM | XMonad, GNOME, KDE, Hyprland, niri | Pendiente test |
 
 *** NVIDIA + Wayland (aurin, vespino)
 
@@ -2735,7 +3024,7 @@ environment.sessionVariables = {
 };
 #+END_SRC
 
-Estas variables se aplican DESPUES del login (sesion), no en greetd (pre-login)
+Estas variables se aplican DESPUES del login (sesion), no en SDDM (pre-login)
 
 *** Picom: por que no esta en desktop.nix
 
@@ -3569,7 +3858,7 @@ Lista de secretos que necesitan migrarse (VALORES SANITIZADOS - no reales):
   - Copiar disco QCOW2 a vespino
   - Configurar =services.vocento-vpn-bridge= con interface correcta
   - Validar que funciona igual que en macbook
-- [X] *WAYLAND RESUELTO* - greetd + tuigreet soporta X11 y Wayland (2026-01-24)
+- [X] *WAYLAND RESUELTO* - SDDM soporta X11 y Wayland (2026-01-24)
   - Probado en macbook con Hyprland
   - Pendiente: probar en aurin y vespino (NVIDIA)
 - [ ] *rEFInd* - Bootloader para fix geometria TTY en MacBook
@@ -3632,6 +3921,123 @@ Lista de secretos que necesitan migrarse (VALORES SANITIZADOS - no reales):
 - [X] Migrar xmonad a home-manager - DONE (Phase 2)
 - [ ] Eliminar stow cuando composer migre (CRÍTICO: composer en PROD Vocento)
 
+* Apps Utiles de GNOME y KDE (para usar en XMonad)
+
+Al tener GNOME y KDE Plasma instalados, tenemos acceso a todas sus aplicaciones
+que funcionan perfectamente en XMonad u otros WMs minimalistas.
+
+** Configuracion del Sistema
+
+| App                        | DE    | Comando                    | Para que                              |
+|----------------------------+-------+----------------------------+---------------------------------------|
+| GNOME Settings             | GNOME | =gnome-control-center=     | Config general del sistema            |
+| KDE System Settings        | KDE   | =systemsettings=           | Config general del sistema            |
+| Display/Monitors           | -     | =arandr=                   | Configurar monitores (xrandr GUI)     |
+| Network Connections        | GNOME | =nm-connection-editor=     | WiFi, VPN, proxies                    |
+| Bluetooth                  | -     | =blueman-manager=          | Dispositivos Bluetooth                |
+| Audio/Volume               | -     | =pavucontrol=              | Mezclador de audio detallado          |
+| Printers                   | GNOME | =system-config-printer=    | Configurar impresoras                 |
+| Users                      | GNOME | =gnome-control-center user-accounts= | Gestion de usuarios        |
+| Date & Time                | GNOME | =gnome-control-center datetime= | Zona horaria, NTP               |
+| Power                      | GNOME | =gnome-control-center power= | Energia, suspension                 |
+| KDE Connect                | KDE   | =kdeconnect-app=           | Conectar movil al PC                  |
+
+** Gestion de Archivos
+
+| App                        | DE    | Comando                    | Para que                              |
+|----------------------------+-------+----------------------------+---------------------------------------|
+| Dolphin                    | KDE   | =dolphin=                  | File manager muy potente              |
+| Nautilus                   | GNOME | =nautilus=                 | File manager GNOME                    |
+| Thunar                     | XFCE  | =thunar=                   | File manager ligero                   |
+| Disks                      | GNOME | =gnome-disks=              | Particiones, montar discos, SMART     |
+| KDE Partition Manager      | KDE   | =partitionmanager=         | Particiones avanzado                  |
+| Filelight                  | KDE   | =filelight=                | Uso de disco visual (sunburst)        |
+| Baobab                     | GNOME | =baobab=                   | Uso de disco visual                   |
+
+** Multimedia
+
+| App                        | DE    | Comando                    | Para que                              |
+|----------------------------+-------+----------------------------+---------------------------------------|
+| Gwenview                   | KDE   | =gwenview=                 | Visor imagenes con edicion basica     |
+| Eye of GNOME               | GNOME | =eog=                      | Visor imagenes simple                 |
+| Okular                     | KDE   | =okular=                   | PDFs, ePub, comics, anotaciones       |
+| Evince                     | GNOME | =evince=                   | PDFs simple                           |
+| Totem                      | GNOME | =totem=                    | Reproductor video                     |
+| Elisa                      | KDE   | =elisa=                    | Reproductor musica                    |
+| Rhythmbox                  | GNOME | =rhythmbox=                | Reproductor musica + podcasts         |
+
+** Screenshots y Grabacion
+
+| App                        | DE    | Comando                    | Para que                              |
+|----------------------------+-------+----------------------------+---------------------------------------|
+| Spectacle                  | KDE   | =spectacle=                | Screenshots con anotaciones           |
+| GNOME Screenshot           | GNOME | =gnome-screenshot=         | Screenshots basico                    |
+| Flameshot                  | -     | =flameshot gui=            | Screenshots con edicion               |
+| OBS Studio                 | -     | =obs=                      | Grabacion/streaming profesional       |
+| Peek                       | -     | =peek=                     | GIFs animados                         |
+
+** Editores y Documentos
+
+| App                        | DE    | Comando                    | Para que                              |
+|----------------------------+-------+----------------------------+---------------------------------------|
+| Kate                       | KDE   | =kate=                     | Editor texto avanzado                 |
+| GNOME Text Editor          | GNOME | =gnome-text-editor=        | Editor texto simple                   |
+| Gedit                      | GNOME | =gedit=                    | Editor texto clasico                  |
+| LibreOffice                | -     | =libreoffice=              | Suite offimatica completa             |
+| Apostrophe                 | GNOME | =apostrophe=               | Editor Markdown                       |
+
+** Utilidades
+
+| App                        | DE    | Comando                    | Para que                              |
+|----------------------------+-------+----------------------------+---------------------------------------|
+| Calculator                 | GNOME | =gnome-calculator=         | Calculadora cientifica                |
+| KCalc                      | KDE   | =kcalc=                    | Calculadora                           |
+| System Monitor             | GNOME | =gnome-system-monitor=     | Procesos, CPU, memoria                |
+| KSysGuard                  | KDE   | =ksysguard=                | Monitor sistema clasico               |
+| Plasma System Monitor      | KDE   | =plasma-systemmonitor=     | Monitor sistema moderno               |
+| Characters                 | GNOME | =gnome-characters=         | Mapa de caracteres, emojis            |
+| KCharSelect                | KDE   | =kcharselect=              | Mapa de caracteres                    |
+| Fonts                      | GNOME | =gnome-font-viewer=        | Visor de fuentes                      |
+| Archive Manager            | GNOME | =file-roller=              | Comprimir/descomprimir                |
+| Ark                        | KDE   | =ark=                      | Comprimir/descomprimir                |
+| Secrets (Keyring)          | GNOME | =gnome-keyring=            | Gestor de passwords del sistema       |
+| KWallet                    | KDE   | =kwalletmanager5=          | Gestor de passwords del sistema       |
+
+** Desarrollo
+
+| App                        | DE    | Comando                    | Para que                              |
+|----------------------------+-------+----------------------------+---------------------------------------|
+| D-Spy                      | GNOME | =d-spy=                    | Explorador D-Bus                      |
+| Qt Designer                | KDE   | =designer=                 | Disenar interfaces Qt                 |
+| Glade                      | GNOME | =glade=                    | Disenar interfaces GTK                |
+
+** Herramientas CLI utiles (bonus)
+
+| Comando                    | Para que                                          |
+|----------------------------+---------------------------------------------------|
+| =xrandr=                   | Configurar monitores desde terminal               |
+| =autorandr=                | Perfiles de monitor automaticos                   |
+| =xdotool=                  | Automatizar clicks y teclas                       |
+| =xclip= / =xsel=           | Clipboard desde terminal                          |
+| =wl-copy= / =wl-paste=     | Clipboard Wayland                                 |
+| =notify-send=              | Enviar notificaciones                             |
+| =pactl=                    | Control PulseAudio/PipeWire                       |
+| =playerctl=                | Controlar reproductores multimedia                |
+| =brightnessctl=            | Controlar brillo de pantalla                      |
+| =nmcli=                    | NetworkManager desde terminal                     |
+| =bluetoothctl=             | Bluetooth desde terminal                          |
+
+** Nota sobre instalacion
+
+La mayoria de estas apps ya estan instaladas al tener GNOME y KDE Plasma habilitados.
+Si alguna falta, se puede instalar temporalmente con:
+
+#+begin_src bash
+nix-shell -p gnome.gnome-disk-utility  # Ejemplo
+#+end_src
+
+O anadirla permanentemente en =modules/core/packages.nix=.
+
 * Referencias
 
 - [[https://nixos.org/manual/nixos/stable/][NixOS Manual]]
@@ -3644,12 +4050,12 @@ Lista de secretos que necesitan migrarse (VALORES SANITIZADOS - no reales):
 
 ---
 
-*Ultima actualizacion:* 2026-01-19
+*Ultima actualizacion:* 2026-01-24
 *Arquitectura:* Clone-First (mkSystem)
-*Display Manager:* greetd + tuigreet (todas las maquinas)
+*Display Manager:* SDDM (todas las maquinas)
 *Sistemas:* Aurin, MacBook, Vespino (NixOS 25.05)
 *Shell principal:* Fish
-*Window Manager:* XMonad
+*Window Manager:* XMonad (X11), Hyprland/niri (Wayland)
 *Terminal:* Alacritty
 
 *Documentacion adicional:*
