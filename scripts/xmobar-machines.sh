@@ -8,12 +8,13 @@ SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 source "${SCRIPT_DIR}/xmobar-colors.sh"
 
 # Máquinas: nombre=host:puerto_ssh
+# TODO: Configurar IPs reales o usar mDNS (.local)
 # Red local (piso): 192.168.18.x
 # Red local (campo): 192.168.2.x
 declare -A MACHINES=(
-    ["aurin"]="192.168.2.147:22"
-    ["macbook"]="192.168.2.148:22"
-    ["vespino"]="192.168.2.149:22"
+    ["aurin"]="aurin.local:22"
+    ["macbook"]="macbook.local:22"
+    ["vespino"]="vespino.local:22"
 )
 
 CACHE_FILE="/tmp/xmobar-machines-cache"
