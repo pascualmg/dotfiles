@@ -23,11 +23,11 @@ dock=$("$SCRIPT_DIR/xmobar-docker.sh" 2>/dev/null | strip)
 
 # Output compacto una linea
 out=""
-[ -n "$gpu" ] && out+="${G}GPU${N}$gpu "
-[ -n "$cpu" ] && out+="${G}CPU${N}$cpu "
-[ -n "$mem" ] && out+="${G}MEM${N}$mem "
-[ -n "$disk" ] && out+="${G}DSK${N}$disk "
-[ -n "$dock" ] && out+="${Y}🐳${N}$dock "
-[ -n "$net" ] && out+="${C}NET${N}$net"
+[ -n "$gpu" ] && out+="${G}GPU ${N}$gpu  "
+[ -n "$cpu" ] && out+="${G}CPU ${N}$cpu  "
+[ -n "$mem" ] && out+="${G}MEM ${N}$mem  "
+[ -n "$disk" ] && out+="${G}DSK ${N}$disk  "
+[ -n "$dock" ] && out+="${Y}DOC ${N}$dock  "
+[ -n "$net" ] && out+="${C}NET ${N}$net"
 
 echo -e "$out"
