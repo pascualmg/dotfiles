@@ -307,6 +307,54 @@
 
       nixosConfigurations = {
         # ---------------------------------------------------------------------
+        # LIVE ISO - Entorno completo booteable desde USB
+        # ---------------------------------------------------------------------
+        # Genera ISO: nix build .#nixosConfigurations.live.config.system.build.isoImage
+        # Resultado:  result/iso/nixos-passh-live-*.iso
+        live = nixpkgs.lib.nixosSystem {
+          inherit system;
+          specialArgs = {
+            inherit inputs;
+            inherit home-manager nixos-hardware;
+            inherit alacritty-themes;
+            inherit pkgsMaster;
+          };
+          modules = [
+            # ISO base con instalador grafico
+            "${nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-graphical-calamares.nix"
+
+            # Configuracion especifica del live
+            ./modules/iso
+
+            # Base del desktop (XMonad, GNOME, etc) - sin hardware especifico
+            ./modules/base/desktop.nix
+            ./modules/core/locale.nix
+            ./modules/core/console.nix
+            ./modules/core/nix-settings.nix
+            ./modules/core/packages.nix
+
+            # nix-index para comma
+            nix-index-database.nixosModules.nix-index
+            { programs.nix-index-database.comma.enable = true; }
+
+            # Home Manager con tu config completa
+            home-manager.nixosModules.home-manager
+            {
+              home-manager = {
+                useGlobalPkgs = true;
+                useUserPackages = true;
+                extraSpecialArgs = {
+                  inherit inputs pkgsMaster alacritty-themes;
+                  hostname = "live";
+                };
+                users.passh = import ./modules/home-manager;
+                backupFileExtension = "backup";
+              };
+            }
+          ];
+        };
+
+        # ---------------------------------------------------------------------
         # AURIN - Workstation de produccion (CRITICO)
         # ---------------------------------------------------------------------
         aurin = mkSystem {
