@@ -12,10 +12,16 @@
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 source "${SCRIPT_DIR}/xmobar-colors.sh"
 
+# Si no hay servicio bluetooth activo, salir rápido (no colgarse)
+systemctl is-active bluetooth.service &>/dev/null || exit 0
+
+# Si no hay adaptador bluetooth, salir
+[ -d /sys/class/bluetooth ] || exit 0
+[ "$(ls -A /sys/class/bluetooth 2>/dev/null)" ] || exit 0
+
 # Buscar dispositivos HHKB conectados por Bluetooth
 # Formato bluetoothctl devices: "Device XX:XX:XX:XX:XX:XX HHKB-Hybrid_1"
-# Timeout para evitar que se quede colgado si no hay BT
-HHKB_MACS=$(timeout 0.5s bluetoothctl devices 2>/dev/null | grep -i "HHKB" | awk '{print $2}')
+HHKB_MACS=$(echo "" | bluetoothctl devices 2>/dev/null | grep -i "HHKB" | awk '{print $2}')
 
 # Si no hay HHKB por Bluetooth, no mostrar nada
 [ -z "$HHKB_MACS" ] && exit 0
@@ -23,7 +29,7 @@ HHKB_MACS=$(timeout 0.5s bluetoothctl devices 2>/dev/null | grep -i "HHKB" | awk
 output=""
 for MAC in $HHKB_MACS; do
     # Verificar que esta conectado y obtener bateria
-    BATTERY=$(bluetoothctl info "$MAC" 2>/dev/null | grep "Battery Percentage" | sed 's/.*0x.. (\(.*\))/\1/')
+    BATTERY=$(echo "" | bluetoothctl info "$MAC" 2>/dev/null | grep "Battery Percentage" | sed 's/.*0x.. (\(.*\))/\1/')
 
     # Si no tiene bateria o no esta conectado, skip
     [ -z "$BATTERY" ] && continue
