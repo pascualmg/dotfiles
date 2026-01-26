@@ -12,36 +12,44 @@
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 source "${SCRIPT_DIR}/xmobar-colors.sh"
 
-# Si no hay servicio bluetooth activo, salir rápido (no colgarse)
-systemctl is-active bluetooth.service &>/dev/null || exit 0
+# Si no hay servicio bluetooth activo, mostrar icono gris
+if ! systemctl is-active bluetooth.service &>/dev/null; then
+	echo "<fc=#444444><fn=1>⌨</fn></fc>"
+	exit 0
+fi
 
-# Si no hay adaptador bluetooth, salir
-[ -d /sys/class/bluetooth ] || exit 0
-[ "$(ls -A /sys/class/bluetooth 2>/dev/null)" ] || exit 0
+# Si no hay adaptador bluetooth, mostrar icono gris
+if [ ! -d /sys/class/bluetooth ] || [ -z "$(ls -A /sys/class/bluetooth 2>/dev/null)" ]; then
+	echo "<fc=#444444><fn=1>⌨</fn></fc>"
+	exit 0
+fi
 
 # Buscar dispositivos HHKB conectados por Bluetooth
 # Formato bluetoothctl devices: "Device XX:XX:XX:XX:XX:XX HHKB-Hybrid_1"
 HHKB_MACS=$(echo "" | bluetoothctl devices 2>/dev/null | grep -i "HHKB" | awk '{print $2}')
 
-# Si no hay HHKB por Bluetooth, no mostrar nada
-[ -z "$HHKB_MACS" ] && exit 0
+# Si no hay HHKB por Bluetooth, mostrar icono gris
+if [ -z "$HHKB_MACS" ]; then
+	echo "<fc=#444444><fn=1>⌨</fn></fc>"
+	exit 0
+fi
 
 output=""
 for MAC in $HHKB_MACS; do
-    # Verificar que esta conectado y obtener bateria
-    BATTERY=$(echo "" | bluetoothctl info "$MAC" 2>/dev/null | grep "Battery Percentage" | sed 's/.*0x.. (\(.*\))/\1/')
+	# Verificar que esta conectado y obtener bateria
+	BATTERY=$(echo "" | bluetoothctl info "$MAC" 2>/dev/null | grep "Battery Percentage" | sed 's/.*0x.. (\(.*\))/\1/')
 
-    # Si no tiene bateria o no esta conectado, skip
-    [ -z "$BATTERY" ] && continue
+	# Si no tiene bateria o no esta conectado, skip
+	[ -z "$BATTERY" ] && continue
 
-    # Color segun nivel (inverso: 100% = verde)
-    COLOR=$(pct_to_color_inverse "$BATTERY")
+	# Color segun nivel (inverso: 100% = verde)
+	COLOR=$(pct_to_color_inverse "$BATTERY")
 
-    # Padding a 3 caracteres
-    BAT_PAD=$(printf "%3d" "$BATTERY")
+	# Padding a 3 caracteres
+	BAT_PAD=$(printf "%3d" "$BATTERY")
 
-    # Icono teclado (Nerd Font)
-    output+="<fc=${COLOR}><fn=1>⌨</fn>${BAT_PAD}%</fc> "
+	# Icono teclado (Nerd Font)
+	output+="<fc=${COLOR}><fn=1>⌨</fn>${BAT_PAD}%</fc> "
 done
 
 # Quitar espacio final, si no hay nada no muestra nada

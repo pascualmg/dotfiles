@@ -255,13 +255,12 @@ toggleSticky = do
 
 main :: IO ()
 main = do
-    -- MODO SPLIT: Dos barras
+    -- MODO SPLIT: Dos barras (workspaces arriba + monitors abajo)
     -- Workspaces+Layout+Titulo (arriba) - recibe info de XMonad
     xmproc0 <- spawnPipe "xmobar ~/.config/xmobar/xmobar-workspaces.hs"
     -- Monitors (abajo) - no necesita pipe
     spawn "xmobar ~/.config/xmobar/xmobar-monitors.hs"
-    -- Para el segundo monitor (full)
-    xmproc1 <- spawnPipe "xmobar -x 1"
+    -- MODO FULL disponible manualmente: xmobar ~/.config/xmobar/xmobarrc
 
     -- Configuración de XMonad
     -- ewmh exporta info de workspaces que taffybar lee automáticamente
@@ -289,9 +288,8 @@ main = do
         -- LOG HOOK
         -- =========================================
         -- Xmobar recibe info via pipe, taffybar lee de EWMH automáticamente
-        -- Enviamos la misma info a ambos monitores
         , logHook = dynamicLogWithPP xmobarPP
-            { ppOutput          = \s -> hPutStrLn xmproc0 s >> hPutStrLn xmproc1 s
+            { ppOutput          = hPutStrLn xmproc0
             , ppCurrent         = xmobarColor "#98c379" "" . wrap "[" "]"
             , ppVisible         = xmobarColor "#61afef" ""
             , ppHidden          = xmobarColor "#c678dd" "" . wrap "*" ""

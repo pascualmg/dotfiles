@@ -1,18 +1,28 @@
 # =============================================================================
 # XMobar Module - Configuracion parametrizable por maquina
 # =============================================================================
-# Este modulo genera xmobarrc dinamicamente basado en el hardware de cada
-# maquina (DPI, GPU, interfaces de red).
+# Este modulo genera xmobarrc dinamicamente con 26 monitores que auto-detectan
+# hardware. Los scripts no muestran nada si el hardware no existe.
 #
 # USO:
 #   En machines/aurin.nix:
 #     dotfiles.xmobar = {
 #       enable = true;
-#       fontSize = 16;
-#       gpuType = "nvidia";
-#       networkInterface = "enp10s0";
-#       wifiInterface = "wlp8s5";
+#       fontSize = 16;              # Ajustar según DPI (16=96dpi, 22=168dpi)
+#       showBattery = false;        # true para laptops
+#       showDiskMonitor = true;     # Monitores de disco
+#       alsaMixer = "Master";       # Control ALSA (default: Master)
 #     };
+#
+# MONITORES (26 total, auto-detectan hardware):
+#   - Estado/Servicios: vpn, docker, updates, machines, ssh
+#   - Dispositivos: bt, volume, bright, battery, hhkb, mouse
+#   - Red: wifi, network, disks
+#   - Hardware: gpu, swap, memory, load, cpufreq, cpu, uptime
+#
+# MODOS DE USO:
+#   - SPLIT (default en xmonad.hs): xmobar-workspaces.hs (top) + xmobar-monitors.hs (bottom)
+#   - FULL: xmobarrc (top) - todos los monitores en 1 barra (disponible pero no usado por defecto)
 #
 # NOTA: Usamos namespace "dotfiles.xmobar" para no colisionar con
 # programs.xmobar nativo de home-manager.
@@ -34,24 +44,6 @@
 
 let
   cfg = config.dotfiles.xmobar;
-
-  # Comando GPU segun tipo
-  gpuCommand = {
-    nvidia = ''
-      Run Com "/home/passh/dotfiles/scripts/xmobar-gpu-nvidia.sh" [] "gpu" 10
-    '';
-    intel = ''
-      Run Com "/home/passh/dotfiles/scripts/xmobar-gpu-intel.sh" [] "gpu" 20
-    '';
-    none = "";
-  };
-
-  # Template GPU en la barra segun tipo
-  gpuTemplate = {
-    nvidia = "%gpu%"; # Script ya incluye formato, color y click action
-    intel = "%gpu%"; # Script ya incluye formato y color
-    none = "";
-  };
 
   # Separador entre grupos de monitores (NixOS icon en gris sutil)
   nixSep = "<fc=#555555><fn=1>󱄅</fn></fc>";
@@ -82,68 +74,58 @@ let
         , persistent = True
         , hideOnStart = False
 
-        -- Comandos y monitores
+        -- Comandos y monitores (26 total, auto-detectan hardware)
         , commands = [
-            ${lib.optionalString (cfg.gpuType != "none") (gpuCommand.${cfg.gpuType})}
-
-            -- CPU frecuencia y governor (click abre cpupower-gui)
-            ${
-              lib.optionalString (cfg.gpuType != "none") ","
-            }Run Com "/home/passh/dotfiles/scripts/xmobar-cpu-freq.sh" [] "cpufreq" 20
-
-            -- CPU uso, temperatura y consumo (script externo)
-            , Run Com "/home/passh/dotfiles/scripts/xmobar-cpu.sh" [] "cpu" 20
-
-            -- Memoria con color dinámico (script externo)
-            , Run Com "/home/passh/dotfiles/scripts/xmobar-memory.sh" [] "memory" 20
-
-            -- Red genérica (auto-detecta eth/wifi, muestra IP)
-            , Run Com "/home/passh/dotfiles/scripts/xmobar-network.sh" [] "network" 10
-
-            -- Docker containers (click abre lazydocker)
+            -- Estado/Servicios
+            Run Com "/home/passh/dotfiles/scripts/xmobar-vpn.sh" [] "vpn" 30
             , Run Com "/home/passh/dotfiles/scripts/xmobar-docker.sh" [] "docker" 50
-
-            -- Fecha y hora con calendario
-            , Run Date "<action=`gsimplecal`><fn=1>\xf017</fn> %a %d %b %H:%M</action>" "date" 10
-
+            , Run Com "/home/passh/dotfiles/scripts/xmobar-updates.sh" [] "updates" 3600
+            , Run Com "/home/passh/dotfiles/scripts/xmobar-machines.sh" [] "machines" 60
+            , Run Com "/home/passh/dotfiles/scripts/xmobar-ssh.sh" [] "ssh" 30
+            
+            -- Dispositivos
+            , Run Com "/home/passh/dotfiles/scripts/xmobar-bluetooth.sh" [] "bt" 30
             ${lib.optionalString (cfg.alsaMixer != null) ''
-              -- Volumen con color gradiente (script externo)
               , Run Com "/home/passh/dotfiles/scripts/xmobar-volume.sh" [] "volume" 10
             ''}
-
-            ${lib.optionalString cfg.showDiskMonitor ''
-              -- Monitor de discos genérico (NVMe + SATA + USB)
-              , Run Com "/home/passh/dotfiles/scripts/xmobar-disks.sh" [] "disks" 60
-            ''}
-
-            -- Bateria con color dinámico (script externo)
+            , Run Com "/home/passh/dotfiles/scripts/xmobar-brightness.sh" [] "bright" 30
             ${lib.optionalString cfg.showBattery ''
               , Run Com "/home/passh/dotfiles/scripts/xmobar-battery.sh" [] "battery" 50
             ''}
-
-            -- Raton wireless (Logitech hidpp)
-            ${lib.optionalString cfg.showWirelessMouse ''
-              , Run Com "/home/passh/dotfiles/scripts/wireless-mouse.sh" [] "mouse" 100
+            , Run Com "/home/passh/dotfiles/scripts/xmobar-hhkb-battery.sh" [] "hhkb" 60
+            , Run Com "/home/passh/dotfiles/scripts/xmobar-mouse-battery.sh" [] "mouse" 60
+            
+            -- Red
+            , Run Com "/home/passh/dotfiles/scripts/xmobar-wifi.sh" [] "wifi" 30
+            , Run Com "/home/passh/dotfiles/scripts/xmobar-network.sh" [] "network" 10
+            
+            -- Hardware
+            ${lib.optionalString cfg.showDiskMonitor ''
+              , Run Com "/home/passh/dotfiles/scripts/xmobar-disks.sh" [] "disks" 60
             ''}
-
-            -- XMonad Workspaces y Layout
+            , Run Com "/home/passh/dotfiles/scripts/xmobar-gpu.sh" [] "gpu" 20
+            , Run Com "/home/passh/dotfiles/scripts/xmobar-swap.sh" [] "swap" 30
+            , Run Com "/home/passh/dotfiles/scripts/xmobar-memory.sh" [] "memory" 20
+            , Run Com "/home/passh/dotfiles/scripts/xmobar-load.sh" [] "load" 20
+            , Run Com "/home/passh/dotfiles/scripts/xmobar-cpu-freq.sh" [] "cpufreq" 20
+            , Run Com "/home/passh/dotfiles/scripts/xmobar-cpu.sh" [] "cpu" 20
+            , Run Com "/home/passh/dotfiles/scripts/xmobar-uptime.sh" [] "uptime" 60
+            
+            -- Fecha y hora
+            , Run Date "<action=`gsimplecal`><fn=1>\xf017</fn> %a %d %b %H:%M</action>" "date" 10
+            
+            -- XMonad Workspaces
             , Run StdinReader
-
-            ${lib.optionalString cfg.showTrayer ''
-              -- Bandeja del sistema
-              , Run Com "/home/passh/dotfiles/scripts/trayer-padding-icon.sh" [] "trayerpad" 10
-            ''}
         ]
 
         -- Template
-        -- LAYOUT: Izda (workspaces + fecha) | Dcha (menos importante → más importante)
+        -- LAYOUT: Workspaces (izda) | Servicios → Dispositivos → Red → Hardware → Fecha (dcha)
+        -- Grupos separados por nixSep (󱄅)
         , sepChar = "%"
         , alignSep = "}{"
-        , template = "%date% %StdinReader% }{${lib.optionalString cfg.showTrayer " %trayerpad% |"} ${nixSep} %docker% ${
-          lib.optionalString (cfg.alsaMixer != null) "%volume% "
-        }${lib.optionalString cfg.showWirelessMouse "%mouse% "}${lib.optionalString cfg.showBattery "%battery% "}%network% ${lib.optionalString cfg.showDiskMonitor "%disks% "}${nixSep} ${
-          lib.optionalString (cfg.gpuType != "none") (gpuTemplate.${cfg.gpuType} + " " + nixSep + " ")
-        }%memory% %cpufreq% %cpu% "
+        , template = " %StdinReader% }{ %vpn%%docker%%updates%%machines%%ssh% ${nixSep} %bt%${
+          lib.optionalString (cfg.alsaMixer != null) "%volume%"
+        }%bright%${lib.optionalString cfg.showBattery "%battery%"}%hhkb%%mouse% ${nixSep} %wifi%%network%${lib.optionalString cfg.showDiskMonitor "%disks%"} ${nixSep} %gpu%%swap%%memory%%load%%cpufreq%%cpu%%uptime% ${nixSep} %date% "
 
     }
   '';
@@ -160,53 +142,16 @@ in
       example = 24;
     };
 
-    gpuType = lib.mkOption {
-      type = lib.types.enum [
-        "nvidia"
-        "intel"
-        "none"
-      ];
-      default = "none";
-      description = "Type of GPU for monitoring";
-      example = "nvidia";
-    };
-
-    networkInterface = lib.mkOption {
-      type = lib.types.nullOr lib.types.str;
-      default = null;
-      description = "Primary network interface name";
-      example = "enp10s0";
-    };
-
-    wifiInterface = lib.mkOption {
-      type = lib.types.nullOr lib.types.str;
-      default = null;
-      description = "WiFi interface name";
-      example = "wlp8s5";
-    };
-
     showBattery = lib.mkOption {
       type = lib.types.bool;
       default = false;
       description = "Show battery indicator (for laptops)";
     };
 
-    showWirelessMouse = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = "Show wireless mouse battery indicator (Logitech hidpp)";
-    };
-
     showDiskMonitor = lib.mkOption {
       type = lib.types.bool;
       default = true;
       description = "Show disk monitor (NVMe + SATA + USB, auto-detected)";
-    };
-
-    showTrayer = lib.mkOption {
-      type = lib.types.bool;
-      default = false; # Trayer ahora es toggle con Mod+t, no necesita padding
-      description = "Show trayer padding (deprecated, usar Mod+t para toggle)";
     };
 
     alsaMixer = lib.mkOption {
@@ -222,8 +167,10 @@ in
     xdg.configFile."xmobar/xmobarrc".text = xmobarConfig;
 
     # Configs para modo split (workspaces arriba, monitors abajo)
-    xdg.configFile."xmobar/xmobar-workspaces.hs".source = ../../../xmobar/.config/xmobar/xmobar-workspaces.hs;
-    xdg.configFile."xmobar/xmobar-monitors.hs".source = ../../../xmobar/.config/xmobar/xmobar-monitors.hs;
+    xdg.configFile."xmobar/xmobar-workspaces.hs".source =
+      ../../../xmobar/.config/xmobar/xmobar-workspaces.hs;
+    xdg.configFile."xmobar/xmobar-monitors.hs".source =
+      ../../../xmobar/.config/xmobar/xmobar-monitors.hs;
 
     # Asegurar que xmobar esta instalado
     home.packages = [ pkgs.xmobar ];

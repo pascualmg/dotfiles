@@ -4,7 +4,12 @@
 # Servicios que AMBAS máquinas (aurin + macbook) necesitan
 # =============================================================================
 
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 {
   # ===== SSH =====
@@ -13,7 +18,7 @@
     enable = lib.mkDefault true;
     settings = {
       PermitRootLogin = lib.mkDefault "no";
-      PasswordAuthentication = lib.mkDefault false;  # Macbook lo pone a true
+      PasswordAuthentication = lib.mkDefault false; # Macbook lo pone a true
     };
   };
 
@@ -61,7 +66,7 @@
   # ===== LOCATE (Database de archivos) =====
   services.locate = {
     enable = true;
-    package = pkgs.plocate;  # Mas rapido que mlocate (usa io_uring)
+    package = pkgs.plocate; # Mas rapido que mlocate (usa io_uring)
     interval = "hourly";
   };
 
@@ -72,7 +77,6 @@
   # Permite a usuarios leer consumo de CPU sin root
   services.udev.extraRules = ''
     # Intel RAPL - permitir lectura a grupo wheel
-    SUBSYSTEM=="powercap", ACTION=="add", RUN+="${pkgs.coreutils}/bin/chmod g+r /sys/class/powercap/intel-rapl/intel-rapl:*/energy_uj"
-    SUBSYSTEM=="powercap", ACTION=="add", RUN+="${pkgs.coreutils}/bin/chgrp wheel /sys/class/powercap/intel-rapl/intel-rapl:*/energy_uj"
+    SUBSYSTEM=="powercap", KERNEL=="intel-rapl:*", RUN+="${pkgs.bash}/bin/bash -c 'chmod g+r /sys/class/powercap/intel-rapl/intel-rapl:*/energy_uj && chgrp wheel /sys/class/powercap/intel-rapl/intel-rapl:*/energy_uj'"
   '';
 }

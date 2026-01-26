@@ -40,5 +40,5 @@ Config {
 
     , sepChar = "%"
     , alignSep = "}{"
-    , template = "}{ %vpn%%docker%%updates%%machines%%ssh%%bt%%volume%%bright%%battery%%hhkb%%mouse%%wifi%%network%%disks%%gpu%%swap%%memory%%load%%cpufreq%%cpu%%uptime%"
+    , template = "}{ <fc=#666666><fn=1>󱄅</fn></fc> %vpn% <fc=#666666><fn=1>󱄅</fn></fc> %docker% <fc=#666666><fn=1>󱄅</fn></fc> %updates% <fc=#666666><fn=1>󱄅</fn></fc> %machines% <fc=#666666><fn=1>󱄅</fn></fc> %ssh% <fc=#666666><fn=1>󱄅</fn></fc> %bt% <fc=#666666><fn=1>󱄅</fn></fc> %volume% <fc=#666666><fn=1>󱄅</fn></fc> %bright% <fc=#666666><fn=1>󱄅</fn></fc> %battery% <fc=#666666><fn=1>󱄅</fn></fc> %hhkb% <fc=#666666><fn=1>󱄅</fn></fc> %mouse% <fc=#666666><fn=1>󱄅</fn></fc> %wifi% <fc=#666666><fn=1>󱄅</fn></fc> %network% <fc=#666666><fn=1>󱄅</fn></fc> %disks% <fc=#666666><fn=1>󱄅</fn></fc> %gpu% <fc=#666666><fn=1>󱄅</fn></fc> %swap% <fc=#666666><fn=1>󱄅</fn></fc> %memory% <fc=#666666><fn=1>󱄅</fn></fc> %load% <fc=#666666><fn=1>󱄅</fn></fc> %cpufreq% <fc=#666666><fn=1>󱄅</fn></fc> %cpu% <fc=#666666><fn=1>󱄅</fn></fc> %uptime% <fc=#666666><fn=1>󱄅</fn></fc> "
 }

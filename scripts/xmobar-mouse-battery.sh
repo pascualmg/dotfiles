@@ -14,8 +14,11 @@ source "${SCRIPT_DIR}/xmobar-colors.sh"
 # Buscar baterías hidpp (Logitech HID++ protocol)
 HIDPP_PATH=$(ls -d /sys/class/power_supply/hidpp_battery_* 2>/dev/null | head -1)
 
-# Si no hay ratón Logitech, no mostrar nada
-[ -z "$HIDPP_PATH" ] && exit 0
+# Si no hay ratón Logitech, mostrar icono gris
+if [ -z "$HIDPP_PATH" ]; then
+	echo "<fc=#444444><fn=1>󰍽</fn></fc>"
+	exit 0
+fi
 
 # Obtener batería
 BATTERY=$(cat "$HIDPP_PATH/capacity" 2>/dev/null)

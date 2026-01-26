@@ -12,7 +12,12 @@
 # NOTA: Verificar nombres reales con `ip link` en el macbook
 # =============================================================================
 
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 {
   # ===== SCALING =====
@@ -22,38 +27,36 @@
   # problemas al mezclar X11/Wayland y diferentes DEs.
 
   # XMobar configurado para macbook HiDPI (arriba)
+  # GPU: Intel integrated - auto-detectada por xmobar-gpu.sh
+  # Red: wlp0s20f0u7 (wifi USB dongle) - auto-detectada por scripts
   # NOTA: Usa sintaxis Pango que escala correctamente con DPI
   dotfiles.xmobar = {
-    enable = true;              # Tu katana de siempre
-    fontSize = 22;              # Pango escala con DPI
-    gpuType = "intel";          # Intel integrated
-    networkInterface = null;    # Sin ethernet fijo, ajustar si usas adaptador
-    wifiInterface = "wlp0s20f0u7";   # WiFi USB dongle (Broadcom interno no soportado)
-    showBattery = true;         # Laptop, mostrar bateria
-    showDiskMonitor = true;     # Monitor genérico (detecta SSD externo TB3)
-    showTrayer = false;         # No hay trayer-padding-icon instalado
-    alsaMixer = "Master";       # PipeWire expone Master, no PCM
+    enable = true; # Tu katana de siempre
+    fontSize = 22; # Pango escala con DPI
+    showBattery = true; # Laptop, mostrar bateria
+    showDiskMonitor = true; # Monitor genérico (detecta SSD externo TB3)
+    alsaMixer = "Master"; # PipeWire expone Master, no PCM
   };
 
   # Taffybar - Barra GTK3 con systray nativo (ABAJO, para probar junto a xmobar)
   dotfiles.taffybar = {
     enable = true;
-    fontSize = 14;              # GTK3 respeta GDK_SCALE, no necesita fuente grande
+    fontSize = 14; # GTK3 respeta GDK_SCALE, no necesita fuente grande
     barHeight = 32;
-    barPosition = "Bottom";     # Abajo - xmobar va arriba
+    barPosition = "Bottom"; # Abajo - xmobar va arriba
     showBattery = true;
-    showSystray = true;         # nm-applet, blueman-applet funcionan directo
+    showSystray = true; # nm-applet, blueman-applet funcionan directo
   };
 
   # Alacritty configurado para macbook HiDPI
   dotfiles.alacritty = {
-    fontSize = 11;              # Con Xft.dpi=227, 11 se ve bien
+    fontSize = 11; # Con Xft.dpi=227, 11 se ve bien
     # defaultTheme = "spacemacs-dark";  # default
   };
 
   # Picom configurado para macbook
   dotfiles.picom = {
-    backend = "xrender";        # Intel integrated - xrender mas compatible
+    backend = "xrender"; # Intel integrated - xrender mas compatible
   };
 
   # Gestos de trackpad para cambiar workspaces
@@ -96,7 +99,7 @@
       idle-activation-enabled = false;
     };
     "org/gnome/desktop/session" = {
-      idle-delay = lib.hm.gvariant.mkUint32 0;  # No idle timeout
+      idle-delay = lib.hm.gvariant.mkUint32 0; # No idle timeout
     };
     # Deshabilitar auto-lock cuando suspende
     "org/gnome/desktop/lockdown" = {
