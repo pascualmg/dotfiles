@@ -3252,6 +3252,24 @@ Filosofía: *el hardware manda, no el software*. Config en memoria del teclado.
 services.libinput.mouse.accelProfile = "flat";
 #+END_SRC
 
+*** Trackpad MacBook - Gestures
+
+Solo en MacBook. Usa =libinput-gestures= para gestos multi-touch en XMonad.
+
+| Gesto               | Acción                              |
+|---------------------+-------------------------------------|
+| 3 dedos izquierda   | Workspace siguiente (estilo macOS)  |
+| 3 dedos derecha     | Workspace anterior (estilo macOS)   |
+| 4 dedos arriba      | Toggle scratchpad Emacs (Mod+e)     |
+| 4 dedos abajo       | Toggle scratchpad Terminal (Mod+a)  |
+
+*Habilitar en* =machines/macbook.nix=:
+#+BEGIN_SRC nix
+dotfiles.libinput-gestures.enable = true;
+#+END_SRC
+
+*Config:* =modules/home-manager/programs/libinput-gestures.nix=
+
 ** Solucion: xmobar y fuentes HiDPI
 
 *Estado:* RESUELTO
