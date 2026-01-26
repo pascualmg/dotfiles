@@ -11,10 +11,11 @@ Config {
     , persistent = True
 
     , commands = [
-        Run StdinReader
+        Run Date "<action=`gsimplecal`><fn=1>\xf017</fn> %a %d %b %H:%M</action>" "date" 10
+        , Run StdinReader
     ]
 
     , sepChar = "%"
     , alignSep = "}{"
-    , template = " %StdinReader% "
+    , template = " %StdinReader% }{ %date% "
 }
