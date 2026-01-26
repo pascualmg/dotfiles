@@ -7,11 +7,11 @@ source "${SCRIPT_DIR}/xmobar-colors.sh"
 if ip link show tun0 &>/dev/null || pgrep -x "pulseUI" &>/dev/null; then
 	# Verificar si realmente está conectado
 	if ip addr show tun0 2>/dev/null | grep -q "inet "; then
-		echo "<fc=${COLOR_GREEN}>󰖂 VPN</fc>"
+		echo "<action=\`nm-connection-editor\`><fc=${COLOR_GREEN}><fn=1>󰖂</fn></fc></action>"
 	else
-		echo "<fc=${COLOR_YELLOW}>󰖂 ...</fc>"
+		echo "<action=\`nm-connection-editor\`><fc=${COLOR_YELLOW}><fn=1>󰖂</fn>...</fc></action>"
 	fi
 else
 	# No conectado - mostrar icono gris
-	echo "<fc=#444444><fn=1>󰖂</fn></fc>"
+	echo "<action=\`nm-connection-editor\`><fc=#444444><fn=1>󰖂</fn></fc></action>"
 fi

@@ -7,7 +7,7 @@ source "${SCRIPT_DIR}/xmobar-colors.sh"
 BRIGHTNESS=$(brightnessctl -m 2>/dev/null | cut -d',' -f4 | tr -d '%')
 
 if [ -z "$BRIGHTNESS" ]; then
-	echo "<fc=#444444><fn=1>󰃞</fn></fc>"
+	echo "<action=\`gnome-control-center display\`><fc=#444444><fn=1>󰃞</fn></fc></action>"
 	exit 0
 fi
 
@@ -23,4 +23,4 @@ else
 	COLOR="$COLOR_GRAY"
 fi
 
-echo "<fc=${COLOR}>${ICON} ${BRIGHTNESS}%</fc>"
+echo "<action=\`gnome-control-center display\`><fc=${COLOR}>${ICON} ${BRIGHTNESS}%</fc></action>"

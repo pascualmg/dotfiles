@@ -9,13 +9,13 @@ eval $(awk '/^MemTotal:/ {total=$2} /^MemAvailable:/ {available=$2} END {printf 
 
 # Calcular porcentaje usado
 if [[ $TOTAL -gt 0 ]]; then
-    USED_PCT=$(( 100 * (TOTAL - AVAIL) / TOTAL ))
+	USED_PCT=$((100 * (TOTAL - AVAIL) / TOTAL))
 else
-    USED_PCT=0
+	USED_PCT=0
 fi
 
 COLOR=$(pct_to_color "$USED_PCT")
 # Padding a 2 dígitos para evitar desplazamiento
 MEM_PAD=$(printf "%02d" "$USED_PCT")
-# Click abre gnome-system-monitor
-echo "<action=\`gnome-system-monitor\`><fc=${COLOR}>$(xmobar_icon "󰍛")${MEM_PAD}%</fc></action>"
+# Click abre mission-center (modern system monitor)
+echo "<action=\`mission-center\`><fc=${COLOR}>$(xmobar_icon "󰍛")${MEM_PAD}%</fc></action>"
