@@ -161,8 +161,8 @@ Puedes elegir sesiones Wayland (Hyprland, niri) desde el greeter X11.
 # Aurin - necesita --impure (hosts Vocento)
 sudo nixos-rebuild switch --flake ~/dotfiles#aurin --impure
 
-# MacBook
-sudo nixos-rebuild switch --flake ~/dotfiles#macbook
+# MacBook - necesita --impure (crush.nix usa charmbracelet NUR)
+sudo nixos-rebuild switch --flake ~/dotfiles#macbook --impure
 
 # Vespino - necesita --impure (hosts Vocento)
 sudo nixos-rebuild switch --flake ~/dotfiles#vespino --impure

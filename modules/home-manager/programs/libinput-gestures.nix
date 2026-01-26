@@ -12,7 +12,12 @@
 #   - libinput debe estar habilitado (services.libinput.enable)
 # =============================================================================
 
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   cfg = config.dotfiles.libinput-gestures;
@@ -64,6 +69,11 @@ in
         ExecStart = "${pkgs.libinput-gestures}/bin/libinput-gestures";
         Restart = "on-failure";
         RestartSec = "3";
+        # Variables de entorno X11 necesarias para xdotool
+        Environment = [
+          "DISPLAY=:0"
+        ];
+        PassEnvironment = [ "XAUTHORITY" ];
         # Evitar spam de reinicios si hay problemas de permisos
         StartLimitIntervalSec = "60";
         StartLimitBurst = "5";
