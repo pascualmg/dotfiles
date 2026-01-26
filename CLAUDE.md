@@ -246,6 +246,22 @@ services.xserver.xkb = {
   - **Workaround**: Configurar DPI en Windows, queda guardado en el ratón
 - **libinput flat** (raw input) en todas las maquinas
 
+### Trackpad MacBook - Gestures (libinput-gestures)
+
+Solo en MacBook. Configurado en `modules/home-manager/programs/libinput-gestures.nix`.
+
+| Gesto | Accion |
+|-------|--------|
+| 3 dedos izquierda | Workspace siguiente (como macOS) |
+| 3 dedos derecha | Workspace anterior (como macOS) |
+| 4 dedos arriba | Toggle scratchpad Emacs (Mod+e) |
+| 4 dedos abajo | Toggle scratchpad Terminal (Mod+a) |
+
+Habilitar en `machines/macbook.nix`:
+```nix
+dotfiles.libinput-gestures.enable = true;
+```
+
 ## Notas para Claude
 
 - **SIEMPRE ejecutar `hostname`** antes de recomendar comandos nixos-rebuild

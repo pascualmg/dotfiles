@@ -48,11 +48,17 @@ in
       # libinput-gestures configuration
       # Gestos para cambiar workspaces en XMonad
 
-      # 3 dedos izquierda -> workspace anterior
-      gesture swipe left 3 xdotool key super+Left
+      # 3 dedos izquierda -> workspace siguiente (como macOS)
+      gesture swipe left 3 xdotool key super+Right
 
-      # 3 dedos derecha -> workspace siguiente
-      gesture swipe right 3 xdotool key super+Right
+      # 3 dedos derecha -> workspace anterior (como macOS)
+      gesture swipe right 3 xdotool key super+Left
+
+      # 4 dedos arriba -> toggle scratchpad Emacs (Mod+e)
+      gesture swipe up 4 xdotool key super+e
+
+      # 4 dedos abajo -> toggle scratchpad terminal (Mod+a)
+      gesture swipe down 4 xdotool key super+a
 
       ${cfg.extraGestures}
     '';
