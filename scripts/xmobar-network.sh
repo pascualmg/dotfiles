@@ -25,20 +25,21 @@ format_rate() {
 	fi
 }
 
-# Función para obtener color según tasa (bytes/s)
+# Función para obtener color según tasa (bytes/s) con gradiente suave
 rate_to_color() {
 	local bytes=$1
-	local mb=$((bytes / 1048576))
 
-	if [ "$mb" -ge 50 ]; then
-		echo "$COLOR_RED" # >50MB/s = rojo (saturado)
-	elif [ "$mb" -ge 20 ]; then
-		echo "$COLOR_ORANGE" # 20-50MB/s = naranja
-	elif [ "$mb" -ge 5 ]; then
-		echo "$COLOR_YELLOW" # 5-20MB/s = amarillo
-	else
-		echo "$COLOR_GREEN" # <5MB/s = verde
-	fi
+	# Convertir a KB/s para el gradiente
+	local kb=$((bytes / 1024))
+
+	# Calcular porcentaje para gradiente (0-100%)
+	# 0 KB/s = 0%, 10 MB/s = 100%
+	local max_kb=10240 # 10 MB/s
+	local pct=$((kb * 100 / max_kb))
+	[ "$pct" -gt 100 ] && pct=100
+
+	# Usar gradiente normal (verde → amarillo → naranja → rojo)
+	pct_to_color "$pct"
 }
 
 output=""
@@ -102,13 +103,17 @@ for iface in $interfaces; do
 	# Guardar estado actual para próxima ejecución
 	echo "$rx_bytes $tx_bytes $current_time" >"$cache_file"
 
-	# Formatear tasas
+	# Formatear tasas con padding para alineación
 	rx_formatted=$(format_rate "$rx_rate")
 	tx_formatted=$(format_rate "$tx_rate")
 
-	# Colores según tasa
+	# Colores según tasa (gradiente verde → rojo)
 	rx_color=$(rate_to_color "$rx_rate")
 	tx_color=$(rate_to_color "$tx_rate")
+
+	# Iconos con color del gradiente (más visual)
+	rx_icon="<fc=${rx_color}>󰁞</fc>"
+	tx_icon="<fc=${tx_color}>󰁆</fc>"
 
 	# Determinar tipo de interfaz e ícono
 	HACKER_GREEN="#00ff00"
@@ -120,15 +125,15 @@ for iface in $interfaces; do
 			SIG_PAD=$(printf "%02d" "$signal")
 			output+="<action=\`nm-connection-editor\`>"
 			output+="<fc=${sig_color}><fn=1>󰖩</fn>${SIG_PAD}%</fc> "
-			output+="<fc=${rx_color}>󰁞${rx_formatted}</fc> "
-			output+="<fc=${tx_color}>󰁆${tx_formatted}</fc> "
+			output+="${rx_icon}<fc=${rx_color}>${rx_formatted}</fc> "
+			output+="${tx_icon}<fc=${tx_color}>${tx_formatted}</fc> "
 			output+="<fc=${HACKER_GREEN}>(${ip_addr})</fc>"
 			output+="</action> "
 		else
 			output+="<action=\`nm-connection-editor\`>"
 			output+="<fc=${HACKER_GREEN}><fn=1>󰖩</fn></fc> "
-			output+="<fc=${rx_color}>󰁞${rx_formatted}</fc> "
-			output+="<fc=${tx_color}>󰁆${tx_formatted}</fc> "
+			output+="${rx_icon}<fc=${rx_color}>${rx_formatted}</fc> "
+			output+="${tx_icon}<fc=${tx_color}>${tx_formatted}</fc> "
 			output+="<fc=${HACKER_GREEN}>(${ip_addr})</fc>"
 			output+="</action> "
 		fi
@@ -136,8 +141,8 @@ for iface in $interfaces; do
 		# Ethernet
 		output+="<action=\`nm-connection-editor\`>"
 		output+="<fc=${HACKER_GREEN}><fn=1>󰈀</fn></fc> "
-		output+="<fc=${rx_color}>󰁞${rx_formatted}</fc> "
-		output+="<fc=${tx_color}>󰁆${tx_formatted}</fc> "
+		output+="${rx_icon}<fc=${rx_color}>${rx_formatted}</fc> "
+		output+="${tx_icon}<fc=${tx_color}>${tx_formatted}</fc> "
 		output+="<fc=${HACKER_GREEN}>(${ip_addr})</fc>"
 		output+="</action> "
 	fi
