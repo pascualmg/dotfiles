@@ -3047,7 +3047,7 @@ En laptops también aparecen: 󱊣 Batería, ⌨ HHKB BT, 󰤨 WiFi
 | GPU | =xmobar-gpu.sh= | 󰢮 | Uso, temp, VRAM, watts (NVIDIA/Intel/AMD) |
 | Discos | =xmobar-disks.sh= | 󰋊 | Uso % + temperatura NVMe |
 | Volumen | =xmobar-volume.sh= | 󰕾 | Nivel PipeWire con gradiente |
-| Red | =xmobar-network.sh= | 󰈀 | IP principal (eth/wifi) |
+| Red | =xmobar-network.sh= | 󰈀󰖩 | Tráfico en tiempo real (󰁞down 󰁆up) con gradientes + IP |
 
 **** Sistema (nuevos 2026-01)
 
@@ -3094,6 +3094,88 @@ Output ejemplo NVIDIA:
 #+BEGIN_SRC text
 󰢮04% 󰔐50° 󰍛1.3G 󰚥33W   (uso% temp VRAM watts)
 #+END_SRC
+
+*** Red: Monitor de Tráfico en Tiempo Real (xmobar-network.sh)
+
+*Nuevo en 2026-01-27* - Monitor de red con tasas de descarga/subida en tiempo real y gradientes de color.
+
+**** Características
+
+| Feature | Descripción |
+|---------+-------------|
+| *Tasas en tiempo real* | Muestra 󰁞 download y 󰁆 upload en B/s, KB/s, MB/s |
+| *Gradientes suaves* | Verde (bajo) → Amarillo (medio) → Naranja (alto) → Rojo (saturado) |
+| *Iconos con color* | Los iconos 󰁞 y 󰁆 cambian de color según el tráfico |
+| *Auto-detección* | Detecta WiFi (wl*, wlan*) o Ethernet (en*, eth*) automáticamente |
+| *Filtrado inteligente* | Excluye br*, vnet*, tun*, docker*, virbr* (bridges, VPN, Docker) |
+| *Precisión alta* | Usa milisegundos para cálculos precisos |
+| *Clone-first* | Funciona en aurin (Ethernet), macbook (WiFi), vespino (Ethernet) |
+
+**** Output Ejemplos
+
+#+BEGIN_SRC text
+# WiFi con señal + tráfico bajo
+󰖩 75% 󰁞15KB 󰁆2KB (192.168.1.50)
+  │    │  │       │     └─ IP (verde hacker)
+  │    │  │       └─ Upload (verde = bajo)
+  │    │  └─ Download (verde = bajo)
+  │    └─ Señal WiFi 75% (verde = buena)
+  └─ Icono WiFi
+
+# Ethernet con tráfico medio
+󰈀 󰁞2.5M 󰁆500K (192.168.1.100)
+│  │      │      └─ IP
+│  │      └─ Upload (amarillo-naranja = medio)
+│  └─ Download (amarillo = medio)
+└─ Icono Ethernet
+
+# Tráfico alto (download de ISO)
+󰈀 󰁞10M 󰁆5M (192.168.1.100)
+│  │     │    └─ Upload (rojo = alto)
+│  └─ Download (rojo = saturado ≥10MB/s)
+#+END_SRC
+
+**** Escala de Colores
+
+| Tasa | Color | Hex | Visual |
+|------+-------+-----+--------|
+| 0-500 KB/s | Verde | =#98c379= | 🟢 Tráfico bajo |
+| 500KB-2.5MB/s | Verde-amarillo | =#aac379= → =#c8c179= | 🟡 Tráfico moderado |
+| 2.5MB-5MB/s | Amarillo-naranja | =#e5c07b= → =#f8bf7a= | 🟠 Tráfico alto |
+| 5MB-10MB/s | Naranja-rojo | =#d19a66= → =#e39979= | 🔴 Tráfico muy alto |
+| 10MB/s+ | Rojo | =#e06c75= | 🔴 Saturado |
+
+**** Detalles Técnicos
+
+#+BEGIN_SRC bash
+# Cache por interfaz (evita race conditions)
+/tmp/xmobar-network/enp7s0    # Ethernet
+/tmp/xmobar-network/wlp0s20f0u7u4  # WiFi
+
+# Contenido del cache (rx_bytes tx_bytes timestamp_ms)
+19563831591 1446526760 1769543877123
+
+# Cálculo de rate (bytes/s)
+rx_rate = (rx_bytes_current - rx_bytes_prev) / time_diff_seconds
+tx_rate = (tx_bytes_current - tx_bytes_prev) / time_diff_seconds
+
+# Lectura de stats del kernel
+/sys/class/net/IFACE/statistics/rx_bytes
+/sys/class/net/IFACE/statistics/tx_bytes
+
+# Intervalo de actualización
+10 segundos (configurable en xmobar-monitors.hs)
+#+END_SRC
+
+**** Troubleshooting
+
+| Problema | Solución |
+|----------+----------|
+| Muestra =0B 0B= siempre | Normal en primer run (no hay datos previos) |
+| No aparece nada | No hay interfaz con IP activa |
+| Muestra =br0= o =tun0= | Bug - reportar (deberían estar filtrados) |
+| Números muy bajos | Normal si no hay tráfico activo |
+| Colores no cambian | Generar tráfico: =curl https://ubuntu.com/...iso= |
 
 *** Test en terminal: xmobar-test-all.sh
 
