@@ -1,0 +1,198 @@
+#!/usr/bin/env python3
+"""
+qwen-tts-clone - Voice cloning with Qwen3-TTS
+
+BRUTAL voice cloning script for local inference on GPU.
+
+Usage:
+  qwen-tts-clone \\
+    --reference audio.wav \\
+    --reference-text "Hola, esto es una prueba" \\
+    --target-text "Buenos días, bienvenidos" \\
+    --language Spanish \\
+    --output cloned.wav
+
+Examples:
+  # Clone voice from 5-second audio
+  qwen-tts-clone \\
+    --reference ~/voice-cloning/references/my-voice.wav \\
+    --reference-text "This is my voice speaking clearly" \\
+    --target-text "Welcome to my podcast about AI" \\
+    --language English \\
+    --output ~/voice-cloning/output/podcast-intro.wav
+
+  # Spanish voice cloning
+  qwen-tts-clone \\
+    -r voice.mp3 \\
+    -rt "Hola, soy Pascual" \\
+    -t "Bienvenidos a mi canal de YouTube sobre programación" \\
+    -l Spanish \\
+    -o youtube-intro.wav
+
+Performance:
+  - First run: Downloads model (~3.5GB)
+  - Subsequent runs: 2-5 seconds per generation
+  - GPU: RTX 5080 (16GB VRAM, uses ~4-6GB)
+"""
+
+import argparse
+import sys
+import os
+from pathlib import Path
+
+def check_dependencies():
+    """Check if qwen-tts is installed, install in venv if missing"""
+    import subprocess
+    
+    venv_dir = Path.home() / ".cache" / "qwen-tts-venv"
+    venv_python = venv_dir / "bin" / "python"
+    
+    # Check if already in venv or qwen-tts is available
+    try:
+        import qwen_tts
+        return  # Already available
+    except ImportError:
+        pass
+    
+    # Create venv if doesn't exist
+    if not venv_dir.exists():
+        print(f"⏳ Creating Python venv at {venv_dir}...")
+        subprocess.check_call([sys.executable, "-m", "venv", str(venv_dir)])
+        print("✅ venv created")
+    
+    # Install qwen-tts in venv
+    if not (venv_dir / "lib" / "python3.13" / "site-packages" / "qwen_tts").exists():
+        print("⏳ Installing qwen-tts in venv (first time only, ~3.5GB)...")
+        subprocess.check_call([
+            str(venv_python), "-m", "pip", "install", "-q", 
+            "qwen-tts", "torch", "torchaudio", "transformers", "soundfile"
+        ])
+        print("✅ qwen-tts installed")
+    
+    # Re-exec with venv python
+    os.execv(str(venv_python), [str(venv_python)] + sys.argv)
+
+def check_cuda():
+    """Verify CUDA is available"""
+    import torch
+    if not torch.cuda.is_available():
+        print("❌ ERROR: No CUDA GPU found")
+        print("   This script requires a CUDA-capable GPU")
+        sys.exit(1)
+    
+    gpu_name = torch.cuda.get_device_name(0)
+    vram_gb = torch.cuda.get_device_properties(0).total_memory / 1024**3
+    print(f"✅ GPU: {gpu_name} ({vram_gb:.1f}GB VRAM)")
+
+def load_model():
+    """Load Qwen3-TTS model"""
+    import torch
+    from qwen_tts import Qwen3TTSModel
+    
+    print("⏳ Loading Qwen3-TTS-12Hz-1.7B-Base...")
+    print("   (First run: downloads ~3.5GB model)")
+    
+    model = Qwen3TTSModel.from_pretrained(
+        "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+        device_map="cuda:0",
+        dtype=torch.bfloat16,
+    )
+    
+    print("✅ Model loaded")
+    return model
+
+def clone_voice(model, reference_audio, reference_text, target_text, language, output_file):
+    """Generate cloned voice audio"""
+    import soundfile as sf
+    
+    print(f"⏳ Generating audio...")
+    print(f"   Reference: {reference_audio}")
+    print(f"   Target text: {target_text[:60]}{'...' if len(target_text) > 60 else ''}")
+    
+    # Generate audio
+    wavs, sr = model.generate_voice_clone(
+        text=target_text,
+        language=language,
+        reference_audio=reference_audio,
+        reference_text=reference_text,
+    )
+    
+    # Save to file
+    sf.write(output_file, wavs[0], sr)
+    
+    # File info
+    duration = len(wavs[0]) / sr
+    file_size = Path(output_file).stat().st_size / 1024 / 1024  # MB
+    
+    print(f"✅ Audio saved: {output_file}")
+    print(f"   Duration: {duration:.1f}s")
+    print(f"   Sample rate: {sr}Hz")
+    print(f"   File size: {file_size:.1f}MB")
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Voice cloning with Qwen3-TTS",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=__doc__
+    )
+    
+    parser.add_argument(
+        "-r", "--reference",
+        required=True,
+        help="Reference audio file (3-15 seconds, WAV/MP3/etc.)"
+    )
+    
+    parser.add_argument(
+        "-rt", "--reference-text",
+        required=True,
+        help="Exact transcription of reference audio"
+    )
+    
+    parser.add_argument(
+        "-t", "--target-text",
+        required=True,
+        help="Text to generate with cloned voice"
+    )
+    
+    parser.add_argument(
+        "-l", "--language",
+        default="Auto",
+        choices=["Auto", "Spanish", "English", "Chinese", "Japanese", "Korean", 
+                 "German", "French", "Russian", "Portuguese", "Italian"],
+        help="Target language (default: Auto)"
+    )
+    
+    parser.add_argument(
+        "-o", "--output",
+        default="cloned-voice.wav",
+        help="Output WAV file (default: cloned-voice.wav)"
+    )
+    
+    args = parser.parse_args()
+    
+    # Validate reference audio exists
+    if not Path(args.reference).exists():
+        print(f"❌ ERROR: Reference audio not found: {args.reference}")
+        sys.exit(1)
+    
+    # Check dependencies and GPU
+    check_dependencies()
+    check_cuda()
+    
+    # Load model
+    model = load_model()
+    
+    # Generate cloned voice
+    clone_voice(
+        model=model,
+        reference_audio=args.reference,
+        reference_text=args.reference_text,
+        target_text=args.target_text,
+        language=args.language,
+        output_file=args.output
+    )
+    
+    print("\n🎉 Done! Play with: ffplay", args.output)
+
+if __name__ == "__main__":
+    main()

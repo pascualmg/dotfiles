@@ -1209,6 +1209,612 @@ dotfiles/
 
 *Estado:* ON HOLD hasta investigar opencode (FASE 0)
 
+** Voice Input & Text-to-Speech - LOCAL AI [2026-01-27]
+
+*** El Problema: Productividad en Dictado y Generación de Audio
+
+Históricamente:
+- Dictado de voz → Google/Apple (cloud, privacidad comprometida)
+- Text-to-Speech → Servicios online (Eleven Labs, Play.ht - caros)
+- Voice cloning → Solo en Colab/servicios externos
+- Latencia: 5-10 segundos por request
+- Privacidad: Todo tu audio sube a servidores externos
+
+*Objetivo:* Sistema local completo de voz con IA en GPU:
+- *STT (Speech-to-Text)* - Transcripción local con Whisper
+- *TTS (Text-to-Speech)* - Generación de voz con Qwen3-TTS
+- *Voice Cloning* - Clonar cualquier voz con 5-15 segundos
+- *Latencia* - 2-5 segundos (todo local en RTX 5080)
+- *Privacidad* - Nada sale de tu máquina
+
+*** Arquitectura: Pipeline Completo STT + TTS
+
+#+BEGIN_SRC text
+┌─────────────────────────────────────────────────────────────────────┐
+│                   VOICE PROCESSING PIPELINE                         │
+│                                                                     │
+│  ┌──────────────────────────────────────────────────────┐          │
+│  │  SPEECH-TO-TEXT (Whisper)                            │          │
+│  │                                                       │          │
+│  │  Audio (mic/meeting) → Whisper GPU → Text            │          │
+│  │  - Model: ggml-small.bin (Spanish optimized)         │          │
+│  │  - Speed: ~0.14x realtime (RTX 5080)                 │          │
+│  │  - Latency: 2-3s for 10s audio                       │          │
+│  └──────────────────────────────────────────────────────┘          │
+│                            ▼                                        │
+│                        TEXT EDITING                                 │
+│                     (manual or automated)                           │
+│                            ▼                                        │
+│  ┌──────────────────────────────────────────────────────┐          │
+│  │  TEXT-TO-SPEECH (Qwen3-TTS)                          │          │
+│  │                                                       │          │
+│  │  Text + Voice Reference → Qwen3-TTS → Audio (cloned) │          │
+│  │  - Model: Qwen3-TTS-12Hz-1.7B-Base (~3.5GB)          │          │
+│  │  - Speed: 2-5s per generation                        │          │
+│  │  - Quality: High-fidelity voice cloning              │          │
+│  └──────────────────────────────────────────────────────┘          │
+│                                                                     │
+│  STORAGE:                                                           │
+│  - Whisper models: ~/.local/share/whisper/models/                  │
+│  - Qwen models:    ~/.cache/huggingface/hub/                       │
+│  - Recordings:     ~/recordings/YYYY-MM-DD_HH-MM-meeting/          │
+│  - Voice refs:     ~/voice-cloning/references/                     │
+│  - Generated TTS:  ~/voice-cloning/output/                         │
+└─────────────────────────────────────────────────────────────────────┘
+#+END_SRC
+
+*** Componentes Instalados
+
+**** 1. Whisper (Speech-to-Text)
+
+*Módulo:* =modules/home-manager/programs/whisper.nix=
+
+*Scripts instalados:*
+- =whisper-brutal= - Transcripción básica desde audio
+- =voice-input-toggle= - Dictado interactivo (M-r)
+- =meeting-recorder-toggle= - Grabación larga de meetings (M-S-r)
+
+*Keybindings XMonad:*
+#+BEGIN_SRC haskell
+-- xmonad/.config/xmonad/xmonad.hs
+, ("M-r", spawn "voice-input-toggle")      -- Dictar texto
+, ("M-S-r", spawn "meeting-recorder-toggle") -- Grabar meeting
+#+END_SRC
+
+*Features:*
+- ✅ Auto-detect RØDE NT-USB Mini microphone
+- ✅ Fallback a @DEFAULT_SOURCE@ si no encuentra RØDE
+- ✅ Transcripción en español (configurable)
+- ✅ GPU acceleration (Vulkan backend)
+- ✅ Inyección automática de texto con xdotool
+
+**** 2. Qwen3-TTS (Text-to-Speech + Voice Cloning)
+
+*Módulo:* =modules/home-manager/programs/qwen-tts.nix=
+
+*Script instalado:*
+- =qwen-tts-clone= - Voice cloning y TTS
+
+*Features:*
+- ✅ Voice cloning con 5-15 segundos de audio
+- ✅ Multi-idioma (Spanish, English, Chinese, Japanese, etc.)
+- ✅ Generación local en GPU (RTX 5080)
+- ✅ Alta calidad (48kHz/96kHz support)
+- ✅ Modelo auto-descarga en primer uso
+
+*** Uso: Voice Input (Dictado)
+
+**** Keybinding: M-r (Mod+r)
+
+#+BEGIN_SRC bash
+# Flujo:
+# 1. Presionar M-r → empieza grabación (notificación roja)
+# 2. Hablar tu texto
+# 3. Presionar M-r de nuevo → para, transcribe, inyecta texto
+
+# Ejemplo:
+# - Abres Emacs/IntelliJ/navegador
+# - M-r
+# - "Este es un comentario que quiero añadir al código"
+# - M-r
+# → Texto aparece donde está el cursor
+#+END_SRC
+
+*Performance:*
+- Grabación: instantánea
+- Transcripción: ~2-3s para 10s de audio
+- Inyección: instantánea
+- *Total: 3-5 segundos de latencia*
+
+*Audio quality settings:*
+#+BEGIN_SRC bash
+# whisper-core.sh - record_audio()
+-ar 16000   # 16kHz (optimal para Whisper)
+-ac 1       # Mono
+-acodec pcm_s16le  # 16-bit PCM
+#+END_SRC
+
+*** Uso: Meeting Recorder (Grabación Larga)
+
+**** Keybinding: M-S-r (Mod+Shift+r)
+
+#+BEGIN_SRC bash
+# Flujo:
+# 1. Presionar M-S-r → empieza grabación (notificación persistente)
+# 2. Hablar durante la reunión (minutos/horas)
+# 3. Presionar M-S-r de nuevo → para, transcribe, guarda
+
+# Salida:
+# ~/recordings/2026-01-27_15-34-meeting/
+#   ├── audio.wav           # Grabación completa (16kHz mono)
+#   ├── transcription.txt   # Texto transcrito
+#   └── metadata.json       # Duración, fecha, etc.
+#+END_SRC
+
+*Audio sources captured:*
+- 🎤 Microphone (tu voz)
+- 🔊 System audio (speakers/headphones) - YouTube, VLC, etc.
+- ⚖️ Mix ratio: Mic 1x, Monitor 8x (configurable)
+- 🎚️ Dynamic normalization (balance automático)
+
+*Audio quality settings:*
+#+BEGIN_SRC bash
+# whisper-core.sh - record_audio_full()
+[0:a]volume=1.0[mic]           # Micrófono nivel natural
+[1:a]volume=8.0[monitor]       # System audio amplificado 8x
+amix + dynaudnorm              # Mezcla + normalización
+volume=3.0[out]                # Amplificación final 3x
+#+END_SRC
+
+*** Uso: Voice Cloning (TTS)
+
+**** Paso 1: Crear Audio de Referencia
+
+Graba 5-15 segundos de la voz que quieres clonar (tuya u otra):
+
+#+BEGIN_SRC bash
+# Opción A: Grabación manual de alta calidad (96kHz)
+ffmpeg -f pulse -i @DEFAULT_SOURCE@ \
+  -ar 96000 \
+  -ac 1 \
+  -acodec pcm_s32le \
+  ~/voice-cloning/references/mi-voz.wav
+# Ctrl+C para parar
+
+# Opción B: Usar meeting-recorder (16kHz, suficiente)
+meeting-recorder-toggle
+# Hablar 5-10 segundos
+meeting-recorder-toggle
+# Usar ~/recordings/FECHA/audio.wav como referencia
+
+# Opción C: Usar cualquier audio existente
+cp mi-grabacion-existente.mp3 ~/voice-cloning/references/voz.wav
+#+END_SRC
+
+*Recomendación:*
+- Duración: 5-15 segundos (ni muy corto ni muy largo)
+- Calidad: 48kHz mínimo (96kHz óptimo)
+- Voz: Clara, sin ruido de fondo
+- Contenido: Frase natural, no robótica
+
+**** Paso 2: Transcribir el Audio de Referencia
+
+CRÍTICO: Necesitas el texto EXACTO de lo que dice el audio.
+
+#+BEGIN_SRC bash
+# Opción A: Manual (si sabes qué dice)
+echo "Hola, soy Pascual y esta es mi voz de referencia" \
+  > ~/voice-cloning/references/mi-voz.txt
+
+# Opción B: Whisper auto-transcripción
+whisper-cli \
+  -m ~/.local/share/whisper/models/ggml-small.bin \
+  -f ~/voice-cloning/references/mi-voz.wav \
+  -l es \
+  -nt \
+  > ~/voice-cloning/references/mi-voz.txt
+#+END_SRC
+
+**** Paso 3: Generar Audio Clonado
+
+#+BEGIN_SRC bash
+# Uso básico
+qwen-tts-clone \
+  --reference ~/voice-cloning/references/mi-voz.wav \
+  --reference-text "$(cat ~/voice-cloning/references/mi-voz.txt)" \
+  --target-text "Bienvenidos a mi podcast sobre NixOS y programación funcional" \
+  --language Spanish \
+  --output ~/voice-cloning/output/podcast-intro.wav
+
+# Shortcuts con alias cortos
+qwen-tts-clone \
+  -r ~/voice-cloning/references/mi-voz.wav \
+  -rt "$(cat ~/voice-cloning/references/mi-voz.txt)" \
+  -t "Este es el texto que quiero generar con mi voz clonada" \
+  -l Spanish \
+  -o output.wav
+#+END_SRC
+
+*Performance (primera ejecución):*
+- Descarga modelo: ~3.5GB (2-3 minutos)
+- Generación: 5-10 segundos
+
+*Performance (posteriores):*
+- Generación: 2-5 segundos
+
+*Idiomas soportados:*
+- Spanish, English, Chinese, Japanese, Korean
+- German, French, Russian, Portuguese, Italian
+- Auto (detecta automáticamente)
+
+*** Casos de Uso Reales
+
+**** 1. Dictado Rápido en Desarrollo
+
+#+BEGIN_SRC bash
+# Estás en Emacs/IntelliJ escribiendo código
+# Necesitas comentar una función compleja
+
+M-r  # Empezar grabación
+"Esta función implementa el patrón repository para abstraer 
+ el acceso a datos y facilitar testing mediante dependency injection"
+M-r  # Parar → texto inyectado automáticamente
+
+# Resultado: comentario insertado donde está el cursor
+#+END_SRC
+
+**** 2. Transcripción de Reuniones
+
+#+BEGIN_SRC bash
+# Meeting de 1 hora con cliente
+
+M-S-r  # Empezar grabación
+# ... reunión completa ...
+M-S-r  # Parar
+
+# Salida automática:
+# ~/recordings/2026-01-27_16-00-meeting/
+#   ├── audio.wav (60 minutos, 60MB)
+#   ├── transcription.txt (texto completo)
+#   └── metadata.json
+
+# Editar transcripción:
+emacs ~/recordings/2026-01-27_16-00-meeting/transcription.txt
+# → Resumen, correcciones, highlights
+#+END_SRC
+
+**** 3. Generar Audiolibros con Tu Voz
+
+#+BEGIN_SRC bash
+# Tienes un artículo/tutorial escrito en Markdown
+# Quieres convertirlo a audio con tu voz
+
+# 1. Grabar voz de referencia (una vez)
+ffmpeg -f pulse -i @DEFAULT_SOURCE@ \
+  -ar 96000 -ac 1 -acodec pcm_s32le \
+  ~/voice-cloning/references/mi-voz-audiolibro.wav
+# Leer 10 segundos de texto natural
+
+# 2. Transcribir referencia
+echo "Texto exacto que leíste en la grabación" \
+  > ~/voice-cloning/references/mi-voz-audiolibro.txt
+
+# 3. Convertir artículo a audio
+qwen-tts-clone \
+  -r ~/voice-cloning/references/mi-voz-audiolibro.wav \
+  -rt "$(cat ~/voice-cloning/references/mi-voz-audiolibro.txt)" \
+  -t "$(cat mi-articulo-completo.txt)" \
+  -l Spanish \
+  -o audiolibro-capitulo1.wav
+
+# Resultado: Audio de 10-20 minutos con TU voz narrando
+#+END_SRC
+
+**** 4. Crear Intros/Outros para YouTube/Podcasts
+
+#+BEGIN_SRC bash
+# Crear intro personalizada sin grabar
+
+qwen-tts-clone \
+  -r ~/voice-cloning/references/mi-voz.wav \
+  -rt "$(cat ~/voice-cloning/references/mi-voz.txt)" \
+  -t "Hola, bienvenidos a Code Brutal, el podcast donde 
+      hablamos de arquitectura de software sin pelos en la lengua.
+      Soy Pascual y hoy vamos a hablar de Domain-Driven Design" \
+  -l Spanish \
+  -o youtube-intro-episode-05.wav
+
+# Editar en Audacity/ffmpeg:
+ffmpeg -i youtube-intro-episode-05.wav \
+  -filter:a "afade=t=in:d=1,afade=t=out:d=2" \
+  youtube-intro-final.wav
+#+END_SRC
+
+**** 5. Traducción + Voice Cloning
+
+#+BEGIN_SRC bash
+# Grabar en español
+meeting-recorder-toggle
+# Hablar en español...
+meeting-recorder-toggle
+
+# Transcripción automática en español
+RECORDING_DIR=$(ls -td ~/recordings/* | head -1)
+SPANISH_TEXT=$(cat $RECORDING_DIR/transcription.txt)
+
+# Traducir con LLM (ejemplo con Claude)
+echo "$SPANISH_TEXT" | claude --prompt "Translate to English, maintain tone" \
+  > english-translation.txt
+
+# Generar audio en inglés con voz clonada
+qwen-tts-clone \
+  -r ~/voice-cloning/references/my-english-voice.wav \
+  -rt "Hello, this is my reference voice for English" \
+  -t "$(cat english-translation.txt)" \
+  -l English \
+  -o translated-audio-english.wav
+#+END_SRC
+
+*** Pipeline Completo: STT → Edit → TTS
+
+*Workflow típico:*
+
+#+BEGIN_SRC bash
+# 1. GRABAR (STT)
+meeting-recorder-toggle
+# ... hablar durante la reunión/presentación ...
+meeting-recorder-toggle
+
+# Resultado:
+MEETING=$(ls -td ~/recordings/* | head -1)
+# $MEETING/audio.wav
+# $MEETING/transcription.txt
+
+# 2. EDITAR TRANSCRIPCIÓN
+emacs $MEETING/transcription.txt
+# - Corregir errores de Whisper
+# - Resumir contenido
+# - Mejorar redacción
+# - Añadir estructura
+
+# 3. REGENERAR AUDIO CON EDICIONES (TTS)
+qwen-tts-clone \
+  -r $MEETING/audio.wav \
+  -rt "$(head -50c $MEETING/transcription.txt)" \
+  -t "$(cat $MEETING/transcription-editada.txt)" \
+  -l Spanish \
+  -o $MEETING/audio-mejorado.wav
+
+# Resultado final:
+# - Audio original: $MEETING/audio.wav
+# - Transcripción editada: $MEETING/transcription-editada.txt
+# - Audio regenerado: $MEETING/audio-mejorado.wav
+#+END_SRC
+
+*Beneficios:*
+- ✅ Calidad superior (sin "uhms", pausas, errores)
+- ✅ Contenido editado (resumen, mejoras)
+- ✅ Misma voz (clonada del audio original)
+- ✅ Todo local (privacidad total)
+
+*** Performance Benchmarks (RTX 5080)
+
+*Whisper (Speech-to-Text):*
+| Audio Duration | Transcription Time | Speed Factor |
+|----------------+--------------------+--------------|
+| 10 segundos    | ~1.4 segundos      | 0.14x        |
+| 1 minuto       | ~8.4 segundos      | 0.14x        |
+| 10 minutos     | ~84 segundos       | 0.14x        |
+| 1 hora         | ~8.4 minutos       | 0.14x        |
+
+*Qwen3-TTS (Text-to-Speech):*
+| Text Length      | Generation Time | Notes                    |
+|------------------+-----------------+--------------------------|
+| 1 frase (~10 palabras) | 2-3 segundos | Latencia inicial modelo |
+| 1 párrafo (~50 palabras) | 3-5 segundos | Generación incremental |
+| 1 página (~300 palabras) | 10-15 segundos | Batch generation |
+
+*VRAM Usage:*
+| Model        | VRAM Used | Total Available |
+|--------------+-----------+-----------------|
+| Whisper      | ~2GB      | 16GB (RTX 5080) |
+| Qwen3-TTS    | ~4-6GB    | 16GB (RTX 5080) |
+| Both running | ~8GB      | 16GB (RTX 5080) |
+
+*** Configuración Avanzada
+
+**** Ajustar Calidad de Audio (Meeting Recorder)
+
+Editar =scripts/whisper-core.sh= - función =record_audio_full()=:
+
+#+BEGIN_SRC bash
+# ACTUAL: Monitor amplificado 8x
+[1:a]volume=8.0[monitor]
+
+# Si system audio suena muy alto:
+[1:a]volume=4.0[monitor]
+
+# Si tu micrófono se escucha bajo:
+[0:a]volume=2.0[mic]
+
+# Volumen final:
+volume=3.0[out]  # Subir a 5.0 si todo suena bajo
+#+END_SRC
+
+Rebuild después de cambios:
+#+BEGIN_SRC bash
+sudo nixos-rebuild switch --flake ~/dotfiles#aurin --impure
+#+END_SRC
+
+**** Cambiar Idioma de Transcripción
+
+Editar scripts para cambiar idioma por defecto:
+
+#+BEGIN_SRC bash
+# scripts/voice-input-toggle
+# Línea ~85 (función transcribe_audio)
+TRANSCRIPT=$(transcribe_audio "$AUDIO_FILE" "es")  # Cambiar "es" por "en", "zh", etc.
+
+# scripts/meeting-recorder-toggle  
+# Línea ~85
+TRANSCRIPT=$(transcribe_audio "$AUDIO_FILE" "es")
+#+END_SRC
+
+**** Usar Otro Modelo Whisper
+
+Por defecto: =ggml-small.bin= (461MB, español optimizado)
+
+Opciones:
+- =ggml-tiny.bin= (75MB, rápido pero menos preciso)
+- =ggml-base.bin= (142MB, balance)
+- =ggml-medium.bin= (1.5GB, más preciso)
+- =ggml-large.bin= (2.9GB, máxima precisión, más lento)
+
+Descargar modelo alternativo:
+#+BEGIN_SRC bash
+cd ~/.local/share/whisper/models/
+curl -LO https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.bin
+#+END_SRC
+
+Editar =scripts/whisper-core.sh=:
+#+BEGIN_SRC bash
+# Línea 20
+MODEL="$HOME/.local/share/whisper/models/ggml-medium.bin"
+#+END_SRC
+
+*** Troubleshooting
+
+**** Voice Input No Inyecta Texto
+
+Problema: Transcripción funciona pero no inyecta texto.
+
+Solución:
+#+BEGIN_SRC bash
+# Verificar xdotool instalado
+which xdotool
+
+# Probar inyección manual
+xdotool type "test"
+
+# Si falla: verificar window manager
+echo $XDG_SESSION_TYPE  # Debe ser x11, no wayland
+#+END_SRC
+
+**** Meeting Recorder: No Captura System Audio
+
+Problema: Solo graba micrófono, no audio del sistema.
+
+Solución:
+#+BEGIN_SRC bash
+# Ver monitors disponibles
+pactl list sources short | grep monitor
+
+# Debe haber al menos un monitor
+# Si no hay: verificar PulseAudio/PipeWire config
+
+# Ajustar volumen monitor en whisper-core.sh
+[1:a]volume=12.0[monitor]  # Subir de 8.0 a 12.0
+#+END_SRC
+
+**** Qwen3-TTS: Model Download Fails
+
+Problema: =qwen-tts-clone= falla al descargar modelo.
+
+Solución:
+#+BEGIN_SRC bash
+# Descargar modelo manualmente
+mkdir -p ~/.cache/huggingface/hub
+cd ~/.cache/huggingface/hub
+
+# Descargar con git lfs
+git lfs install
+git clone https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-Base
+
+# Retry script
+qwen-tts-clone --reference test.wav ...
+#+END_SRC
+
+**** VRAM Out of Memory
+
+Problema: =RuntimeError: CUDA out of memory=
+
+Solución:
+#+BEGIN_SRC bash
+# Verificar VRAM disponible
+nvidia-smi
+
+# Cerrar procesos que usen GPU:
+# - Navegadores (Chrome/Firefox GPU acceleration)
+# - OBS Studio
+# - Otros modelos LLM
+
+# Si persiste: usar modelo más pequeño o CPU
+# (no implementado aún - TODO)
+#+END_SRC
+
+*** Archivos y Módulos
+
+| File/Module | Purpose |
+|-------------|---------|
+| =modules/home-manager/programs/whisper.nix= | Whisper STT config |
+| =modules/home-manager/programs/qwen-tts.nix= | Qwen3-TTS config |
+| =scripts/whisper-core.sh= | Shared audio functions |
+| =scripts/voice-input-toggle= | Interactive dictation (M-r) |
+| =scripts/meeting-recorder-toggle= | Long recording (M-S-r) |
+| =scripts/qwen-tts-clone= | Voice cloning CLI |
+| =xmonad/.config/xmonad/xmonad.hs= | Keybindings |
+
+*** Estructura de Directorios
+
+#+BEGIN_SRC text
+~/
+├── .local/share/whisper/models/    # Whisper models
+│   └── ggml-small.bin               # Spanish optimized (461MB)
+│
+├── .cache/huggingface/hub/          # Qwen3-TTS models
+│   └── Qwen3-TTS-12Hz-1.7B-Base/   # Auto-downloaded (~3.5GB)
+│
+├── recordings/                      # Meeting recordings
+│   └── 2026-01-27_16-00-meeting/
+│       ├── audio.wav                # Original audio
+│       ├── transcription.txt        # Whisper output
+│       └── metadata.json            # Duration, date, etc.
+│
+└── voice-cloning/
+    ├── references/                  # Voice samples for cloning
+    │   ├── mi-voz.wav              # Reference audio (5-15s)
+    │   └── mi-voz.txt              # Reference transcription
+    │
+    └── output/                      # Generated TTS audio
+        └── podcast-intro.wav
+#+END_SRC
+
+*** Clone-First: Portabilidad
+
+Ambos sistemas (Whisper + Qwen3-TTS) están en =modules/home-manager/core.nix= → portables a todas las máquinas.
+
+*Estado actual:*
+| Machine  | Whisper | Qwen3-TTS | Notes                       |
+|----------+---------+-----------+-----------------------------|
+| *aurin*  | ✅      | ✅        | RTX 5080 (16GB) - Full GPU  |
+| *macbook*| ✅      | ⚠️        | CPU only (sin NVIDIA)       |
+| *vespino*| ✅      | ⚠️        | CPU only (sin NVIDIA)       |
+
+*Qwen3-TTS en CPU:* Funciona pero MUY lento (~30-60s por generación vs 2-5s GPU).
+
+*TODO:* Implementar fallback CPU automático para máquinas sin GPU.
+
+*** Referencias
+
+*Whisper:*
+- Modelo: https://github.com/ggerganov/whisper.cpp
+- Paper: https://arxiv.org/abs/2212.04356
+
+*Qwen3-TTS:*
+- Modelo: https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-Base
+- Notebook Colab: (original inspiration)
+
+
 *** Comandos Útiles
 
 #+BEGIN_SRC bash

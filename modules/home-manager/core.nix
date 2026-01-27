@@ -30,6 +30,7 @@ in
     ./programs/ai-agents # AI agents modular config (claude-code, crush, opencode)
     ./programs/console-theme.nix # Temas terminal en caliente (TTY + Termux)
     ./programs/whisper.nix # Whisper voice input (local transcription)
+    ./programs/qwen-tts.nix # Qwen3-TTS voice cloning (text-to-speech)
   ];
 
   # Home Manager basico
