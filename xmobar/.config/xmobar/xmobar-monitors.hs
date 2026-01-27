@@ -23,6 +23,7 @@ Config {
         , Run Com "/home/passh/dotfiles/scripts/xmobar-brightness.sh" [] "bright" 30
         , Run Com "/home/passh/dotfiles/scripts/xmobar-battery.sh" [] "battery" 50
         , Run Com "/home/passh/dotfiles/scripts/xmobar-hhkb-battery.sh" [] "hhkb" 60
+        , Run Com "/home/passh/dotfiles/scripts/xmobar-hhkb-hasu.sh" [] "hhkbpro" 30
         , Run Com "/home/passh/dotfiles/scripts/xmobar-mouse-battery.sh" [] "mouse" 60
         -- Red
         , Run Com "/home/passh/dotfiles/scripts/xmobar-wifi.sh" [] "wifi" 30
@@ -40,5 +41,5 @@ Config {
 
     , sepChar = "%"
     , alignSep = "}{"
-    , template = "}{ <fc=#666666><fn=1>󱄅</fn></fc> %vpn% %docker% %updates% %machines% %ssh% %bt% %volume% %bright% %battery% %hhkb% %mouse% %wifi% %network% %disks% %gpu% %swap% %memory% %load% %cpufreq% %cpu% %uptime% <fc=#666666><fn=1>󱄅</fn></fc> "
+    , template = "}{ <fc=#666666><fn=1>󱄅</fn></fc> %vpn% %docker% %updates% %machines% %ssh% %bt% %volume% %bright% %battery% %hhkb% %hhkbpro% %mouse% %wifi% %network% %disks% %gpu% %swap% %memory% %load% %cpufreq% %cpu% %uptime% <fc=#666666><fn=1>󱄅</fn></fc> "
 }
