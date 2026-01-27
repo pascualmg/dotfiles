@@ -4236,6 +4236,7 @@ Lista de secretos que necesitan migrarse (VALORES SANITIZADOS - no reales):
 |-----------+-------------+------------+--------|
 | AI Agents | 4/5 (80%) | 1 | ✅ Funcionando (aurin + macbook) |
 | XMonad Migration | 3/3 (100%) | 0 | ✅ Completado (aurin + macbook) |
+| XMobar/XMonad Portability | 0/1 (0%) | 1 | 📖 Documentado (no prioritario) |
 | Repo Template | 2/3 (67%) | 1 | ⚠️ En progreso |
 | Seguridad (SOPS) | 1/2 (50%) | 1 | 📖 Documentado |
 | Infraestructura | 0/3 (0%) | 3 | 🔮 Futuro |
@@ -4336,6 +4337,164 @@ Lista de secretos que necesitan migrarse (VALORES SANITIZADOS - no reales):
   - [ ] FASE 1: Setup inicial (generar keys age, .sops.yaml)
   - [ ] FASE 2: Migrar passwords (Miniflux, Syncthing, VM Ubuntu)
   - [ ] FASE 3: Limpieza (git history, docs)
+
+** XMobar + XMonad Portability (Fase 3 - Hardcoded Paths)
+- [ ] *PORTABILITY REFACTOR* - Eliminar paths hardcoded /home/passh/
+  - [ ] SCOPE: ~120 líneas en 4 archivos (xmobar.nix, xmonad.nix, xmobar-monitors.hs, xmobar-full.hs)
+  - [ ] OBJETIVO: Funcionar con cualquier username (no solo "passh")
+  - [ ] IMPACTO: Alto (mejora portabilidad, mejor práctica Nix)
+  - [ ] ETA: ~50 minutos trabajo + 30 min testing
+
+*** Problema Actual
+
+Hardcoded paths en múltiples archivos:
+
+#+BEGIN_SRC text
+modules/home-manager/programs/xmobar.nix (líneas 80-112):
+  Run Com "/home/passh/dotfiles/scripts/xmobar-vpn.sh" [] "vpn" 30
+  ...24 scripts más con mismo pattern
+
+xmobar/.config/xmobar/xmobar-monitors.hs (~24 líneas):
+  Run Com "/home/passh/dotfiles/scripts/xmobar-bluetooth.sh" [] "bt" 30
+  ...
+
+xmonad/.config/xmonad/xmonad.hs (2 líneas):
+  , ("M-t", spawn "/home/passh/dotfiles/scripts/trayer-toggle.sh")
+  , ("M-S-m", spawn "/home/passh/dotfiles/scripts/glmatrix-bg.sh")
+#+END_SRC
+
+*Consecuencia:* Repo NO funciona si username != "passh"
+
+*** Solución Propuesta
+
+**** 1. xmobar.nix (Alto impacto, 70 líneas)
+
+#+BEGIN_SRC nix
+# ANTES:
+Run Com "/home/passh/dotfiles/scripts/xmobar-vpn.sh" [] "vpn" 30
+
+# DESPUÉS:
+let
+  scriptsDir = "${config.home.homeDirectory}/dotfiles/scripts";
+in
+  Run Com "${scriptsDir}/xmobar-vpn.sh" [] "vpn" 30
+#+END_SRC
+
+*Afecta:*
+- xmobarrc (generado por xmobar.nix)
+- 24 monitores × 3 configs = ~70 líneas
+
+**** 2. xmonad.nix (Medio impacto, 5 líneas)
+
+Convertir de =.source= (copy) a =.text= (templating):
+
+#+BEGIN_SRC nix
+# ANTES:
+home.file.".config/xmonad/xmonad.hs".source = 
+  ../../../xmonad/.config/xmonad/xmonad.hs;
+
+# DESPUÉS:
+home.file.".config/xmonad/xmonad.hs".text = 
+  let scriptsDir = "${config.home.homeDirectory}/dotfiles/scripts";
+  in builtins.replaceStrings 
+    [ "/home/passh/dotfiles/scripts" ]
+    [ scriptsDir ]
+    (builtins.readFile ../../../xmonad/.config/xmonad/xmonad.hs);
+#+END_SRC
+
+*Afecta:* 2 scripts (trayer-toggle.sh, glmatrix-bg.sh)
+
+**** 3. xmobar-monitors.hs (Medio impacto, 24 líneas)
+
+*Opciones:*
+- *Opción A (Recomendada):* Generar dinámicamente en xmobar.nix
+  - Crear =xmobarMonitorsConfig= (como ya existe =xmobarConfig=)
+  - Usar templating para paths
+  - Más trabajo inicial, más mantenible
+  
+- *Opción B (Quick fix):* Usar =builtins.replaceStrings=
+  - Similar al approach de xmonad.nix
+  - Rápido pero menos elegante
+
+**** 4. xmobar-full.hs (Bajo impacto, legacy)
+
+- Legacy file (no usado actualmente)
+- Aplicar mismo fix por consistencia
+- O eliminar si ya no se necesita
+
+*** Complejidad Estimada
+
+| Archivo | Cambios | Dificultad | Tiempo | Impacto |
+|---------+---------+------------+--------+---------|
+| xmobar.nix | ~70 líneas | ⭐⭐ Media | 15 min | Alto |
+| xmonad.nix | ~5 líneas | ⭐ Baja | 5 min | Medio |
+| xmobar-monitors.hs | ~24 líneas | ⭐⭐⭐ Alta | 20 min | Medio |
+| xmobar-full.hs | ~24 líneas | ⭐⭐ Media | 10 min | Bajo |
+| *TOTAL* | *~120 líneas* | *⭐⭐ Media* | *50 min* | *Alto* |
+
+*** Estrategia de Testing
+
+#+BEGIN_SRC bash
+# 1. Desarrollo en macbook (testbed)
+sudo nixos-rebuild test --flake ~/dotfiles#macbook --impure
+xmonad --recompile && xmonad --restart
+
+# 2. Validar que NO quedan hardcoded paths
+grep -r "/home/passh" ~/.config/xmonad/ ~/.config/xmobar/
+# Debe estar vacío
+
+# 3. Producción en aurin (después de test exitoso)
+sudo nixos-rebuild switch --flake ~/dotfiles#aurin --impure
+xmonad --recompile && xmonad --restart
+#+END_SRC
+
+*** Beneficios
+
+1. *Portabilidad Total*
+   - Dotfiles funcionarán con cualquier username
+   - Facilitará compartir configs con otros usuarios NixOS
+
+2. *Mejor Integración Nix*
+   - Todo manejado por home-manager (no paths mágicos)
+   - Fácil de debuggear (=nix repl= para ver variables)
+
+3. *Preparación Multi-Usuario*
+   - Si agregas otro usuario (ej: root, trabajo), funciona out-of-the-box
+
+4. *Consistencia*
+   - Mismo approach que ya usas en otros módulos (=config.home.homeDirectory=)
+
+*** Decisiones Pendientes
+
+Antes de implementar:
+
+1. *¿Eliminar xmobar-full.hs?*
+   - No se usa actualmente (solo xmobar-monitors.hs + xmobar-workspaces.hs)
+   - Puede eliminarse o mantener como fallback
+
+2. *¿Approach para xmobar-monitors.hs?*
+   - Opción A: Generar dinámicamente (recomendada)
+   - Opción B: =builtins.replaceStrings= (rápido)
+
+3. *¿Testing en macbook primero?*
+   - Recomendado: testear en macbook antes de aurin (PRODUCCIÓN)
+
+*** Referencias
+
+- TODO comments en archivos:
+  - =modules/home-manager/programs/xmobar.nix= (líneas 30-35)
+  - =modules/home-manager/programs/xmonad.nix= (líneas 19-25)
+- Consultar nixos-guru: =~/dotfiles/claude-code/.claude/agents/nixos-guru.md=
+
+*** Estado: DOCUMENTADO (no implementado)
+
+Esta mejora está documentada pero NO es prioritaria. Implementar cuando:
+- Se requiera portabilidad real (compartir repo con terceros)
+- Preparación para template público (post-SOPS)
+- O cuando haya tiempo libre para mejoras técnicas
+
+*Nota:* XMobar funciona perfectamente en aurin y macbook con paths actuales.
+Esta refactor es mejora técnica, no fix de bug.
 
 ** Limpieza
 - [ ] Revisar y limpiar configs obsoletas (shell/, composer/)
