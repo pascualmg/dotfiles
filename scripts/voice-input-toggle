@@ -1,0 +1,145 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# voice-input-toggle - Interactive voice input (dictation)
+# ==============================================================================
+# BRUTAL voice input: Record -> Transcribe -> Inject text into focused window
+#
+# Usage: voice-input-toggle
+#   First call: Starts recording (shows notification with timer)
+#   Second call: Stops recording, transcribes, injects text with xdotool
+#
+# Keybinding: M-r (Mod+r)
+#
+# Features:
+#   - Toggle behavior (single keybinding for start/stop)
+#   - Persistent notification with live timer
+#   - Spanish transcription (Whisper local)
+#   - Text injection via xdotool (with clipboard fallback)
+#   - Lock file prevents multiple recordings
+#
+# Performance: ~3-5 seconds latency (transcription on RTX 5080)
+# ==============================================================================
+
+# Source shared functions
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+source "$SCRIPT_DIR/whisper-core.sh"
+
+PIDFILE="/tmp/voice-input.pid"
+STATE_FILE="/tmp/voice-input-state"
+
+# ==============================================================================
+# STOP RECORDING LOGIC
+# ==============================================================================
+if [ -f "$PIDFILE" ] && kill -0 $(cat "$PIDFILE") 2>/dev/null; then
+  # Read state (line 1: notification ID, line 2: audio file path)
+  if [ -f "$STATE_FILE" ]; then
+    NOTIF_ID=$(sed -n '1p' "$STATE_FILE")
+    AUDIO_FILE=$(sed -n '2p' "$STATE_FILE")
+  else
+    NOTIF_ID=""
+    AUDIO_FILE=""
+  fi
+  
+  PID=$(cat "$PIDFILE")
+  
+  # Kill recording process gracefully (ffmpeg handles SIGTERM properly)
+  kill $PID 2>/dev/null
+  wait $PID 2>/dev/null
+  
+  # Give ffmpeg time to finalize WAV header (critical!)
+  sleep 0.5
+  
+  # Close recording notification
+  [ -n "$NOTIF_ID" ] && dunstify -C "$NOTIF_ID"
+  
+  # Show transcription in progress
+  TRANS_NOTIF=$(dunstify -p "Transcribing..." "Processing audio")
+  
+  # Transcribe
+  if [ -f "$AUDIO_FILE" ] && [ -s "$AUDIO_FILE" ]; then
+    TRANSCRIPT=$(transcribe_audio "$AUDIO_FILE" "es")
+    
+    # Close transcription notification
+    dunstify -C "$TRANS_NOTIF"
+    
+    # Inject text into focused window
+    if [ -n "$TRANSCRIPT" ]; then
+      sleep 0.1  # Let XMonad settle focus
+      
+      # Try xdotool first
+      if command -v xdotool &>/dev/null; then
+        xdotool type --clearmodifiers "$TRANSCRIPT"
+        
+        # Success notification (show preview)
+        PREVIEW=$(echo "$TRANSCRIPT" | head -c 60)
+        [ ${#TRANSCRIPT} -gt 60 ] && PREVIEW="${PREVIEW}..."
+        dunstify "Text Inserted" "$PREVIEW"
+      else
+        # Fallback: copy to clipboard
+        if copy_to_clipboard "$TRANSCRIPT"; then
+          dunstify "Text Copied to Clipboard" "Paste with Ctrl+V"
+        else
+          dunstify -u critical "Text Injection Failed" "Install xdotool or xclip"
+        fi
+      fi
+    else
+      dunstify -u critical "No Speech Detected" "Try speaking louder or longer"
+    fi
+  else
+    dunstify -u critical "Recording Failed" "No audio captured"
+  fi
+  
+  # Cleanup
+  rm -f "$AUDIO_FILE" "$PIDFILE" "$STATE_FILE"
+
+# ==============================================================================
+# START RECORDING LOGIC
+# ==============================================================================
+else
+  # Check if model exists
+  check_model || exit 1
+  
+  # Check if already recording (stale PID file cleanup)
+  if [ -f "$PIDFILE" ]; then
+    OLD_PID=$(cat "$PIDFILE")
+    if ! kill -0 "$OLD_PID" 2>/dev/null; then
+      # Stale PID file - clean it up
+      rm -f "$PIDFILE" "$STATE_FILE"
+    else
+      dunstify "Already Recording" "Stop current recording first (Mod+r)"
+      exit 1
+    fi
+  fi
+  
+  # Start recording (use unique timestamp + random for filename)
+  AUDIO_FILE="/tmp/voice-recording-$(date +%s)-$RANDOM.wav"
+  FFMPEG_PID=$(record_audio "$AUDIO_FILE")
+  
+  echo $FFMPEG_PID > "$PIDFILE"
+  
+  # Show persistent notification
+  NOTIF_ID=$(dunstify -p -u critical -t 0 \
+    -i microphone-sensitivity-high \
+    "🎤 Voice Input" "Press Mod+r to stop")
+  
+  # Save state (line 1: notification ID, line 2: audio file path)
+  cat > "$STATE_FILE" <<EOF
+$NOTIF_ID
+$AUDIO_FILE
+EOF
+  
+  # Update notification with timer (background process)
+  (
+    START_TIME=$(date +%s)
+    while kill -0 $FFMPEG_PID 2>/dev/null; do
+      ELAPSED=$(($(date +%s) - START_TIME))
+      
+      dunstify -r "$NOTIF_ID" -u critical -t 0 \
+        -i microphone-sensitivity-high \
+        "🎤 Voice Input" \
+        "Recording: $(format_duration $ELAPSED)"
+      
+      sleep 3
+    done
+  ) &
+fi

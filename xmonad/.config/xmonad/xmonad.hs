@@ -352,6 +352,10 @@ main = do
         , ("M-S-w", spawn "nitrogen --random --set-zoom-fill ~/wallpapers")  -- Wallpaper random
         , ("M-S-m", spawn "/home/passh/dotfiles/scripts/glmatrix-bg.sh")    -- Matrix de fondo
         , ("M-S-s", sinkAll)                     -- Unfloat todas las ventanas
+        
+        -- Voice Input (Whisper transcription)
+        , ("M-r", spawn "/home/passh/.local/bin/voice-input-toggle")      -- Voice input toggle (dictation)
+        , ("M-S-r", spawn "/home/passh/.local/bin/meeting-recorder-toggle") -- Meeting recorder toggle
 
         -- -----------------------------------------
         -- Spacing (gaps entre ventanas)

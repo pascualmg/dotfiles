@@ -60,6 +60,9 @@ in
     whisper-cpp-vulkan # GPU Vulkan backend (NVIDIA/AMD) with CPU fallback
     ffmpeg-full # Audio recording (already in passh.nix but explicit here)
     pulseaudio # Provides pactl for audio device detection
+    xdotool # Text injection for voice input
+    jq # JSON generation for meeting metadata
+    bc # Arithmetic for duration calculations
   ];
 
   # Symlink scripts to ~/.local/bin/
@@ -67,5 +70,16 @@ in
   home.file = {
     ".local/bin/whisper-brutal".source =
       config.lib.file.mkOutOfStoreSymlink "${dotfilesDir}/scripts/whisper-brutal";
+
+    ".local/bin/voice-input-toggle".source =
+      config.lib.file.mkOutOfStoreSymlink "${dotfilesDir}/scripts/voice-input-toggle";
+
+    ".local/bin/meeting-recorder-toggle".source =
+      config.lib.file.mkOutOfStoreSymlink "${dotfilesDir}/scripts/meeting-recorder-toggle";
   };
+
+  # Create recordings directory for meetings
+  home.activation.createRecordingsDir = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    mkdir -p $HOME/recordings
+  '';
 }

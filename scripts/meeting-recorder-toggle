@@ -1,0 +1,209 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# meeting-recorder-toggle - Record and transcribe meetings
+# ==============================================================================
+# BRUTAL meeting recorder: Record long audio -> Save organized structure
+#
+# Usage: meeting-recorder-toggle
+#   First call: Starts recording meeting (shows notification)
+#   Second call: Stops, transcribes, saves to ~/recordings/
+#
+# Keybinding: M-S-r (Mod+Shift+r)
+#
+# Features:
+#   - Long recording support (hours)
+#   - Organized output: ~/recordings/YYYY-MM-DD_HH-MM-meeting/
+#   - Saves: audio.wav, transcription.txt, metadata.json
+#   - Live timer notification (updates every 10s)
+#   - Lock file prevents multiple recordings
+#
+# Output structure:
+#   ~/recordings/2025-01-27_14-30-meeting/
+#     audio.wav           - Original recording (16kHz mono)
+#     transcription.txt   - Whisper transcribed text
+#     metadata.json       - Duration, date, file info
+# ==============================================================================
+
+# Source shared functions
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+source "$SCRIPT_DIR/whisper-core.sh"
+
+PIDFILE="/tmp/meeting-recording.pid"
+STATE_FILE="/tmp/meeting-recording-state"
+RECORDINGS_DIR="$HOME/recordings"
+LOGFILE="/tmp/meeting-recorder-debug.log"
+
+# Debug logging (temporary)
+echo "=== $(date) ===" >> "$LOGFILE"
+echo "Script started" >> "$LOGFILE"
+
+# ==============================================================================
+# STOP RECORDING LOGIC
+# ==============================================================================
+if [ -f "$PIDFILE" ] && kill -0 $(cat "$PIDFILE") 2>/dev/null; then
+  echo "STOP mode activated" >> "$LOGFILE"
+  # Read state
+  PID=$(cat "$PIDFILE")
+  
+  # Read state file (line 1: output dir)
+  if [ -f "$STATE_FILE" ]; then
+    OUTPUT_DIR=$(cat "$STATE_FILE")
+  else
+    dunstify -u critical "State File Missing" "Cannot find recording directory"
+    rm -f "$PIDFILE"
+    exit 1
+  fi
+  
+  # Kill recording process
+  kill $PID 2>/dev/null
+  wait $PID 2>/dev/null
+  
+  # Give ffmpeg time to finalize WAV header (critical!)
+  sleep 0.5
+  
+  # Close ALL notifications and show immediate feedback
+  dunstctl close-all 2>/dev/null
+  dunstify -u normal -t 2000 "🛑 Recording Stopped" "Processing..."
+  
+  # Process recording
+  AUDIO_FILE="$OUTPUT_DIR/audio.wav"
+  
+  if [ -f "$AUDIO_FILE" ] && [ -s "$AUDIO_FILE" ]; then
+    # Get audio duration first
+    DURATION=$(get_audio_duration "$AUDIO_FILE")
+    DURATION_INT=${DURATION%.*}  # Convert to integer
+    DURATION_FORMATTED=$(format_duration $DURATION_INT)
+    DIRNAME=$(basename "$OUTPUT_DIR")
+    
+    # Show processing notification with details
+    PROC_NOTIF=$(dunstify -p -u normal "🔄 Processing Meeting Recording" \
+      "📁 ~/recordings/$DIRNAME/
+⏱️  Duration: $DURATION_FORMATTED
+🤖 Transcribing with Whisper (GPU)...")
+    
+    # Transcribe audio
+    TRANSCRIPT=$(transcribe_audio "$AUDIO_FILE" "es")
+    
+    # Save transcription
+    if [ -n "$TRANSCRIPT" ]; then
+      echo "$TRANSCRIPT" > "$OUTPUT_DIR/transcription.txt"
+      TRANS_STATUS="success"
+    else
+      echo "No speech detected in recording" > "$OUTPUT_DIR/transcription.txt"
+      TRANS_STATUS="no_speech"
+    fi
+    
+    # Generate metadata JSON
+    cat > "$OUTPUT_DIR/metadata.json" <<EOF
+{
+  "date": "$(date -Iseconds)",
+  "duration_seconds": $DURATION_INT,
+  "duration_formatted": "$DURATION_FORMATTED",
+  "audio_file": "audio.wav",
+  "transcription_file": "transcription.txt",
+  "transcription_status": "$TRANS_STATUS",
+  "model": "ggml-small.bin",
+  "language": "es",
+  "sample_rate": "16000",
+  "channels": "1"
+}
+EOF
+    
+    # Close processing notification
+    dunstify -C "$PROC_NOTIF" 2>/dev/null
+    
+    # Success notification with clear info
+    DIRNAME=$(basename "$OUTPUT_DIR")
+    if [ "$TRANS_STATUS" = "success" ]; then
+      dunstify -u normal -t 5000 "✅ Meeting Saved Successfully" \
+        "Duration: $DURATION_FORMATTED
+Location: ~/recordings/$DIRNAME/
+Files: audio.wav, transcription.txt, metadata.json"
+    else
+      dunstify -u critical -t 5000 "⚠️ Meeting Saved (No Speech Detected)" \
+        "Duration: $DURATION_FORMATTED
+Location: ~/recordings/$DIRNAME/"
+    fi
+  else
+    dunstify -u critical -t 5000 "❌ Recording Failed" "No audio file created"
+  fi
+  
+  # Cleanup
+  rm -f "$PIDFILE" "$STATE_FILE"
+
+# ==============================================================================
+# START RECORDING LOGIC
+# ==============================================================================
+else
+  echo "START mode activated" >> "$LOGFILE"
+  
+  # Check if model exists
+  check_model || exit 1
+  echo "Model check passed" >> "$LOGFILE"
+  
+  # Check if already recording (stale PID cleanup)
+  if [ -f "$PIDFILE" ]; then
+    OLD_PID=$(cat "$PIDFILE")
+    if ! kill -0 "$OLD_PID" 2>/dev/null; then
+      # Stale PID file - clean it up
+      rm -f "$PIDFILE" "$STATE_FILE"
+    else
+      dunstify "Already Recording Meeting" "Stop current recording first (Mod+Shift+r)"
+      exit 1
+    fi
+  fi
+  
+  # Create recordings directory if needed
+  mkdir -p "$RECORDINGS_DIR"
+  
+  # Create output directory with timestamp
+  TIMESTAMP=$(date +%Y-%m-%d_%H-%M)
+  OUTPUT_DIR="$RECORDINGS_DIR/${TIMESTAMP}-meeting"
+  mkdir -p "$OUTPUT_DIR"
+  
+  # Start recording (mic + system output for full meeting capture)
+  AUDIO_FILE="$OUTPUT_DIR/audio.wav"
+  echo "Calling record_audio_full..." >> "$LOGFILE"
+  
+  # BRUTAL FIX: Pass PID file directly, no command substitution
+  record_audio_full "$AUDIO_FILE" "$PIDFILE"
+  
+  echo "record_audio_full returned" >> "$LOGFILE"
+  
+  # Give ffmpeg time to initialize
+  sleep 0.3
+  
+  # CRITICAL: Validate PID from file
+  if [ ! -f "$PIDFILE" ]; then
+    echo "ERROR: PID file not created" >> "$LOGFILE"
+    dunstify -u critical "Recording Failed" "PID file not created"
+    rm -rf "$OUTPUT_DIR"
+    exit 1
+  fi
+  
+  FFMPEG_PID=$(cat "$PIDFILE")
+  echo "Got FFMPEG_PID from file: $FFMPEG_PID" >> "$LOGFILE"
+  
+  if [ -z "$FFMPEG_PID" ] || ! kill -0 "$FFMPEG_PID" 2>/dev/null; then
+    echo "ERROR: PID validation failed (PID: $FFMPEG_PID)" >> "$LOGFILE"
+    dunstify -u critical "Recording Failed" "ffmpeg process died immediately"
+    rm -rf "$OUTPUT_DIR"
+    exit 1
+  fi
+  echo "PID validated successfully" >> "$LOGFILE"
+  
+  # Save state (output dir only for now, notif ID not needed without timer)
+  echo "$OUTPUT_DIR" > "$STATE_FILE"
+  echo "Saved state file" >> "$LOGFILE"
+  
+  # Show simple persistent notification
+  DIRNAME=$(basename "$OUTPUT_DIR")
+  echo "About to show notification..." >> "$LOGFILE"
+  dunstify -u critical -t 0 \
+    -i media-record \
+    "🔴 Meeting Recording ACTIVE" \
+    "📁 ~/recordings/$DIRNAME/
+🎙️  Press Mod+Shift+r to stop"
+  echo "Notification shown" >> "$LOGFILE"
+  echo "Script finished (START)" >> "$LOGFILE"
+fi
