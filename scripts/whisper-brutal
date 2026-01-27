@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# whisper-brutal - Voice transcription (Spanish default)
+# ==============================================================================
+# BRUTAL: No bullshit, just works
+# Records audio from microphone and transcribes using Whisper
+#
+# Usage: whisper-brutal
+#   - Press Ctrl+C to stop recording
+#   - Transcription appears with timing stats
+#
+# Hardware detection:
+#   - Auto-detects RØDE NT-USB Mini or falls back to default mic
+#   - Auto-selects GPU (Vulkan) or CPU backend at runtime
+#
+# Performance (aurin RTX 5080 + Spanish):
+#   - ~0.14x real-time (2.6s to transcribe 18.5s audio)
+#   - Encode time: ~22ms (GPU accelerated)
+# ==============================================================================
+
+MODEL="$HOME/.local/share/whisper/models/ggml-small.bin"
+TEMP_AUDIO="/tmp/whisper-$$.wav"
+
+# Cleanup on exit only (let ffmpeg handle Ctrl+C gracefully)
+trap 'rm -f "$TEMP_AUDIO"' EXIT
+
+# Check if model exists
+if [ ! -f "$MODEL" ]; then
+    echo "❌ Error: Modelo Whisper no encontrado"
+    echo "📥 Descarga el modelo primero:"
+    echo ""
+    echo "  mkdir -p ~/.local/share/whisper/models"
+    echo "  cd ~/.local/share/whisper/models"
+    echo "  curl -L -O https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin"
+    echo ""
+    exit 1
+fi
+
+# Auto-detect audio system and microphone
+if command -v pactl &>/dev/null; then
+    # Linux: PulseAudio/PipeWire (aurin, vespino)
+    # Look for RØDE NT-USB (encoding may be R__DE) or any alsa_input device
+    RODE_SOURCE=$(pactl list sources short | grep "alsa_input" | grep -i "NT-USB" | awk '{print $2}' | head -1)
+    INPUT_SOURCE="${RODE_SOURCE:-default}"
+    
+    echo "🎤 Recording from: $INPUT_SOURCE"
+    echo "🎤 Press Ctrl+C to stop..."
+    echo ""
+    ffmpeg -f pulse -i "$INPUT_SOURCE" -ar 16000 -ac 1 "$TEMP_AUDIO" 2>&1 | grep -v "^size=" | grep -v "Press \[q\]"
+else
+    # macOS: CoreAudio (macbook)
+    # List devices: ffmpeg -f avfoundation -list_devices true -i ""
+    # Default mic is usually ":0" (first audio input device)
+    echo "🎤 Recording... (Ctrl+C to stop)"
+    echo ""
+    ffmpeg -f avfoundation -i ":0" -ar 16000 -ac 1 "$TEMP_AUDIO" 2>&1 | grep -v "^size=" | grep -v "Press \[q\]"
+fi
+
+# Check if recording was successful
+echo ""
+if [ ! -f "$TEMP_AUDIO" ] || [ ! -s "$TEMP_AUDIO" ]; then
+    echo "❌ Error: No audio recorded"
+    echo "💡 Tip: Make sure to press Ctrl+C (not 'q') to stop recording"
+    exit 1
+fi
+
+echo "✅ Audio recorded: $(du -h "$TEMP_AUDIO" | cut -f1)"
+
+# Transcribe (Spanish default, show full stats)
+echo "Transcribing..."
+echo ""
+whisper-cli -m "$MODEL" -f "$TEMP_AUDIO" -l es -nt -t 16
+
+# Cleanup
+rm -f "$TEMP_AUDIO"

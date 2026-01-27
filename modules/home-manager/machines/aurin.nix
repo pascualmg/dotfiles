@@ -38,18 +38,4 @@
   dotfiles.picom = {
     backend = "egl"; # RTX 5080 - egl optimizado
   };
-
-  # =============================================================================
-  # TESTING: Whisper Voice Input (Phase 0 - Research)
-  # =============================================================================
-  # Paquetes temporales para probar Whisper antes de nixificar
-  # TODO: Mover a módulo home-manager cuando decidamos arquitectura final
-  # NOTA: whisper-cpp y whisper-cpp-vulkan conflictúan (mismos binarios)
-  #       Probamos primero CPU, luego GPU en fase separada
-  # NOTA: ffmpeg-full ya está instalado en passh.nix (no duplicar)
-  home.packages = with pkgs; [
-    whisper-cpp # Engine principal (CPU + compilado con OpenBLAS)
-    sox # Audio processing utilities
-    pavucontrol # PulseAudio/PipeWire control GUI (debugging)
-  ];
 }

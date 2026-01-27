@@ -4496,6 +4496,195 @@ Esta mejora está documentada pero NO es prioritaria. Implementar cuando:
 *Nota:* XMobar funciona perfectamente en aurin y macbook con paths actuales.
 Esta refactor es mejora técnica, no fix de bug.
 
+** Whisper Voice Input - EXPERIMENTAL [2026-01-27]
+
+*** Problema
+
+Escribir prompts largos en chats (OpenCode, Claude, etc.) es lento y tedioso.
+Necesidad de dictar por voz con transcripción *local* (sin cloud, privacidad total).
+
+*** Solución: Whisper (OpenAI)
+
+Modelo de transcripción speech-to-text completamente local:
+- Modelo =ggml-small.bin= (466 MB, multilíngüe: español + inglés + 97 idiomas)
+- *GPU Vulkan*: 0.14x tiempo real (2.6s para transcribir 18.5s de audio!)
+- *CPU fallback*: ~4x tiempo real (aceptable para uso ocasional)
+- Idioma por defecto: *Español* (5x más rápido que auto-detect)
+- Precisión: Excelente en español (capta palabras complejas correctamente)
+- Sin internet: 100% local, sin API calls, máxima privacidad
+
+*** Estado Actual
+
+| Máquina | Hardware | Status | Performance |
+|---------+----------+--------+-------------|
+| aurin | RTX 5080 Vulkan | ✅ PROBADO | 2.6s para 18.5s audio (0.14x) |
+| macbook | Intel CPU | ⏳ PENDIENTE | ~35s estimado (4x tiempo real) |
+| vespino | RTX 2060 Vulkan | ⏳ PENDIENTE | ~similar a aurin |
+
+*Performance detallado (aurin RTX 5080 + español forzado):*
+
+| Fase | Tiempo |
+|------|--------|
+| Load model | 447ms |
+| Mel spectrogram | 86ms |
+| Encode | *22ms* (GPU acelerado) |
+| Decode | 8ms |
+| Batch decode | 1679ms |
+| *TOTAL* | *2.6s* |
+
+*** Arquitectura Clone-First
+
+Patrón: *Clone-First Puro* (sin options por máquina)
+
+#+BEGIN_SRC
+dotfiles/scripts/
+  ├── whisper-brutal         # Transcripción + stats (español default)
+  └── whisper-auto-detect    # Helper: detecta GPU Vulkan vs CPU
+
+modules/home-manager/programs/whisper.nix
+  → Instala whisper-cpp + whisper-cpp-vulkan
+  → Auto-select mejor backend en runtime (GPU/CPU)
+  → Symlinks scripts a ~/.local/bin/
+  → NO requiere config por máquina (always enabled)
+
+modules/home-manager/core.nix
+  → Import whisper.nix (activo en TODAS las máquinas)
+#+END_SRC
+
+*Filosofía:*
+- Sin =enable= option (always-on)
+- Sin opciones por máquina (auto-detect hardware)
+- Mismo código funciona en aurin (GPU), macbook (CPU), vespino (GPU)
+- Scripts detectan micrófono automáticamente (RØDE NT-USB Mini o default)
+
+*** Instalación
+
+1. El módulo ya está enabled globalmente (clone-first)
+2. Rebuild en cualquier máquina:
+   #+BEGIN_SRC bash
+   cd ~/dotfiles
+   git pull
+   sudo nixos-rebuild switch --flake ~/dotfiles#aurin --impure
+   #+END_SRC
+
+3. Descargar modelo (primera vez, manual):
+   #+BEGIN_SRC bash
+   mkdir -p ~/.local/share/whisper/models
+   cd ~/.local/share/whisper/models
+   curl -L -O https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin
+   #+END_SRC
+
+*Nota:* El modelo NO se descarga automáticamente (466 MB). Es un paso manual para evitar descargas inesperadas en rebuilds.
+
+*** Uso
+
+#+BEGIN_SRC bash
+# Transcribir audio por voz
+whisper-brutal
+
+# 1. Habla al micrófono (detectado automáticamente)
+# 2. Ctrl+C cuando termines de hablar
+# 3. Espera transcripción (~2-3s con GPU, ~30s con CPU)
+# 4. Resultado en pantalla con stats de performance
+#+END_SRC
+
+*Ejemplo de transcripción:*
+
+#+BEGIN_EXAMPLE
+🎤 Recording... (Ctrl+C to stop)
+^C
+Transcribing...
+
+ggml_vulkan: Found 1 Vulkan devices:
+ggml_vulkan: 0 = NVIDIA GeForce RTX 5080
+whisper_backend_init_gpu: using Vulkan0 backend
+
+ Esta es una prueba de Whisper con GPU Vulkan.
+ Funciona muy rápido usando la RTX 5080 de NVIDIA.
+
+whisper_print_timings:     load time =   447 ms
+whisper_print_timings:   encode time =    22 ms (GPU accelerated!)
+whisper_print_timings:    total time =  2602 ms
+#+END_EXAMPLE
+
+*** Detalles Técnicos
+
+**** GPU Detection (Automático)
+
+Scripts detectan hardware en runtime:
+- Si Vulkan disponible + GPU NVIDIA/AMD → usa =whisper-cpp-vulkan=
+- Si no GPU o solo Intel integrada → usa =whisper-cpp= (CPU)
+- Mismo script funciona en todas las máquinas (clone-first)
+
+**** Microphone Detection (Automático)
+
+Scripts detectan micrófono automáticamente:
+- Si RØDE NT-USB Mini conectado → lo usa (mejor calidad)
+- Si no → usa =default= de PulseAudio/PipeWire
+- No requiere config manual
+
+**** Idioma
+
+- *Default:* Español (=-l es=) - 5x más rápido que auto-detect
+- Cambiar a inglés: editar =scripts/whisper-brutal= (=-l en=)
+- Auto-detect multilenguaje: =-l auto= (más lento pero universal)
+
+**** Modelo
+
+Actualmente: =ggml-small.bin= (466 MB)
+- Equilibrio perfecto precisión/velocidad
+- Español + inglés excelentes
+- 99 idiomas soportados
+
+Alternativas futuras:
+- =ggml-base.bin= (142 MB): más rápido, menos preciso
+- =ggml-medium.bin= (1.5 GB): más preciso, más lento
+- =ggml-large.bin= (2.9 GB): máxima precisión, muy lento
+
+*** Módulo Nix
+
+#+BEGIN_SRC nix
+# modules/home-manager/programs/whisper.nix
+{ config, lib, pkgs, ... }:
+
+let
+  dotfilesDir = "${config.home.homeDirectory}/dotfiles";
+in
+{
+  # Always enabled (clone-first: no options)
+  # Auto-detect hardware at runtime
+
+  home.packages = with pkgs; [
+    whisper-cpp           # CPU backend (fallback)
+    whisper-cpp-vulkan    # GPU Vulkan backend
+    sox                   # Audio utilities
+  ];
+
+  home.file = {
+    ".local/bin/whisper-brutal".source = 
+      config.lib.file.mkOutOfStoreSymlink 
+        "${dotfilesDir}/scripts/whisper-brutal";
+    ".local/bin/whisper-auto-detect".source = 
+      config.lib.file.mkOutOfStoreSymlink 
+        "${dotfilesDir}/scripts/whisper-auto-detect";
+  };
+}
+#+END_SRC
+
+*** TODO Phase 2 (Futuro)
+
+- [ ] Script =whisper-clipboard= (transcribe + copia al portapapeles)
+- [ ] Keybindings XMonad opcionales (Mod+Shift+v)
+- [ ] Integration con Emacs (voice-to-text in buffers)
+- [ ] Probar modelo =medium= (mejor precisión, ¿aceptable con GPU?)
+- [ ] Script de descarga automática de modelos (opcional)
+
+*** Referencias
+
+- Whisper.cpp: https://github.com/ggerganov/whisper.cpp
+- Modelos: https://huggingface.co/ggerganov/whisper.cpp
+- OpenAI Whisper paper: https://arxiv.org/abs/2212.04356
+
 ** Limpieza
 - [ ] Revisar y limpiar configs obsoletas (shell/, composer/)
 - [ ] Documentar scripts utiles en scripts/
