@@ -32,7 +32,7 @@
 {
   imports = [
     ./claude-code.nix
-    ./crush.nix
+    # ./crush.nix  # DISABLED: upstream autoPatchelfHook broken (master branch inestable)
     ./opencode.nix
   ];
 
