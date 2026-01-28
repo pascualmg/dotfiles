@@ -5430,6 +5430,92 @@ in
 - Modelos: https://huggingface.co/ggerganov/whisper.cpp
 - OpenAI Whisper paper: https://arxiv.org/abs/2212.04356
 
+** Arquitectura Clone-First - Refactorizacion [2026-01-28]
+
+#+BEGIN_QUOTE
+*Contexto:* Auditoria del nixos-guru reveló configuraciones que violan la filosofia clone-first.
+Hay duplicacion entre hosts que deberia estar en =modules/base/= o =modules/core/=.
+#+END_QUOTE
+
+*** Estado de Tareas
+
+| # | Tarea | Estado | Motivo |
+|---+-------+--------+--------|
+| 1 | Crear =modules/core/firewall.nix= | DONE [2026-01-28] | Puertos dev duplicados en aurin/vespino |
+| 2 | Limpiar puertos aurin | PENDING | Eliminar duplicados, solo dejar específicos |
+| 3 | Limpiar puertos vespino | PENDING | Eliminar duplicados, solo dejar específicos |
+| 4 | Crear =modules/services/syncthing.nix= | PENDING | Config casi idéntica en aurin/vespino |
+| 5 | Eliminar open-webui deshabilitado | PENDING | Código muerto (enable=false) en ambos hosts |
+| 6 | Eliminar nsswitch.conf duplicado | PENDING | Idéntico en aurin/vespino, evaluar si va a base |
+| 7 | Limpiar paquetes vespino | PENDING | Paquetes que ya están en base o home-manager |
+| 8 | Crear =modules/services/ollama.nix= | PENDING (baja prioridad) | Config muy específica por hardware |
+
+*** Tarea 1: firewall.nix - COMPLETADA [2026-01-28]
+
+*Problema:* Puertos de desarrollo duplicados en =hosts/aurin/default.nix= y =hosts/vespino/default.nix=.
+
+*Solución:* Crear =modules/core/firewall.nix= con puertos comunes:
+- 22 (SSH), 53/80/443 (DNS, HTTP/S)
+- 3000, 4200, 5173, 8000, 8080, 8081, 8888 (dev servers)
+- 5900, 5901 (VNC), 8096 (Jellyfin), 22000 (Syncthing), 631 (CUPS)
+
+*Archivos modificados:*
+- =modules/core/firewall.nix= (NUEVO)
+- =modules/base/default.nix= (añadido import)
+
+*Próximo paso:* Limpiar puertos duplicados de aurin (#2) y vespino (#3).
+
+*** Tarea 2: Limpiar puertos aurin - PENDIENTE
+
+*Motivo:* Después de firewall.nix, aurin solo necesita puertos ESPECÍFICOS:
+- 11434 (Ollama - servidor AI principal)
+- 8385 (Syncthing GUI custom)
+- 34279 (Claude Code)
+- 5990-5993 (custom)
+
+*Eliminar:* 22, 53, 80, 443, 8080, 8081, 8000, 8888, 3000, 5900, 5901, 22000, 8096, 631 (ya en base).
+
+*** Tarea 3: Limpiar puertos vespino - PENDIENTE
+
+*Motivo:* Vespino solo necesita puertos ESPECÍFICOS:
+- 111, 2049 (NFS - único servidor NFS)
+- 8384 (Syncthing GUI custom)
+- Minecraft abre sus puertos via módulo
+
+*** Tarea 4: Syncthing modular - PENDIENTE
+
+*Motivo:* Config casi idéntica en aurin (líneas 429-466) y vespino (líneas 243-277).
+Mismos devices (vespino, aurin, cohete, pocapullos), mismo folder "org".
+
+*Solución:* Módulo =modules/services/syncthing.nix= con:
+- Devices compartidos
+- Folder "org" común
+- Opción =guiPort= configurable por host
+
+*** Tarea 5: Eliminar open-webui - PENDIENTE
+
+*Motivo:* Código muerto. =open-webui.enable = false= en aurin y vespino.
+Si está deshabilitado, no debería estar en producción.
+
+*** Tarea 6: nsswitch.conf - PENDIENTE (evaluar)
+
+*Motivo:* Idéntico en aurin y vespino. Opciones:
+1. Mover a =modules/core/= si todas las máquinas lo necesitan
+2. Dejarlo solo en aurin si es específico de VPN Vocento
+3. Ya existe en =vocento-vpn-bridge.nix= - eliminar duplicados
+
+*** Tarea 7: Paquetes vespino - PENDIENTE
+
+*Motivo:* =environment.systemPackages= en vespino incluye paquetes que ya están en base:
+- xorg.* (setxkbmap, xmodmap, xinput, xset)
+- Audio: alsa-utils, pavucontrol (ya via pipewire)
+- dunst, libnotify, xclip (deberían estar en home-manager o base)
+
+*** Tarea 8: Ollama modular - BAJA PRIORIDAD
+
+*Motivo:* Config muy específica por hardware (GPU layers, CUDA memory, threads).
+Beneficio de modularizar es menor porque los valores son muy diferentes entre máquinas.
+
 ** Limpieza
 - [ ] Revisar y limpiar configs obsoletas (shell/, composer/)
 - [ ] Documentar scripts utiles en scripts/

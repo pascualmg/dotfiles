@@ -26,6 +26,7 @@
     ../core/packages.nix
     ../core/services.nix
     ../core/cpupower-gui.nix
+    ../core/firewall.nix
 
     # ===== DESKTOP UNIFICADO =====
     # SDDM + GNOME + XMonad + Hyprland + Niri - TODO disponible en TODAS

@@ -277,38 +277,30 @@
       '';
     };
 
+    # =========================================================================
+    # FIREWALL - Solo puertos ESPECÍFICOS de aurin
+    # =========================================================================
+    # Puertos comunes (dev servers, VNC, CUPS) → modules/core/firewall.nix
+    # Puertos de módulos (Ollama, Syncthing, Avahi) → openFirewall = true
+    # =========================================================================
     firewall = {
       enable = true;
       allowedTCPPorts = [
+        # VPN Vocento (DNS via VM)
         53
-        80
-        443
-        22 # Basicos
-        11434 # Ollama
-        8385
-        22000
-        8096 # Syncthing, Jellyfin
-        5900
-        5901 # VNC
-        8000
-        8081
-        8080
-        8888 # Jupyter/dev servers
-        3000 # Web apps, webhooks
-        5990
-        5991
-        5992
-        5993 # Custom
-        34279 # Claude Code
-        631 # CUPS
+
+        # Servicios específicos aurin
+        8096                  # Jellyfin (no tiene módulo NixOS)
+        8385                  # Syncthing GUI (puerto custom)
+        34279                 # Claude Code MCP
+
+        # Puertos custom
+        5990 5991 5992 5993
       ];
       allowedUDPPorts = [
-        53
-        22000
-        21027 # Syncthing
-        5353 # Avahi/mDNS
+        53                    # DNS (VPN Vocento)
       ];
-      checkReversePath = false;
+      checkReversePath = false;  # Necesario para bridge VPN
     };
   };
   # =============================================================================
