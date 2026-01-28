@@ -3075,7 +3075,8 @@ En laptops también aparecen: 󱊣 Batería, ⌨ HHKB BT, 󰤨 WiFi
 |---------+--------+-------+-------------+-------|
 | Docker | =xmobar-docker.sh= | 󰡨 | Containers activos | Si no hay Docker/containers: oculto |
 | Batería | =xmobar-battery.sh= | 󱊣 | Carga + estado (charging/discharging) | Si no hay batería: oculto |
-| HHKB | =xmobar-hhkb-battery.sh= | ⌨ | Batería teclado HHKB Hybrid BT | Si no hay HHKB BT: oculto |
+| HHKB Hybrid | =xmobar-hhkb-battery.sh= | ⌨ | Batería teclado HHKB Hybrid BT | Si no hay HHKB BT: oculto |
+| HHKB Pro | =xmobar-hhkb-hasu.sh= | ⌨Pro | HHKB con Hasu controller (USB) | Si no hay USB 4848:0001: oculto |
 | Ratón | =xmobar-mouse-battery.sh= | 󰍽 | Batería ratón Logitech (HID++) | Si no hay ratón Logitech: oculto |
 | WiFi | =xmobar-wifi.sh= | 󰤨 | SSID red WiFi | Si no hay WiFi/conectado: oculto |
 
@@ -3176,6 +3177,62 @@ tx_rate = (tx_bytes_current - tx_bytes_prev) / time_diff_seconds
 | Muestra =br0= o =tun0= | Bug - reportar (deberían estar filtrados) |
 | Números muy bajos | Normal si no hay tráfico activo |
 | Colores no cambian | Generar tráfico: =curl https://ubuntu.com/...iso= |
+
+*** HHKB Pro con Hasu Controller (xmobar-hhkb-hasu.sh)
+
+*Nuevo en 2026-01-27* - Monitor para el HHKB original con Hasu controller conectado por USB.
+
+**** Características
+
+| Feature | Descripción |
+|---------+-------------|
+| *Detección USB* | Detecta USB ID =4848:0001= (Hasu controller) |
+| *Icono distintivo* | Muestra =⌨Pro= en cyan brillante (#8be9fd) |
+| *5 interfaces HID* | El Hasu expone teclado + mouse + system + consumer + extra |
+| *Mouse Layer* | Emulación de ratón con =hold ;= (tu keymap "ultimate") |
+| *Smart* | Se oculta si el HHKB no está conectado |
+
+**** Interfaces HID del Hasu Controller
+
+El HHKB con Hasu controller expone 5 interfaces diferentes:
+
+#+BEGIN_SRC text
+input7  → HHKB ANSI              (teclado principal)
+input8  → HHKB ANSI Mouse        (mouse layer - hold ; para activar)
+input9  → HHKB ANSI System       (power/sleep/wake)
+input10 → HHKB ANSI Consumer     (media keys: play/pause/vol)
+input11 → HHKB ANSI Keyboard     (teclado secundario para layers)
+#+END_SRC
+
+**** Output
+
+#+BEGIN_SRC text
+# Conectado por USB
+⌨Pro    (cyan #8be9fd)
+
+# No conectado
+(vacío - el monitor se oculta)
+#+END_SRC
+
+**** Diferencia con HHKB Hybrid
+
+| Modelo | Script | Detección | Info |
+|--------+--------+-----------+------|
+| HHKB Hybrid | =xmobar-hhkb-battery.sh= | BT =04fe:000b= | Batería % |
+| HHKB Pro (Hasu) | =xmobar-hhkb-hasu.sh= | USB =4848:0001= | Estado conexión |
+
+**** Verificar conexión
+
+#+BEGIN_SRC bash
+# Ver si el HHKB con Hasu está conectado
+lsusb | grep 4848:0001
+
+# Ver las 5 interfaces HID
+cat /proc/bus/input/devices | grep -A5 "HHKB"
+
+# Test del monitor
+~/dotfiles/scripts/xmobar-hhkb-hasu.sh
+#+END_SRC
 
 *** Test en terminal: xmobar-test-all.sh
 
