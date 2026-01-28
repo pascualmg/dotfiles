@@ -38,7 +38,8 @@
     enable = lib.mkDefault true;
 
     # ===== PUERTOS TCP - Solo los que NO tienen módulo =====
-    allowedTCPPorts = lib.mkDefault [
+    # Sin mkDefault para que se CONCATENE con los de hosts/
+    allowedTCPPorts = [
       # Básicos (sin módulo específico)
       22                    # SSH
       80                    # HTTP
@@ -62,8 +63,7 @@
     ];
 
     # ===== PUERTOS UDP - Solo los que NO tienen módulo =====
-    allowedUDPPorts = lib.mkDefault [
-      # (vacío por ahora - mDNS lo abre Avahi, Syncthing lo abre su módulo)
-    ];
+    # (vacío - mDNS lo abre Avahi, Syncthing lo abre su módulo)
+    # allowedUDPPorts se concatena automáticamente con los de hosts/
   };
 }
