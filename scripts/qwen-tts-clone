@@ -1,38 +1,35 @@
 #!/usr/bin/env python3
 """
-qwen-tts-clone - Voice cloning with Qwen3-TTS
+qwen-tts - Text-to-Speech with Qwen3-TTS
 
-BRUTAL voice cloning script for local inference on GPU.
+Supports TWO modes:
+  1. PRE-MADE VOICES (fast, simple) - Just text, no reference needed
+  2. VOICE CLONING (your voice) - Requires reference audio + transcription
 
-Usage:
-  qwen-tts-clone \\
-    --reference audio.wav \\
-    --reference-text "Hola, esto es una prueba" \\
-    --target-text "Buenos días, bienvenidos" \\
-    --language Spanish \\
-    --output cloned.wav
+Usage - Pre-made voices:
+  qwen-tts -t "Hola mundo" -v Chelsie --output salida.wav
+
+Usage - Voice cloning:
+  qwen-tts --clone \\
+    -r mi-voz.wav -rt "Texto de referencia" \\
+    -t "Texto a generar" -o clonado.wav
+
+Available voices (pre-made):
+  - Chelsie (female, clear)
+  - Ethan (male, professional)
+  - More available in Qwen TTS
 
 Examples:
-  # Clone voice from 5-second audio
-  qwen-tts-clone \\
-    --reference ~/voice-cloning/references/my-voice.wav \\
-    --reference-text "This is my voice speaking clearly" \\
-    --target-text "Welcome to my podcast about AI" \\
-    --language English \\
-    --output ~/voice-cloning/output/podcast-intro.wav
+  # Simple TTS with pre-made voice
+  qwen-tts -t "Buenos dias, bienvenidos al podcast" -v Chelsie
 
-  # Spanish voice cloning
-  qwen-tts-clone \\
-    -r voice.mp3 \\
-    -rt "Hola, soy Pascual" \\
-    -t "Bienvenidos a mi canal de YouTube sobre programación" \\
-    -l Spanish \\
-    -o youtube-intro.wav
+  # Clone your voice
+  qwen-tts --clone -r mi-voz.wav -rt "Hola soy yo" -t "Texto nuevo"
 
 Performance:
   - First run: Downloads model (~3.5GB)
-  - Subsequent runs: 2-5 seconds per generation
-  - GPU: RTX 5080 (16GB VRAM, uses ~4-6GB)
+  - Pre-made voices: ~5 seconds
+  - Voice cloning: ~10-20 seconds
 """
 
 import argparse
@@ -43,22 +40,25 @@ from pathlib import Path
 # Global flag for CPU fallback
 USE_CPU = False
 
+# Available pre-made voices in Qwen TTS
+AVAILABLE_VOICES = [
+    "Chelsie",      # Female, clear
+    "Ethan",        # Male, professional
+    "Aura",         # Female, warm
+    "Nova",         # Female, energetic
+    "Atlas",        # Male, deep
+]
+
 def check_dependencies():
-    """Check if qwen-tts is installed, install if missing"""
-    import subprocess
-    
+    """Check if qwen-tts is installed"""
     try:
         import qwen_tts
-        return  # Already available
+        return
     except ImportError:
-        print("⏳ Installing qwen-tts (first time only)...")
-        print("   Downloading ~500MB + dependencies to ~/.local/...")
-        subprocess.check_call([
-            sys.executable, "-m", "pip", "install", 
-            "--user", "--break-system-packages", "-q",
-            "qwen-tts"
-        ])
-        print("✅ qwen-tts installed")
+        print("ERROR: qwen-tts not installed")
+        print("   In Docker: should be pre-installed")
+        print("   Native: pip install qwen-tts")
+        sys.exit(1)
 
 def check_cuda():
     """Check CUDA availability, fallback to CPU"""
@@ -67,20 +67,20 @@ def check_cuda():
     USE_CPU = False
 
     if not torch.cuda.is_available():
-        print("⚠️  No CUDA GPU found - using CPU (slower)")
+        print("Warning: No CUDA GPU found - using CPU (slower)")
         USE_CPU = True
         return
 
     gpu_name = torch.cuda.get_device_name(0)
     vram_gb = torch.cuda.get_device_properties(0).total_memory / 1024**3
-    print(f"✅ GPU: {gpu_name} ({vram_gb:.1f}GB VRAM)")
+    print(f"GPU: {gpu_name} ({vram_gb:.1f}GB VRAM)")
 
 def load_model():
     """Load Qwen3-TTS model"""
     import torch
     from qwen_tts import Qwen3TTSModel
 
-    print("⏳ Loading Qwen3-TTS-12Hz-1.7B-Base...")
+    print("Loading Qwen3-TTS-12Hz-1.7B-Base...")
     print("   (First run: downloads ~3.5GB model)")
 
     if USE_CPU:
@@ -88,7 +88,7 @@ def load_model():
         model = Qwen3TTSModel.from_pretrained(
             "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
             device_map="cpu",
-            dtype=torch.float32,  # CPU needs float32
+            dtype=torch.float32,
         )
     else:
         model = Qwen3TTSModel.from_pretrained(
@@ -97,101 +97,152 @@ def load_model():
             dtype=torch.bfloat16,
         )
 
-    print("✅ Model loaded")
+    print("Model loaded")
     return model
+
+def generate_tts(model, text, voice, language, output_file):
+    """Generate audio with pre-made voice"""
+    import soundfile as sf
+
+    print(f"Generating audio with voice '{voice}'...")
+    print(f"   Text: {text[:60]}{'...' if len(text) > 60 else ''}")
+
+    # Generate audio with pre-made voice
+    wavs, sr = model.generate(
+        text=text,
+        voice=voice,
+        language=language,
+    )
+
+    # Save to file
+    sf.write(output_file, wavs[0], sr)
+
+    # File info
+    duration = len(wavs[0]) / sr
+    file_size = Path(output_file).stat().st_size / 1024 / 1024
+
+    print(f"Audio saved: {output_file}")
+    print(f"   Duration: {duration:.1f}s | Sample rate: {sr}Hz | Size: {file_size:.1f}MB")
 
 def clone_voice(model, reference_audio, reference_text, target_text, language, output_file):
     """Generate cloned voice audio"""
     import soundfile as sf
-    
-    print(f"⏳ Generating audio...")
+
+    print(f"Generating cloned voice...")
     print(f"   Reference: {reference_audio}")
     print(f"   Target text: {target_text[:60]}{'...' if len(target_text) > 60 else ''}")
-    
-    # Generate audio
+
+    # Generate audio with cloned voice
     wavs, sr = model.generate_voice_clone(
         text=target_text,
         language=language,
         ref_audio=reference_audio,
         ref_text=reference_text,
     )
-    
+
     # Save to file
     sf.write(output_file, wavs[0], sr)
-    
+
     # File info
     duration = len(wavs[0]) / sr
-    file_size = Path(output_file).stat().st_size / 1024 / 1024  # MB
-    
-    print(f"✅ Audio saved: {output_file}")
-    print(f"   Duration: {duration:.1f}s")
-    print(f"   Sample rate: {sr}Hz")
-    print(f"   File size: {file_size:.1f}MB")
+    file_size = Path(output_file).stat().st_size / 1024 / 1024
+
+    print(f"Audio saved: {output_file}")
+    print(f"   Duration: {duration:.1f}s | Sample rate: {sr}Hz | Size: {file_size:.1f}MB")
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Voice cloning with Qwen3-TTS",
+        description="Text-to-Speech with Qwen3-TTS (pre-made voices or cloning)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__
     )
-    
+
+    # Mode selection
     parser.add_argument(
-        "-r", "--reference",
-        required=True,
-        help="Reference audio file (3-15 seconds, WAV/MP3/etc.)"
+        "--clone", "-c",
+        action="store_true",
+        help="Voice cloning mode (requires -r and -rt)"
     )
-    
+
+    # Common arguments
     parser.add_argument(
-        "-rt", "--reference-text",
+        "-t", "--text", "--target-text",
         required=True,
-        help="Exact transcription of reference audio"
+        help="Text to generate as speech"
     )
-    
-    parser.add_argument(
-        "-t", "--target-text",
-        required=True,
-        help="Text to generate with cloned voice"
-    )
-    
+
     parser.add_argument(
         "-l", "--language",
-        default="Auto",
-        choices=["Auto", "Spanish", "English", "Chinese", "Japanese", "Korean", 
+        default="Spanish",
+        choices=["Auto", "Spanish", "English", "Chinese", "Japanese", "Korean",
                  "German", "French", "Russian", "Portuguese", "Italian"],
-        help="Target language (default: Auto)"
+        help="Target language (default: Spanish)"
     )
-    
+
     parser.add_argument(
         "-o", "--output",
-        default="cloned-voice.wav",
-        help="Output WAV file (default: cloned-voice.wav)"
+        default="output.wav",
+        help="Output WAV file (default: output.wav)"
     )
-    
+
+    # Pre-made voice arguments
+    parser.add_argument(
+        "-v", "--voice",
+        default="Chelsie",
+        choices=AVAILABLE_VOICES,
+        help="Pre-made voice to use (default: Chelsie). Ignored in --clone mode."
+    )
+
+    # Voice cloning arguments
+    parser.add_argument(
+        "-r", "--reference",
+        help="Reference audio file for cloning (3-15 seconds)"
+    )
+
+    parser.add_argument(
+        "-rt", "--reference-text",
+        help="Exact transcription of reference audio"
+    )
+
     args = parser.parse_args()
-    
-    # Validate reference audio exists
-    if not Path(args.reference).exists():
-        print(f"❌ ERROR: Reference audio not found: {args.reference}")
-        sys.exit(1)
-    
+
+    # Validate arguments based on mode
+    if args.clone:
+        if not args.reference or not args.reference_text:
+            print("ERROR: Voice cloning mode requires -r (reference audio) and -rt (reference text)")
+            print("   Example: qwen-tts --clone -r mi-voz.wav -rt 'Hola soy yo' -t 'Texto nuevo'")
+            sys.exit(1)
+        if not Path(args.reference).exists():
+            print(f"ERROR: Reference audio not found: {args.reference}")
+            sys.exit(1)
+
     # Check dependencies and GPU
     check_dependencies()
     check_cuda()
-    
+
     # Load model
     model = load_model()
-    
-    # Generate cloned voice
-    clone_voice(
-        model=model,
-        reference_audio=args.reference,
-        reference_text=args.reference_text,
-        target_text=args.target_text,
-        language=args.language,
-        output_file=args.output
-    )
-    
-    print("\n🎉 Done! Play with: ffplay", args.output)
+
+    # Generate audio
+    if args.clone:
+        clone_voice(
+            model=model,
+            reference_audio=args.reference,
+            reference_text=args.reference_text,
+            target_text=args.text,
+            language=args.language,
+            output_file=args.output
+        )
+    else:
+        generate_tts(
+            model=model,
+            text=args.text,
+            voice=args.voice,
+            language=args.language,
+            output_file=args.output
+        )
+
+    print(f"\nDone! Play with: ffplay {args.output}")
 
 if __name__ == "__main__":
     main()

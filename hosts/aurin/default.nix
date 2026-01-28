@@ -19,38 +19,34 @@
 #   - Voice Cloning (Qwen TTS via Docker)
 #
 # =============================================================================
-# VOICE CLONING - Qwen TTS con RTX 5080
+# QWEN TTS - Text-to-Speech con RTX 5080
 # =============================================================================
-# Sistema de clonado de voz usando Qwen3-TTS en Docker con CUDA 13.
+# Sistema TTS usando Qwen3-TTS en Docker con CUDA 13. Dos modos:
 #
-# REQUISITOS:
-#   - Docker image: qwen-tts:cu130 (build en ~/dotfiles/containers/qwen-tts/)
-#   - Volumen Docker: qwen-tts-cache (para cachear modelo de 3.5GB)
-#   - Audio de referencia + transcripción
+#   1. VOCES PREFABRICADAS (rapido) - Solo texto, sin referencia
+#   2. VOICE CLONING (tu voz) - Requiere audio de referencia
 #
-# CONSTRUIR IMAGEN (primera vez):
+# SETUP (primera vez):
 #   cd ~/dotfiles/containers/qwen-tts && docker build -t qwen-tts:cu130 .
-#
-# CREAR VOLUMEN CACHE (primera vez):
 #   docker volume create qwen-tts-cache
 #
-# USO:
-#   docker run --rm --device nvidia.com/gpu=all \
-#     -v qwen-tts-cache:/root/.cache/huggingface \
-#     -v ~/dotfiles/scripts/qwen-tts-clone:/app/qwen-tts-clone:ro \
-#     -v ~/voice-cloning/references:/voice-cloning/references:ro \
-#     -v ~/voice-cloning/output:/voice-cloning/output \
-#     qwen-tts:cu130 \
-#     -r /voice-cloning/references/mi-voz.wav \
-#     -rt "Transcripción del audio de referencia" \
-#     -t "Texto que quiero generar con la voz clonada" \
-#     -l Spanish \
-#     -o /voice-cloning/output/salida.wav
+# USO - Voces prefabricadas:
+#   qwen-tts -t "Hola mundo" -v Chelsie -o salida.wav
+#
+# USO - Clonar tu voz:
+#   qwen-tts --clone \
+#     -r ~/voice-cloning/references/mi-voz.wav \
+#     -rt "Transcripcion del audio" \
+#     -t "Texto a generar" \
+#     -o ~/voice-cloning/output/clonado.wav
+#
+# VOCES DISPONIBLES: Chelsie, Ethan, Aura, Nova, Atlas
+# IDIOMAS: Spanish (default), English, Chinese, Japanese, Korean, etc.
 #
 # NOTAS:
-#   - Primera ejecución descarga modelo (~3.5GB), luego usa cache
+#   - Primera ejecucion descarga modelo (~3.5GB), luego usa cache
 #   - RTX 5080 requiere PyTorch nightly cu130 (CUDA 13)
-#   - Flag --device nvidia.com/gpu=all es CDI (NixOS), NO --gpus all
+#   - Voces prefabricadas: ~5s | Voice cloning: ~15s
 #
 #
 # ZONA SAGRADA: VPN Vocento
@@ -597,32 +593,43 @@
       numastat
     '')
 
-    # Voice cloning helper
-    (writeShellScriptBin "voice-clone" ''
+    # Qwen TTS helper (pre-made voices + voice cloning)
+    (writeShellScriptBin "qwen-tts" ''
       #!/bin/bash
-      # Wrapper para Qwen TTS voice cloning en Docker
-      # Uso: voice-clone -r referencia.wav -rt "texto referencia" -t "texto a generar" -o salida.wav
+      # Wrapper para Qwen TTS en Docker (voces prefabricadas + clonado)
+      #
+      # MODO 1 - Voces prefabricadas (rapido):
+      #   qwen-tts -t "Texto a leer" -v Chelsie -o salida.wav
+      #
+      # MODO 2 - Clonar tu voz:
+      #   qwen-tts --clone -r mi-voz.wav -rt "Transcripcion" -t "Texto nuevo" -o clonado.wav
+      #
+      # Voces disponibles: Chelsie, Ethan, Aura, Nova, Atlas
 
-      if [ "$#" -lt 6 ]; then
-        echo "Uso: voice-clone -r <audio_ref> -rt <texto_ref> -t <texto_generar> [-o salida.wav] [-l Spanish]"
+      if [ "$#" -lt 2 ]; then
+        echo "Qwen TTS - Text-to-Speech con GPU"
         echo ""
-        echo "Ejemplo:"
-        echo "  voice-clone -r ~/voice-cloning/references/mi-voz.wav \\"
-        echo "    -rt 'Hola, esta es mi voz de referencia' \\"
-        echo "    -t 'Texto que quiero generar con mi voz clonada'"
+        echo "MODO 1 - Voces prefabricadas:"
+        echo "  qwen-tts -t 'Hola mundo' [-v Chelsie] [-o salida.wav]"
+        echo ""
+        echo "MODO 2 - Clonar tu voz:"
+        echo "  qwen-tts --clone -r referencia.wav -rt 'texto ref' -t 'texto nuevo'"
+        echo ""
+        echo "Voces: Chelsie (default), Ethan, Aura, Nova, Atlas"
+        echo "Idiomas: Spanish (default), English, Chinese, Japanese, etc."
         exit 1
       fi
 
       # Verificar imagen Docker
       if ! docker image inspect qwen-tts:cu130 >/dev/null 2>&1; then
-        echo "❌ Imagen qwen-tts:cu130 no encontrada"
-        echo "   Construir con: cd ~/dotfiles/containers/qwen-tts && docker build -t qwen-tts:cu130 ."
+        echo "ERROR: Imagen qwen-tts:cu130 no encontrada"
+        echo "   Construir: cd ~/dotfiles/containers/qwen-tts && docker build -t qwen-tts:cu130 ."
         exit 1
       fi
 
-      # Verificar volumen cache
+      # Verificar/crear volumen cache
       if ! docker volume inspect qwen-tts-cache >/dev/null 2>&1; then
-        echo "⏳ Creando volumen cache para modelo..."
+        echo "Creando volumen cache para modelo..."
         docker volume create qwen-tts-cache
       fi
 
@@ -679,7 +686,7 @@
       echo "- xeon-stress     - Stress test dual Xeon"
       echo "- numa-info       - Informacion NUMA"
       echo "- temp-monitor    - Monitor temperaturas"
-      echo "- voice-clone     - Clonar voz con Qwen TTS (Docker + GPU)"
+      echo "- qwen-tts        - Text-to-Speech (voces prefabricadas o clonado)"
     '')
   ];
 
