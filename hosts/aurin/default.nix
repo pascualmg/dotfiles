@@ -407,16 +407,11 @@
       };
     };
 
-    # Open WebUI (DISABLED: Bug en nixpkgs-unstable)
-    open-webui = {
-      enable = false;
-      port = 3000;
-      host = "0.0.0.0";
-      environment = {
-        OLLAMA_API_BASE_URL = "http://localhost:11434";
-        WEBUI_AUTH = "false";
-      };
-    };
+    # Open WebUI: Usar Docker (nixpkgs roto por ctranslate2)
+    # docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway \
+    #   -v open-webui:/app/backend/data \
+    #   -e OLLAMA_BASE_URL=http://host.docker.internal:11434 \
+    #   --name open-webui ghcr.io/open-webui/open-webui:main
 
     # Syncthing
     syncthing = {
