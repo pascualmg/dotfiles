@@ -40,46 +40,37 @@ import sys
 import os
 from pathlib import Path
 
+# Global flag for CPU fallback
+USE_CPU = False
+
 def check_dependencies():
-    """Check if qwen-tts is installed, install in venv if missing"""
+    """Check if qwen-tts is installed, install if missing"""
     import subprocess
     
-    venv_dir = Path.home() / ".cache" / "qwen-tts-venv"
-    venv_python = venv_dir / "bin" / "python"
-    
-    # Check if already in venv or qwen-tts is available
     try:
         import qwen_tts
         return  # Already available
     except ImportError:
-        pass
-    
-    # Create venv if doesn't exist
-    if not venv_dir.exists():
-        print(f"⏳ Creating Python venv at {venv_dir}...")
-        subprocess.check_call([sys.executable, "-m", "venv", str(venv_dir)])
-        print("✅ venv created")
-    
-    # Install qwen-tts in venv
-    if not (venv_dir / "lib" / "python3.13" / "site-packages" / "qwen_tts").exists():
-        print("⏳ Installing qwen-tts in venv (first time only, ~3.5GB)...")
+        print("⏳ Installing qwen-tts (first time only)...")
+        print("   Downloading ~500MB + dependencies to ~/.local/...")
         subprocess.check_call([
-            str(venv_python), "-m", "pip", "install", "-q", 
-            "qwen-tts", "torch", "torchaudio", "transformers", "soundfile"
+            sys.executable, "-m", "pip", "install", 
+            "--user", "--break-system-packages", "-q",
+            "qwen-tts"
         ])
         print("✅ qwen-tts installed")
-    
-    # Re-exec with venv python
-    os.execv(str(venv_python), [str(venv_python)] + sys.argv)
 
 def check_cuda():
-    """Verify CUDA is available"""
+    """Check CUDA availability, fallback to CPU"""
     import torch
+    global USE_CPU
+    USE_CPU = False
+
     if not torch.cuda.is_available():
-        print("❌ ERROR: No CUDA GPU found")
-        print("   This script requires a CUDA-capable GPU")
-        sys.exit(1)
-    
+        print("⚠️  No CUDA GPU found - using CPU (slower)")
+        USE_CPU = True
+        return
+
     gpu_name = torch.cuda.get_device_name(0)
     vram_gb = torch.cuda.get_device_properties(0).total_memory / 1024**3
     print(f"✅ GPU: {gpu_name} ({vram_gb:.1f}GB VRAM)")
@@ -88,16 +79,24 @@ def load_model():
     """Load Qwen3-TTS model"""
     import torch
     from qwen_tts import Qwen3TTSModel
-    
+
     print("⏳ Loading Qwen3-TTS-12Hz-1.7B-Base...")
     print("   (First run: downloads ~3.5GB model)")
-    
-    model = Qwen3TTSModel.from_pretrained(
-        "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
-        device_map="cuda:0",
-        dtype=torch.bfloat16,
-    )
-    
+
+    if USE_CPU:
+        print("   Using CPU (this will be slow)...")
+        model = Qwen3TTSModel.from_pretrained(
+            "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+            device_map="cpu",
+            dtype=torch.float32,  # CPU needs float32
+        )
+    else:
+        model = Qwen3TTSModel.from_pretrained(
+            "Qwen/Qwen3-TTS-12Hz-1.7B-Base",
+            device_map="cuda:0",
+            dtype=torch.bfloat16,
+        )
+
     print("✅ Model loaded")
     return model
 
@@ -113,8 +112,8 @@ def clone_voice(model, reference_audio, reference_text, target_text, language, o
     wavs, sr = model.generate_voice_clone(
         text=target_text,
         language=language,
-        reference_audio=reference_audio,
-        reference_text=reference_text,
+        ref_audio=reference_audio,
+        ref_text=reference_text,
     )
     
     # Save to file
