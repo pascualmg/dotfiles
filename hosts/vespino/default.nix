@@ -140,19 +140,25 @@
       '';
     };
 
+    # =========================================================================
+    # FIREWALL - Solo puertos ESPECÍFICOS de vespino
+    # =========================================================================
+    # Puertos comunes (dev servers, VNC, CUPS) → modules/core/firewall.nix
+    # Puertos de módulos (Syncthing, Avahi, Minecraft) → openFirewall = true
+    # =========================================================================
     firewall = {
       enable = true;
       allowedTCPPorts = [
-        53 80 443 22          # Basicos
-        8385 8384 22000       # Syncthing
+        # NFS (solo vespino es servidor NFS)
+        111 2049
+
+        # Servicios específicos vespino
         8096                  # Jellyfin
-        5900 5901             # VNC
-        8000 8081 8080 3000   # Web apps (Open-webui en 3000)
-        111 2049              # NFS
+        8384                  # Syncthing GUI (puerto custom)
       ];
       allowedUDPPorts = [
-        53
-        22000 21027           # Syncthing
+        # NFS
+        111 2049
       ];
       checkReversePath = false;
     };
