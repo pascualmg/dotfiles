@@ -21,25 +21,18 @@ Config {
         , Run Com "/home/passh/dotfiles/scripts/xmobar-bluetooth.sh" [] "bt" 30
         , Run Com "/home/passh/dotfiles/scripts/xmobar-volume.sh" [] "volume" 10
         , Run Com "/home/passh/dotfiles/scripts/xmobar-brightness.sh" [] "bright" 30
-        , Run Com "/home/passh/dotfiles/scripts/xmobar-battery.sh" [] "battery" 50
         , Run Com "/home/passh/dotfiles/scripts/xmobar-hhkb-battery.sh" [] "hhkb" 60
         , Run Com "/home/passh/dotfiles/scripts/xmobar-hhkb-hasu.sh" [] "hhkbpro" 30
         , Run Com "/home/passh/dotfiles/scripts/xmobar-mouse-battery.sh" [] "mouse" 60
         -- Red
         , Run Com "/home/passh/dotfiles/scripts/xmobar-wifi.sh" [] "wifi" 30
         , Run Com "/home/passh/dotfiles/scripts/xmobar-network.sh" [] "network" 10
-        -- Hardware
+        -- Hardware (discos y uptime, el resto está arriba)
         , Run Com "/home/passh/dotfiles/scripts/xmobar-disks.sh" [] "disks" 60
-        , Run Com "/home/passh/dotfiles/scripts/xmobar-gpu.sh" [] "gpu" 20
-        , Run Com "/home/passh/dotfiles/scripts/xmobar-swap.sh" [] "swap" 30
-        , Run Com "/home/passh/dotfiles/scripts/xmobar-memory.sh" [] "memory" 20
-        , Run Com "/home/passh/dotfiles/scripts/xmobar-load.sh" [] "load" 20
-        , Run Com "/home/passh/dotfiles/scripts/xmobar-cpu-freq.sh" [] "cpufreq" 20
-        , Run Com "/home/passh/dotfiles/scripts/xmobar-cpu.sh" [] "cpu" 20
         , Run Com "/home/passh/dotfiles/scripts/xmobar-uptime.sh" [] "uptime" 60
     ]
 
     , sepChar = "%"
     , alignSep = "}{"
-    , template = "}{ <fc=#666666><fn=1>󱄅</fn></fc> %vpn% %docker% %updates% %machines% %ssh% %bt% %volume% %bright% %battery% %hhkb% %hhkbpro% %mouse% %wifi% %network% %disks% %gpu% %swap% %memory% %load% %cpufreq% %cpu% %uptime% <fc=#666666><fn=1>󱄅</fn></fc> "
+    , template = "}{ <fc=#666666><fn=1>󱄅</fn></fc> %vpn% %docker% %updates% %machines% %ssh% %bt% %volume% %bright% %hhkb% %hhkbpro% %mouse% %wifi% %network% %disks% %uptime% <fc=#666666><fn=1>󱄅</fn></fc> "
 }
