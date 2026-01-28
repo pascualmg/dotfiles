@@ -68,7 +68,29 @@
   };
 
   # ===== NVIDIA CONTAINER TOOLKIT (Docker con GPU) =====
+  # Permite que contenedores Docker accedan a la GPU via CDI (Container Device Interface)
+  #
+  # USO:
+  #   docker run --rm --device nvidia.com/gpu=all <imagen> nvidia-smi
+  #
+  # NOTA: En NixOS se usa --device nvidia.com/gpu=all (CDI), NO --gpus all (legacy)
+  #       El flag --gpus all requiere nvidia-docker2 que está deprecado.
+  #
+  # EJEMPLO con CUDA:
+  #   docker run --rm --device nvidia.com/gpu=all nvidia/cuda:13.1.1-base nvidia-smi
+  #
+  # EJEMPLO con imagen custom:
+  #   docker run --rm --device nvidia.com/gpu=all mi-imagen-ml python train.py
+  #
   hardware.nvidia-container-toolkit.enable = true;
+
+  # Registra el runtime nvidia en el daemon de Docker
+  # Esto genera /etc/cdi/nvidia.yaml automáticamente via nvidia-ctk
+  virtualisation.docker.daemon.settings = {
+    runtimes.nvidia = {
+      path = "${pkgs.nvidia-container-toolkit.tools}/bin/nvidia-container-runtime";
+    };
+  };
 
   # ===== PARAMETROS KERNEL NVIDIA =====
   boot.kernelParams = [
