@@ -20,7 +20,23 @@
 {
   imports = [
     ./minecraft.nix
+    ../../modules/services/syncthing.nix
   ];
+
+  # ===========================================================================
+  # SYNCTHING (módulo centralizado)
+  # ===========================================================================
+  dotfiles.syncthing.enable = true;
+  dotfiles.syncthing.guiPort = 8384;
+  # Extra folder: Camera (solo vespino)
+  dotfiles.syncthing.extraFolders = {
+    "storage/Camera" = {
+      path = "/home/passh/storage/Camera";
+      devices = [ "pocapullos" ];
+      type = "sendreceive";
+      ignorePerms = false;
+    };
+  };
 
   # ===========================================================================
   # DISPLAY SETUP - Monitor ultrawide 5120x1440 @ 120Hz
@@ -239,42 +255,7 @@
       };
     };
 
-    # Syncthing
-    syncthing = {
-      enable = true;
-      user = "passh";
-      group = "users";
-      dataDir = "/home/passh";
-      openDefaultPorts = true;
-      guiAddress = "0.0.0.0:8384";
-      settings = {
-        devices = {
-          "cohete" = { id = "MJCXI4B-EA5DX64-SY4QGGI-TKPDYG5-Y3OKBIU-XXAAWML-7TXS57Q-GLNQ4AY"; };
-          "pocapullos" = { id = "OYORVJB-XKOUBKT-NPILWWO-FYXSBAB-Q2FFRMC-YIZB4FW-XX5HDWR-X6K65QE"; };
-          "aurin" = { id = "I5C3RVM-G3NN7HI-PU44PDV-GHSR7XK-3TKCRT5-L3SG4QW-GDT2O5D-YOT3DQJ"; };
-        };
-        folders = {
-          "org" = {
-            path = "/home/passh/org";
-            devices = [ "cohete" "pocapullos" "aurin" ];
-            type = "sendreceive";
-            name = "org";
-            ignorePerms = false;
-          };
-          "storage/Camera" = {
-            path = "/home/passh/storage/Camera";
-            devices = [ "pocapullos" ];
-            type = "sendreceive";
-            name = "Camera";
-            ignorePerms = false;
-          };
-        };
-        gui = {
-          user = "passh";
-          password = "capullo100";
-        };
-      };
-    };
+    # Syncthing: config en dotfiles.syncthing (arriba)
 
     # SSH config
     openssh.settings = {

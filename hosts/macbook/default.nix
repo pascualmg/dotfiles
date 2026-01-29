@@ -62,6 +62,7 @@
   imports = [
     ../../modules/services/ivanti-vpn-vm.nix # VM Ubuntu para VPN Ivanti
     ../../modules/services/vocento-vpn-bridge.nix # Bridge networking para VPN
+    ../../modules/services/syncthing.nix # Syncthing centralizado
   ];
 
   # ===========================================================================
@@ -126,6 +127,12 @@
   # Esto es comodo pero MENOS SEGURO. En entornos corporativos o
   # multi-usuario se deberia cambiar a true.
   security.sudo.wheelNeedsPassword = false;
+
+  # ===========================================================================
+  # SYNCTHING (módulo centralizado en modules/services/syncthing.nix)
+  # ===========================================================================
+  dotfiles.syncthing.enable = true;
+  # dotfiles.syncthing.guiPort = 8384;  # default
 
   # ===========================================================================
   # SSH

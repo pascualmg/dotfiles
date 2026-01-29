@@ -64,6 +64,19 @@
 
 {
   # ===========================================================================
+  # IMPORTS
+  # ===========================================================================
+  imports = [
+    ../../modules/services/syncthing.nix
+  ];
+
+  # ===========================================================================
+  # SYNCTHING (módulo centralizado)
+  # ===========================================================================
+  dotfiles.syncthing.enable = true;
+  dotfiles.syncthing.guiPort = 8385;  # aurin usa 8385
+
+  # ===========================================================================
   # DISPLAY SETUP - Monitor ultrawide 5120x1440 @ 120Hz
   # ===========================================================================
   services.xserver.displayManager.setupCommands = ''
@@ -413,44 +426,8 @@
     #   -e OLLAMA_BASE_URL=http://host.docker.internal:11434 \
     #   --name open-webui ghcr.io/open-webui/open-webui:main
 
-    # Syncthing
-    syncthing = {
-      enable = true;
-      user = "passh";
-      dataDir = "/home/passh";
-      openDefaultPorts = true;
-      guiAddress = "0.0.0.0:8385";
-      settings = {
-        devices = {
-          "vespino" = {
-            id = "C2DZIRD-A65IMBL-34MTS3M-ULVUMOL-6436UPS-DNZU5QI-ITPPIER-LWZCOAG";
-          };
-          "cohete" = {
-            id = "MJCXI4B-EA5DX64-SY4QGGI-TKPDYG5-Y3OKBIU-XXAAWML-7TXS57Q-GLNQ4AY";
-          };
-          "pocapullos" = {
-            id = "OYORVJB-XKOUBKT-NPILWWO-FYXSBAB-Q2FFRMC-YIZB4FW-XX5HDWR-X6K65QE";
-          };
-        };
-        folders = {
-          "org" = {
-            id = "pgore-xe7pu";
-            path = "/home/passh/org";
-            devices = [
-              "vespino"
-              "cohete"
-              "pocapullos"
-            ];
-            type = "sendreceive";
-            ignorePerms = false;
-          };
-        };
-        gui = {
-          user = "passh";
-          password = "capullo100";
-        };
-      };
-    };
+    # Syncthing (módulo centralizado en modules/services/syncthing.nix)
+    # Config: dotfiles.syncthing (abajo)
 
     # Hardware monitoring
     smartd = {
