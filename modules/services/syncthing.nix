@@ -24,23 +24,28 @@ let
   # TODOS LOS DEVICES CONOCIDOS
   # =========================================================================
   allDevices = {
-    # Máquinas NixOS
+    # Máquinas NixOS (con addresses para conexión directa)
     aurin = {
-      id = "I5C3RVM-G3NN7HI-PU44PDV-GHSR7XK-3TKCRT5-L3SG4QW-GDT2O5D-YOT3DQJ";
+      id = "X5F5YWD-L4ECJPJ-5HO3ZF4-RJOY3HT-5Q5TXDU-R34OJUC-J4N42ID-C2GKSQC";
+      addresses = [ "tcp://campo.zapto.org:22000" "quic://campo.zapto.org:22000" "dynamic" ];
     };
     vespino = {
       id = "C2DZIRD-A65IMBL-34MTS3M-ULVUMOL-6436UPS-DNZU5QI-ITPPIER-LWZCOAG";
+      addresses = [ "dynamic" ];  # Solo en red local
     };
     macbook = {
       id = "Q5FFDRL-XIDVJRA-U5N4BG7-C6KXWOX-XY4UGS7-OLL56U6-BMKW4WP-JOW2KQN";
+      addresses = [ "dynamic" ];  # IP dinámica
     };
 
     # Otros dispositivos
     cohete = {
       id = "MJCXI4B-EA5DX64-SY4QGGI-TKPDYG5-Y3OKBIU-XXAAWML-7TXS57Q-GLNQ4AY";
+      addresses = [ "tcp://pascualmg.dev:22000" "dynamic" ];
     };
     pocapullos = {
       id = "OYORVJB-XKOUBKT-NPILWWO-FYXSBAB-Q2FFRMC-YIZB4FW-XX5HDWR-X6K65QE";
+      addresses = [ "dynamic" ];
     };
   };
 
